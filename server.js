@@ -1,270 +1,518 @@
-const express=require("express");
-const http=require("http");
-const crypto=require("crypto");
-const {Server}=require("socket.io");
-const path=require("path");
+const express = require("express");
+const http = require("http");
+const path = require("path");
+const crypto = require("crypto");
+const { Server } = require("socket.io");
 
-const app=express();
-const server=http.createServer(app);
-const io=new Server(server);
-const PORT=process.env.PORT||3000;
+const app = express();
+const server = http.createServer(app);
 
-app.use(express.json({limit:"10mb"}));
-app.use(express.static(path.join(__dirname,"public")));
+const io = new Server(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
+});
 
-const users=new Map();
-const messages=new Map();
-const online=new Map();
+const PORT = process.env.PORT || 3000;
 
-const clean=x=>String(x??"").trim();
-const phoneOK=x=>/^09\d{9}$/.test(x);
-const userOK=x=>/^[a-zA-Z0-9_]{3,30}$/.test(x);
-const chatId=(a,b)=>[a,b].sort().join(":");
+/*
+|--------------------------------------------------------------------------
+| In-memory database
+|--------------------------------------------------------------------------
+| فعلاً دیتابیس نداریم.
+| اطلاعات تا زمانی که سرور ری‌استارت نشده در RAM می‌مانند.
+|--------------------------------------------------------------------------
+*/
 
-function publicUser(u){
-    return u?{
-        phone:u.phone,
-        name:u.name,
-        username:u.username,
-        photo:u.photo||"",
-        online:online.has(u.phone)
-    }:null;
+const users = new Map();
+const sockets = new Map();
+const messages = new Map();
+
+/*
+|--------------------------------------------------------------------------
+| Helpers
+|--------------------------------------------------------------------------
+*/
+
+function cleanPhone(value) {
+    return String(value || "").replace(/\D/g, "");
 }
 
-function registerUser(data){
-    const phone=clean(data.phone);
-    const username=clean(data.username)
-        .replace(/^@/,"")
+function cleanUsername(value) {
+    return String(value || "")
+        .trim()
+        .replace(/^@/, "")
+        .replace(/\s+/g, "_")
         .toLowerCase();
-    const name=clean(data.name)||"کاربر Virax";
+}
 
-    if(!phoneOK(phone))
-        throw Error("شماره موبایل نامعتبر است");
+function validPhone(phone) {
+    return /^09\d{9}$/.test(phone);
+}
 
-    if(!userOK(username))
-        throw Error("آیدی نامعتبر است");
+function validUsername(username) {
+    return /^[a-zA-Z0-9_]{3,24}$/.test(username);
+}
 
-    for(const [p,u] of users){
-        if(p!==phone&&u.username===username)
-            throw Error("این آیدی قبلاً گرفته شده است");
-    }
+function makeId() {
+    return crypto.randomUUID();
+}
 
-    const user={
-        phone,
-        username,
-        name,
-        photo:clean(data.photo)
+function conversationKey(a, b) {
+    return [a, b].sort().join(":");
+}
+
+function publicUser(user) {
+    if (!user) return null;
+
+    return {
+        id: user.id,
+        phone: user.phone,
+        name: user.name,
+        username: user.username,
+        photo: user.photo || "",
+        online: sockets.has(user.phone)
     };
-
-    users.set(phone,user);
-    return user;
 }
 
-/* ثبت کاربر */
-app.post("/api/users",(req,res)=>{
-    try{
-        res.json({
-            ok:true,
-            user:publicUser(registerUser(req.body||{}))
-        });
-    }catch(e){
-        res.status(400).json({
-            ok:false,
-            error:e.message
-        });
-    }
-});
+function sendError(socket, message) {
+    socket.emit("error_message", {
+        message
+    });
+}
 
-/* جستجوی کاربران */
-app.get("/api/users/search",(req,res)=>{
-    const q=clean(req.query.q)
-        .replace(/^@/,"")
-        .toLowerCase();
+/*
+|--------------------------------------------------------------------------
+| Express
+|--------------------------------------------------------------------------
+*/
 
-    if(!q)
-        return res.json({ok:true,users:[]});
+app.use(express.json());
 
-    const result=[...users.values()]
-        .filter(u=>
-            u.username.includes(q)||
-            u.name.toLowerCase().includes(q)
-        )
-        .slice(0,20)
-        .map(publicUser);
+app.use(
+    express.static(
+        path.join(__dirname, "public")
+    )
+);
 
+app.get("/health", (req, res) => {
     res.json({
-        ok:true,
-        users:result
+        status: "ok",
+        app: "Virax",
+        users: users.size,
+        conversations: messages.size
     });
 });
 
-/* پروفایل */
-app.get("/api/users/:username",(req,res)=>{
-    const q=clean(req.params.username)
-        .replace(/^@/,"")
-        .toLowerCase();
+/*
+|--------------------------------------------------------------------------
+| Register / Login
+|--------------------------------------------------------------------------
+*/
 
-    const user=[...users.values()]
-        .find(u=>u.username===q);
+io.on("connection", (socket) => {
 
-    if(!user)
-        return res.status(404).json({
-            ok:false,
-            error:"کاربر پیدا نشد"
-        });
+    console.log("CONNECTED:", socket.id);
 
-    res.json({
-        ok:true,
-        user:publicUser(user)
-    });
-});
+    /*
+    |--------------------------------------------------------------------------
+    | Login
+    |--------------------------------------------------------------------------
+    */
 
-/* سلامت سرور */
-app.get("/health",(req,res)=>{
-    res.json({
-        status:"ok",
-        app:"Virax",
-        users:users.size,
-        online:online.size
-    });
-});
+    socket.on("login", ({ phone }) => {
 
-/* Socket.IO */
-io.on("connection",socket=>{
+        phone = cleanPhone(phone);
 
-    console.log("Connected:",socket.id);
-
-    /* ورود */
-    socket.on("join",phone=>{
-        phone=clean(phone);
-
-        if(!phoneOK(phone))return;
-
-        socket.phone=phone;
-        online.set(phone,socket.id);
-
-        io.emit("user_status",{
-            phone,
-            online:true
-        });
-    });
-
-    /* ثبت حساب */
-    socket.on("register",data=>{
-        try{
-            const user=registerUser(data);
-
-            socket.phone=user.phone;
-            online.set(user.phone,socket.id);
-
-            socket.emit("registered",{
-                ok:true,
-                user:publicUser(user)
-            });
-
-            io.emit("user_status",{
-                phone:user.phone,
-                online:true
-            });
-
-        }catch(e){
-            socket.emit("registered",{
-                ok:false,
-                error:e.message
-            });
-        }
-    });
-
-    /* ارسال پیام خصوصی */
-    socket.on("send_message",data=>{
-
-        const from=socket.phone;
-        const to=clean(data?.to);
-        const text=clean(data?.message);
-
-        if(
-            !phoneOK(from)||
-            !phoneOK(to)||
-            !text||
-            text.length>4000
-        )return;
-
-        if(!users.has(from)||!users.has(to))
-            return;
-
-        const id=chatId(from,to);
-
-        const message={
-            id:crypto.randomUUID(),
-            from,
-            to,
-            message:text,
-            time:Date.now()
-        };
-
-        if(!messages.has(id))
-            messages.set(id,[]);
-
-        messages.get(id).push(message);
-
-        socket.emit("new_message",message);
-
-        const target=online.get(to);
-
-        if(target)
-            io.to(target).emit(
-                "new_message",
-                message
+        if (!validPhone(phone)) {
+            return sendError(
+                socket,
+                "شماره موبایل معتبر نیست"
             );
+        }
+
+        let user = users.get(phone);
+
+        if (!user) {
+
+            user = {
+                id: makeId(),
+                phone,
+                name: "کاربر Virax",
+                username: "",
+                photo: "",
+                createdAt: Date.now()
+            };
+
+            users.set(phone, user);
+        }
+
+        sockets.set(phone, socket.id);
+
+        socket.phone = phone;
+
+        socket.join(`user:${phone}`);
+
+        socket.emit("login_success", {
+            user: publicUser(user)
+        });
+
+        io.emit("presence", {
+            phone,
+            online: true
+        });
+
+        console.log("LOGIN:", phone);
     });
 
-    /* تاریخچه */
-    socket.on("get_messages",data=>{
+    /*
+    |--------------------------------------------------------------------------
+    | Update Profile
+    |--------------------------------------------------------------------------
+    */
 
-        const me=socket.phone;
-        const other=clean(data?.with);
+    socket.on("update_profile", (data) => {
 
-        if(
-            !phoneOK(me)||
-            !phoneOK(other)
-        )return;
+        if (!socket.phone) {
+            return;
+        }
+
+        const user = users.get(socket.phone);
+
+        if (!user) {
+            return;
+        }
+
+        const name =
+            String(data?.name || "")
+                .trim()
+                .slice(0, 40);
+
+        const username =
+            cleanUsername(data?.username);
+
+        if (!name) {
+            return sendError(
+                socket,
+                "نام را وارد کنید"
+            );
+        }
+
+        if (!validUsername(username)) {
+            return sendError(
+                socket,
+                "نام کاربری باید ۳ تا ۲۴ کاراکتر باشد"
+            );
+        }
+
+        for (const item of users.values()) {
+
+            if (
+                item.phone !== socket.phone &&
+                item.username === username
+            ) {
+                return sendError(
+                    socket,
+                    "این نام کاربری قبلاً استفاده شده است"
+                );
+            }
+        }
+
+        user.name = name;
+        user.username = username;
+
+        if (typeof data.photo === "string") {
+            user.photo =
+                data.photo.slice(0, 2_000_000);
+        }
+
+        users.set(socket.phone, user);
+
+        socket.emit("profile_updated", {
+            user: publicUser(user)
+        });
+
+        /*
+        | اطلاع به کسانی که این کاربر را دارند
+        */
+
+        io.emit("user_updated", {
+            user: publicUser(user)
+        });
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Search Users
+    |--------------------------------------------------------------------------
+    */
+
+    socket.on("search_users", (query) => {
+
+        const q = String(query || "")
+            .trim()
+            .replace(/^@/, "")
+            .toLowerCase();
+
+        if (!q) {
+            return socket.emit(
+                "search_results",
+                []
+            );
+        }
+
+        const result = [];
+
+        for (const user of users.values()) {
+
+            const match =
+                user.username
+                    .toLowerCase()
+                    .includes(q) ||
+                user.name
+                    .toLowerCase()
+                    .includes(q);
+
+            if (match) {
+                result.push(
+                    publicUser(user)
+                );
+            }
+
+            if (result.length >= 30) {
+                break;
+            }
+        }
 
         socket.emit(
-            "message_history",
-            messages.get(chatId(me,other))||[]
+            "search_results",
+            result
         );
     });
 
-    /* قطع اتصال */
-    socket.on("disconnect",()=>{
+    /*
+    |--------------------------------------------------------------------------
+    | Get User By Username
+    |--------------------------------------------------------------------------
+    */
 
-        const phone=socket.phone;
+    socket.on("get_user", (username) => {
 
-        if(
-            phone&&
-            online.get(phone)===socket.id
-        ){
-            online.delete(phone);
+        const q = cleanUsername(username);
 
-            io.emit("user_status",{
-                phone,
-                online:false
+        const user =
+            [...users.values()]
+                .find(
+                    x =>
+                        x.username === q
+                );
+
+        socket.emit(
+            "user_result",
+            user
+                ? publicUser(user)
+                : null
+        );
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Open Private Chat
+    |--------------------------------------------------------------------------
+    */
+
+    socket.on("open_chat", ({ phone }) => {
+
+        if (!socket.phone) {
+            return;
+        }
+
+        phone = cleanPhone(phone);
+
+        if (!users.has(phone)) {
+            return sendError(
+                socket,
+                "کاربر پیدا نشد"
+            );
+        }
+
+        const key =
+            conversationKey(
+                socket.phone,
+                phone
+            );
+
+        const history =
+            messages.get(key) || [];
+
+        socket.emit("chat_history", {
+            phone,
+            messages: history
+        });
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Send Private Message
+    |--------------------------------------------------------------------------
+    */
+
+    socket.on("send_message", (data) => {
+
+        if (!socket.phone) {
+            return;
+        }
+
+        const to =
+            cleanPhone(data?.to);
+
+        const text =
+            String(data?.message || "")
+                .trim()
+                .slice(0, 4000);
+
+        if (!validPhone(to)) {
+            return sendError(
+                socket,
+                "گیرنده معتبر نیست"
+            );
+        }
+
+        if (!text) {
+            return;
+        }
+
+        if (!users.has(to)) {
+            return sendError(
+                socket,
+                "این کاربر وجود ندارد"
+            );
+        }
+
+        const message = {
+            id: makeId(),
+            from: socket.phone,
+            to,
+            message: text,
+            time: Date.now()
+        };
+
+        const key =
+            conversationKey(
+                socket.phone,
+                to
+            );
+
+        if (!messages.has(key)) {
+            messages.set(key, []);
+        }
+
+        const history =
+            messages.get(key);
+
+        history.push(message);
+
+        /*
+        | محدود کردن حافظه
+        */
+
+        if (history.length > 500) {
+            history.splice(
+                0,
+                history.length - 500
+            );
+        }
+
+        /*
+        | فرستنده
+        */
+
+        socket.emit(
+            "new_message",
+            message
+        );
+
+        /*
+        | گیرنده
+        */
+
+        io.to(`user:${to}`).emit(
+            "new_message",
+            message
+        );
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Typing
+    |--------------------------------------------------------------------------
+    */
+
+    socket.on("typing", ({ to, typing }) => {
+
+        if (!socket.phone) {
+            return;
+        }
+
+        to = cleanPhone(to);
+
+        io.to(`user:${to}`).emit(
+            "typing",
+            {
+                from: socket.phone,
+                typing: !!typing
+            }
+        );
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Disconnect
+    |--------------------------------------------------------------------------
+    */
+
+    socket.on("disconnect", () => {
+
+        if (!socket.phone) {
+            return;
+        }
+
+        /*
+        | فقط اگر همین Socket هنوز فعال است
+        */
+
+        if (
+            sockets.get(socket.phone) ===
+            socket.id
+        ) {
+            sockets.delete(socket.phone);
+
+            io.emit("presence", {
+                phone: socket.phone,
+                online: false
             });
         }
 
         console.log(
-            "Disconnected:",
-            socket.id
+            "DISCONNECTED:",
+            socket.phone
         );
     });
 });
+
+/*
+|--------------------------------------------------------------------------
+| Start
+|--------------------------------------------------------------------------
+*/
 
 server.listen(
     PORT,
     "0.0.0.0",
-    ()=>{
+    () => {
         console.log(
-            `Virax server running on port ${PORT}`
+            `Virax running on port ${PORT}`
         );
     }
 );

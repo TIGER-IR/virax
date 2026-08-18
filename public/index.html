@@ -1,0 +1,2240 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Virax</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            height: 100vh;
+            overflow: hidden;
+            background: #080c20;
+            color: #fff;
+            font: 13px Tahoma;
+            user-select: none;
+        }
+
+        button,
+        input,
+        select {
+            font: inherit;
+            border: 0;
+            outline: 0;
+        }
+
+        button {
+            color: #fff;
+            background: none;
+        }
+
+        input {
+            user-select: text;
+        }
+
+        /* =========================
+           Login
+        ========================= */
+
+        #auth {
+            height: 100%;
+            display: grid;
+            place-items: center;
+            padding: 20px;
+        }
+
+        .box,
+        .modal {
+            background: #151a36;
+            border: 1px solid #ffffff10;
+            border-radius: 24px;
+        }
+
+        .login {
+            width: min(380px, 100%);
+            padding: 25px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 30px;
+            color: #8995ff;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .login p {
+            color: #858ba2;
+            font-size: 11px;
+            margin-bottom: 15px;
+        }
+
+        input {
+            height: 44px;
+            padding: 0 13px;
+            border-radius: 13px;
+            background: #0e1330;
+            color: #fff;
+        }
+
+        .login input,
+        .modal input {
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        .primary {
+            width: 100%;
+            height: 44px;
+            border-radius: 13px;
+            background: linear-gradient(135deg, #667eea, #7650a9);
+            font-weight: bold;
+        }
+
+        /* =========================
+           Main App
+        ========================= */
+
+        #app {
+            display: none;
+            height: 100%;
+        }
+
+        .header {
+            height: 60px;
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            background: #111630;
+        }
+
+        .header-logo {
+            font-size: 22px;
+            color: #8995ff;
+        }
+
+        .header-title {
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .search {
+            height: 58px;
+            padding: 7px 11px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .search input {
+            flex: 1;
+            height: 44px;
+            border-radius: 23px;
+        }
+
+        .admin {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: #181e3b;
+            border: 1px solid #ffffff12;
+        }
+
+        .page {
+            display: none;
+            height: calc(100% - 118px);
+            overflow: auto;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        /* =========================
+           Chats
+        ========================= */
+
+        .chat {
+            margin: 9px 12px;
+            padding: 11px 13px;
+            display: flex;
+            align-items: center;
+            border-radius: 28px;
+            background: #181e3bcc;
+            border: 1px solid #ffffff0d;
+        }
+
+        .avatar,
+        .pavatar,
+        .chatpic {
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .avatar {
+            width: 50px;
+            height: 50px;
+            margin-left: 11px;
+            font-size: 21px;
+            flex: none;
+        }
+
+        .avatar img,
+        .pavatar img,
+        .chatpic img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .info {
+            flex: 1;
+        }
+
+        .top {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .name {
+            font-weight: bold;
+        }
+
+        .time {
+            font-size: 9px;
+            color: #777d96;
+        }
+
+        .msg {
+            color: #8d93a8;
+            font-size: 11px;
+            margin-top: 6px;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 100px 20px;
+            color: #858ba2;
+        }
+
+        /* =========================
+           Profile
+        ========================= */
+
+        .profile {
+            padding: 18px 14px;
+            text-align: center;
+        }
+
+        .pavatar {
+            width: 100px;
+            height: 100px;
+            margin: auto;
+            font-size: 45px;
+            cursor: pointer;
+            box-shadow: 0 10px 30px #667eea35;
+        }
+
+        .pname {
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 12px;
+        }
+
+        .user {
+            color: #8995ff;
+            font-size: 11px;
+            margin-top: 5px;
+            cursor: pointer;
+        }
+
+        .online {
+            color: #4ade80;
+            font-size: 10px;
+        }
+
+        .verify {
+            display: inline-grid;
+            place-items: center;
+            width: 17px;
+            height: 17px;
+            margin-right: 4px;
+            border-radius: 50%;
+            background: #229ed9;
+            font: bold 11px Arial;
+        }
+
+        .card {
+            max-width: 500px;
+            margin: 18px auto 0;
+            border-radius: 21px;
+            overflow: hidden;
+            background: #181e3bcc;
+            border: 1px solid #ffffff0d;
+            text-align: right;
+        }
+
+        .row {
+            padding: 12px 14px;
+            border-bottom: 1px solid #ffffff08;
+        }
+
+        .row:last-child {
+            border: 0;
+        }
+
+        .label {
+            font-size: 9px;
+            color: #7d849d;
+        }
+
+        .value {
+            margin-top: 4px;
+        }
+
+        .hidden {
+            font-size: 10px;
+            color: #666b80;
+            margin-top: 3px;
+        }
+
+        .logout {
+            width: 100%;
+            max-width: 500px;
+            height: 43px;
+            margin: 10px auto;
+            border-radius: 20px;
+            background: #ef44441a;
+            color: #ff7373;
+        }
+
+        /* =========================
+           Navigation
+        ========================= */
+
+        .nav {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 20px);
+            max-width: 620px;
+            height: 68px;
+            padding: 5px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 4px;
+            background: #181e3bf5;
+            border: 1px solid #ffffff12;
+            border-radius: 38px;
+            box-shadow: 0 8px 25px #0005;
+            backdrop-filter: blur(18px);
+        }
+
+        .nav button {
+            border-radius: 30px;
+            font-size: 9px;
+            color: #747b94;
+        }
+
+        .nav .on {
+            background: #ffffff12;
+            color: #fff;
+        }
+
+        .nav b {
+            display: block;
+            font-size: 19px;
+            margin-bottom: 2px;
+        }
+
+        /* =========================
+           Modals
+        ========================= */
+
+        #edit,
+        #panel,
+        #userProfile {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 5;
+            align-items: center;
+            justify-content: center;
+            background: #000b;
+            padding: 15px;
+        }
+
+        .modal {
+            width: min(430px, 100%);
+            padding: 20px;
+        }
+
+        .modal h3 {
+            margin-bottom: 15px;
+        }
+
+        .modal input,
+        .modal select {
+            width: 100%;
+            height: 42px;
+            margin: 5px 0;
+            padding: 0 12px;
+            border-radius: 12px;
+            background: #0e1330;
+            color: #fff;
+        }
+
+        .actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 7px;
+            margin-top: 8px;
+        }
+
+        .danger {
+            background: #ef444425;
+            color: #ff7777;
+        }
+
+        .safe {
+            background: #22c55e22;
+            color: #66e89a;
+        }
+
+        .mbtn {
+            width: 100%;
+            height: 40px;
+            border-radius: 12px;
+            margin-top: 6px;
+            background: #ffffff0b;
+        }
+
+        #file {
+            display: none;
+        }
+
+        /* =========================
+           Toast
+        ========================= */
+
+        .toast {
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translate(-50%, 20px);
+            opacity: 0;
+            padding: 10px 15px;
+            border-radius: 14px;
+            background: #1d2445ee;
+            font-size: 11px;
+            transition: 0.2s;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translate(-50%, 0);
+        }
+
+        /* =========================
+           Chat Page
+        ========================= */
+
+        #savedChat {
+            display: none;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #chatHead {
+            height: 58px;
+            background: #111630;
+            border-bottom: 1px solid #ffffff08;
+            display: flex;
+            align-items: flex-start;
+            padding: 5px 12px;
+            gap: 10px;
+        }
+
+        .back {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 22px;
+            background: #ffffff08;
+        }
+
+        .chatpic {
+            width: 45px;
+            height: 45px;
+            flex: none;
+            font-size: 20px;
+        }
+
+        .chatUser {
+            min-width: 0;
+            cursor: pointer;
+            padding-top: 3px;
+        }
+
+        .chatUser b {
+            display: block;
+            font-size: 13px;
+            line-height: 18px;
+        }
+
+        .chatUser span {
+            display: block;
+            color: #4ade80;
+            font-size: 9px;
+            margin-top: 2px;
+        }
+
+        .baninfo {
+            margin-top: 12px;
+            padding: 11px 15px;
+            width: max-content;
+            max-width: 100%;
+            border-radius: 12px;
+            background: #ef444430;
+            border: 1px solid #ef444450;
+            color: #ff8585;
+            font-size: 11px;
+        }
+
+        #messages {
+            height: calc(100% - 116px);
+            overflow: auto;
+            padding: 8px 12px 12px;
+        }
+
+        .message {
+            width: max-content;
+            max-width: 78%;
+            margin: 5px 0 5px auto;
+            padding: 9px 12px;
+            border-radius: 15px 15px 4px 15px;
+            background: #667eea;
+            word-break: break-word;
+            user-select: text;
+        }
+
+        .sendbar {
+            height: 58px;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 7px 11px;
+            display: flex;
+            gap: 7px;
+            background: #111630;
+        }
+
+        .sendbar input {
+            flex: 1;
+            height: 44px;
+            border-radius: 23px;
+        }
+
+        .send {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: #667eea;
+            font-size: 18px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- =========================
+         Login
+    ========================= -->
+
+    <div id="auth">
+        <div class="login box">
+
+            <div class="logo">⚡ 𝐕𝐢𝐫𝐚𝐱</div>
+
+            <p>
+                شماره موبایل خود را وارد کنید
+            </p>
+
+            <input
+                id="phoneInput"
+                inputmode="numeric"
+                maxlength="11"
+                placeholder="09123456789"
+            >
+
+            <button
+                class="primary"
+                onclick="login()"
+            >
+                ورود / ثبت‌نام
+            </button>
+
+            <button
+                id="unbanBtn"
+                class="mbtn safe"
+                style="display:none"
+                onclick="unbanMe()"
+            >
+                🔓 رفع بن خودم
+            </button>
+
+        </div>
+    </div>
+
+
+    <!-- =========================
+         Main App
+    ========================= -->
+
+    <div id="app">
+
+        <header
+            class="header"
+            id="mainHeader"
+        >
+            <span class="header-logo">⚡</span>
+
+            <span
+                class="header-title"
+                id="title"
+            >
+                𝐕𝐢𝐫𝐚𝐱
+            </span>
+        </header>
+
+
+        <!-- Search -->
+
+        <div
+            class="search"
+            id="search"
+        >
+
+            <input
+                id="find"
+                placeholder="جستجوی گفتگوها..."
+            >
+
+            <button
+                id="admin"
+                class="admin"
+                onclick="panel()"
+                style="display:none"
+            >
+                🛡
+            </button>
+
+        </div>
+
+
+        <!-- =========================
+             Chats
+        ========================= -->
+
+        <section
+            id="chats"
+            class="page active"
+        >
+
+            <!-- Saved Messages -->
+
+            <div
+                class="chat"
+                onclick="openChat('saved')"
+            >
+
+                <div class="avatar">
+                    🔖
+                </div>
+
+                <div class="info">
+
+                    <div class="top">
+                        <b class="name">
+                            پیام‌های ذخیره‌شده
+                        </b>
+
+                        <span class="time">
+                            اکنون
+                        </span>
+                    </div>
+
+                    <div class="msg">
+                        پیام‌های ذخیره‌شده شما
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- Mohammad -->
+
+            <div
+                class="chat"
+                onclick="openChat('user1')"
+            >
+
+                <div
+                    class="avatar"
+                    id="chatAvatar"
+                >
+                    👤
+                </div>
+
+                <div class="info">
+
+                    <div class="top">
+
+                        <b
+                            class="name"
+                            id="mname"
+                        >
+                            محمد
+                        </b>
+
+                        <span class="time">
+                            اکنون
+                        </span>
+
+                    </div>
+
+                    <div class="msg">
+                        سلام، خوبی؟
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =========================
+             Chat
+        ========================= -->
+
+        <section id="savedChat">
+
+            <div id="chatHead">
+
+                <button
+                    class="back"
+                    onclick="closeChat()"
+                >
+                    ‹
+                </button>
+
+                <div
+                    class="chatpic"
+                    id="chatPic"
+                    onclick="openUserProfile()"
+                >
+                    👤
+                </div>
+
+                <div
+                    class="chatUser"
+                    onclick="openUserProfile()"
+                >
+
+                    <b id="chatName"></b>
+
+                    <span>
+                        ● آنلاین
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div id="messages"></div>
+
+
+            <div class="sendbar">
+
+                <input
+                    id="messageInput"
+                    placeholder="پیام..."
+                    autocomplete="off"
+                >
+
+                <button
+                    class="send"
+                    onclick="sendMsg()"
+                >
+                    ➤
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- =========================
+             Contacts
+        ========================= -->
+
+        <section
+            id="contacts"
+            class="page"
+        >
+
+            <div class="empty">
+
+                👥
+
+                <br><br>
+
+                <b style="color:#fff">
+                    مخاطبین شما
+                </b>
+
+                <br><br>
+
+                به‌زودی در دسترس خواهد بود
+
+            </div>
+
+        </section>
+
+
+        <!-- =========================
+             Profile
+        ========================= -->
+
+        <section
+            id="profile"
+            class="page"
+        >
+
+            <div class="profile">
+
+                <div
+                    class="pavatar"
+                    id="pic"
+                    onclick="pick()"
+                >
+                    👤
+                </div>
+
+                <div
+                    class="pname"
+                    id="pn"
+                ></div>
+
+                <div
+                    class="user"
+                    id="pu"
+                    onclick="copyUser(p.user)"
+                ></div>
+
+                <div class="online">
+                    ● آنلاین
+                </div>
+
+
+                <div class="card">
+
+                    <div
+                        class="row"
+                        onclick="editProfile()"
+                    >
+                        <div class="label">
+                            نام
+                        </div>
+
+                        <div
+                            class="value"
+                            id="rn"
+                        ></div>
+                    </div>
+
+
+                    <div
+                        class="row"
+                        onclick="editProfile()"
+                    >
+                        <div class="label">
+                            نام کاربری
+                        </div>
+
+                        <div
+                            class="value"
+                            id="ru"
+                        ></div>
+                    </div>
+
+
+                    <div class="row">
+
+                        <div class="label">
+                            شماره موبایل
+                        </div>
+
+                        <div
+                            class="value"
+                            id="rp"
+                        ></div>
+
+                    </div>
+
+                </div>
+
+
+                <button
+                    class="logout"
+                    onclick="logout()"
+                >
+                    خروج از حساب کاربری
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- =========================
+             Navigation
+        ========================= -->
+
+        <nav class="nav">
+
+            <button
+                class="on"
+                onclick="go('chats', this)"
+            >
+                <b>💬</b>
+                گفتگوها
+            </button>
+
+            <button
+                onclick="go('contacts', this)"
+            >
+                <b>👥</b>
+                مخاطبین
+            </button>
+
+            <button
+                onclick="go('profile', this)"
+            >
+                <b>👤</b>
+                پروفایل
+            </button>
+
+            <button onclick="soon()">
+                <b>⚙️</b>
+                تنظیمات
+            </button>
+
+        </nav>
+
+    </div>
+
+
+    <!-- =========================
+         User Profile Modal
+    ========================= -->
+
+    <div id="userProfile">
+
+        <div class="modal profile">
+
+            <div
+                class="pavatar"
+                id="mpic"
+            >
+                👤
+            </div>
+
+            <div
+                class="pname"
+                id="mprofile"
+            ></div>
+
+            <div
+                class="user"
+                id="muser"
+            ></div>
+
+            <div class="online">
+                ● آنلاین
+            </div>
+
+
+            <div class="card">
+
+                <div class="row">
+
+                    <div class="label">
+                        نام کاربری
+                    </div>
+
+                    <div
+                        class="value"
+                        id="muser2"
+                    ></div>
+
+                </div>
+
+
+                <div class="row">
+
+                    <div class="label">
+                        شماره موبایل
+                    </div>
+
+                    <div
+                        class="value"
+                        id="mphone"
+                    ></div>
+
+                    <div class="hidden"></div>
+
+                </div>
+
+            </div>
+
+
+            <button
+                class="primary"
+                style="margin-top:12px"
+                onclick="$('userProfile').style.display='none'"
+            >
+                بستن
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- File Upload -->
+
+    <input
+        id="file"
+        type="file"
+        accept="image/*"
+    >
+
+
+    <!-- =========================
+         Edit Profile
+    ========================= -->
+
+    <div id="edit">
+
+        <div class="modal">
+
+            <h3>
+                ویرایش پروفایل
+            </h3>
+
+            <input
+                id="ename"
+                placeholder="نام"
+            >
+
+            <input
+                id="euser"
+                placeholder="نام کاربری"
+                dir="ltr"
+            >
+
+            <button
+                class="primary"
+                onclick="saveProfile()"
+            >
+                ذخیره
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================
+         Admin Panel
+    ========================= -->
+
+    <div id="panel">
+
+        <div class="modal">
+
+            <h3>
+                🛡 پنل مدیریت
+            </h3>
+
+
+            <input
+                id="adminPhone"
+                inputmode="numeric"
+                maxlength="11"
+                placeholder="شماره کاربر برای مدیریت ادمین"
+            >
+
+
+            <div class="actions">
+
+                <button
+                    class="mbtn safe"
+                    onclick="addAdmin()"
+                >
+                    👑 ادمین کردن
+                </button>
+
+                <button
+                    class="mbtn danger"
+                    onclick="removeAdmin()"
+                >
+                    ❌ حذف ادمین
+                </button>
+
+            </div>
+
+
+            <input
+                id="target"
+                placeholder="شماره یا @یوزرنیم"
+            >
+
+
+            <div class="actions">
+
+                <button
+                    class="mbtn safe"
+                    onclick="blue(1)"
+                >
+                    🔵 افزودن تیک
+                </button>
+
+                <button
+                    class="mbtn danger"
+                    onclick="blue(0)"
+                >
+                    ❌ حذف تیک
+                </button>
+
+            </div>
+
+
+            <select id="days"></select>
+
+
+            <div class="actions">
+
+                <button
+                    class="mbtn danger"
+                    onclick="ban()"
+                >
+                    🚫 بن کاربر
+                </button>
+
+                <button
+                    class="mbtn safe"
+                    onclick="unban()"
+                >
+                    🔓 رفع بن
+                </button>
+
+            </div>
+
+
+            <button
+                class="primary"
+                style="margin-top:8px"
+                onclick="$('panel').style.display='none'"
+            >
+                بستن
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- Toast -->
+
+    <div
+        id="toast"
+        class="toast"
+    ></div>
+
+
+    <!-- =========================
+         JavaScript
+    ========================= -->
+
+    <script>
+        const $ = x => document.getElementById(x);
+
+        const ADMIN = '09001115958';
+        const MOHAMMAD = '09123456789';
+
+
+        /* =========================
+           Local Storage
+        ========================= */
+
+        let users = JSON.parse(
+            localStorage.users || '{}'
+        );
+
+        let admins = JSON.parse(
+            localStorage.admins || '[]'
+        );
+
+        let blueDB = JSON.parse(
+            localStorage.blue || '{}'
+        );
+
+        let banDB = JSON.parse(
+            localStorage.bans || '{}'
+        );
+
+        let phone = localStorage.phone || '';
+
+        let room = 'saved';
+
+
+        /* =========================
+           Default Admin
+        ========================= */
+
+        users[ADMIN] ??= {
+            name: 'کاربر Virax',
+            user: '',
+            photo: ''
+        };
+
+        localStorage.users = JSON.stringify(users);
+
+
+        /* =========================
+           Ban Duration
+        ========================= */
+
+        for (let i = 1; i <= 30; i++) {
+            days.innerHTML += `
+                <option value="${i}">
+                    ${i} روز
+                </option>
+            `;
+        }
+
+        days.innerHTML += `
+            <option value="-1">
+                بن دائم
+            </option>
+        `;
+
+
+        /* =========================
+           Current User
+        ========================= */
+
+        if (phone && !users[phone]) {
+            localStorage.removeItem('phone');
+            phone = '';
+        }
+
+        let p = users[phone] || null;
+
+
+        /* =========================
+           Helper Functions
+        ========================= */
+
+        const isAdmin = n =>
+            n === ADMIN || admins.includes(n);
+
+        const adminOnly = () =>
+            isAdmin(phone);
+
+        const saveData = () =>
+            localStorage.users =
+                JSON.stringify(users);
+
+        const getUser = n =>
+            users[n] || {
+                name: 'کاربر Virax',
+                user: '',
+                photo: ''
+            };
+
+        const verify = n =>
+            blueDB[n]
+                ? '<i class="verify">✓</i>'
+                : '';
+
+
+        /* =========================
+           Login
+        ========================= */
+
+        function login() {
+
+            let x = phoneInput.value
+                .replace(/\D/g, '');
+
+            if (!/^09\d{9}$/.test(x)) {
+                return msg(
+                    'شماره معتبر وارد کنید'
+                );
+            }
+
+
+            let b = banDB[x];
+
+            if (
+                b &&
+                (b === -1 || b > Date.now())
+            ) {
+
+                unbanBtn.style.display =
+                    x === ADMIN
+                        ? 'block'
+                        : 'none';
+
+                return msg(
+                    b === -1
+                        ? 'این حساب برای همیشه مسدود است'
+                        : 'این حساب موقتاً مسدود شده است'
+                );
+            }
+
+
+            users[x] ??= {
+                name: 'کاربر Virax',
+                user: '',
+                photo: ''
+            };
+
+
+            phone = x;
+
+            p = {
+                ...users[x]
+            };
+
+
+            localStorage.phone = x;
+
+            saveData();
+
+
+            auth.style.display = 'none';
+
+            app.style.display = 'block';
+
+            unbanBtn.style.display = 'none';
+
+            render();
+        }
+
+
+        /* =========================
+           Unban Current User
+        ========================= */
+
+        function unbanMe() {
+
+            if (
+                phoneInput.value.replace(
+                    /\D/g,
+                    ''
+                ) !== ADMIN
+            ) {
+                return;
+            }
+
+
+            delete banDB[ADMIN];
+
+            localStorage.bans =
+                JSON.stringify(banDB);
+
+            unbanBtn.style.display = 'none';
+
+            msg(
+                'بن شما با موفقیت رفع شد'
+            );
+        }
+
+
+        /* =========================
+           Render
+        ========================= */
+
+        function render() {
+
+            pn.innerHTML =
+                p.name + verify(phone);
+
+            pu.textContent =
+                p.user
+                    ? '@' + p.user
+                    : 'آیدی انتخاب نشده';
+
+            rn.textContent = p.name;
+
+            ru.textContent =
+                p.user
+                    ? '@' + p.user
+                    : 'آیدی انتخاب نشده';
+
+            rp.textContent = phone;
+
+
+            admin.style.display =
+                adminOnly()
+                    ? 'block'
+                    : 'none';
+
+
+            pic.innerHTML =
+                p.photo
+                    ? `<img src="${p.photo}">`
+                    : '👤';
+
+
+            let u = getUser(MOHAMMAD);
+
+
+            mname.innerHTML =
+                u.name + verify(MOHAMMAD);
+
+
+            chatAvatar.innerHTML =
+                u.photo
+                    ? `<img src="${u.photo}">`
+                    : '👤';
+
+
+            if (room === 'user1') {
+
+                chatName.innerHTML =
+                    u.name + verify(MOHAMMAD);
+
+                chatPic.innerHTML =
+                    u.photo
+                        ? `<img src="${u.photo}">`
+                        : '👤';
+            }
+        }
+
+
+        /* =========================
+           Profile Picture
+        ========================= */
+
+        function pick() {
+            file.click();
+        }
+
+
+        file.onchange = e => {
+
+            let f = e.target.files[0];
+
+            if (!f) {
+                return;
+            }
+
+
+            if (f.size > 3e6) {
+                return msg(
+                    'حجم تصویر کمتر از ۳ مگابایت باشد'
+                );
+            }
+
+
+            let r = new FileReader;
+
+
+            r.onload = () => {
+
+                p.photo = r.result;
+
+                users[phone] = {
+                    ...p
+                };
+
+                saveData();
+
+                render();
+            };
+
+
+            r.readAsDataURL(f);
+        };
+
+
+        /* =========================
+           Navigation
+        ========================= */
+
+        function go(x, b) {
+
+            document
+                .querySelectorAll('.page')
+                .forEach(e =>
+                    e.classList.remove('active')
+                );
+
+
+            savedChat.style.display = 'none';
+
+            mainHeader.style.display = 'flex';
+
+            document.querySelector('.nav')
+                .style.display = 'grid';
+
+
+            $(x).classList.add('active');
+
+
+            document
+                .querySelectorAll('.nav button')
+                .forEach(e =>
+                    e.classList.remove('on')
+                );
+
+
+            b.classList.add('on');
+
+
+            title.textContent = {
+                chats: '𝐕𝐢𝐫𝐚𝐱',
+                contacts: 'مخاطبین',
+                profile: 'پروفایل'
+            }[x];
+
+
+            search.style.display =
+                x === 'chats'
+                    ? 'flex'
+                    : 'none';
+        }
+
+
+        /* =========================
+           Open Chat
+        ========================= */
+
+        function openChat(r) {
+
+            room = r;
+
+            chats.classList.remove('active');
+
+            search.style.display = 'none';
+
+            mainHeader.style.display = 'none';
+
+            savedChat.style.display = 'block';
+
+            document.querySelector('.nav')
+                .style.display = 'none';
+
+
+            document
+                .getElementById('banInfo')
+                ?.remove();
+
+
+            if (r === 'saved') {
+
+                chatName.textContent =
+                    'پیام‌های ذخیره‌شده';
+
+                chatPic.innerHTML = '🔖';
+
+            } else {
+
+                let u = getUser(MOHAMMAD);
+
+
+                chatName.innerHTML =
+                    u.name + verify(MOHAMMAD);
+
+
+                chatPic.innerHTML =
+                    u.photo
+                        ? `<img src="${u.photo}">`
+                        : '👤';
+
+
+                let b = banDB[MOHAMMAD];
+
+
+                if (
+                    b === -1 ||
+                    b > Date.now()
+                ) {
+
+                    let x =
+                        document.createElement('div');
+
+
+                    x.id = 'banInfo';
+
+                    x.className = 'baninfo';
+
+                    x.textContent =
+                        'این کاربر به دلیل تخلف مسدود شده است';
+
+
+                    document
+                        .querySelector('.chatUser')
+                        .appendChild(x);
+                }
+            }
+
+
+            loadMsg();
+
+            messageInput.focus();
+        }
+
+
+        /* =========================
+           Close Chat
+        ========================= */
+
+        function closeChat() {
+
+            savedChat.style.display = 'none';
+
+            mainHeader.style.display = 'flex';
+
+            search.style.display = 'flex';
+
+            document.querySelector('.nav')
+                .style.display = 'grid';
+
+            chats.classList.add('active');
+        }
+
+
+        /* =========================
+           Copy Username
+        ========================= */
+
+        function copyUser(u) {
+
+            if (!u) {
+                return msg(
+                    'این کاربر آیدی ندارد'
+                );
+            }
+
+
+            navigator.clipboard?.writeText(
+                '@' + u
+            );
+
+
+            msg('آیدی کپی شد');
+        }
+
+
+        /* =========================
+           User Profile
+        ========================= */
+
+        function openUserProfile() {
+
+            if (room === 'saved') {
+                return msg(
+                    'پروفایل برای پیام‌های ذخیره‌شده وجود ندارد'
+                );
+            }
+
+
+            let u = getUser(MOHAMMAD);
+
+
+            mprofile.innerHTML =
+                u.name + verify(MOHAMMAD);
+
+
+            muser.textContent =
+                u.user
+                    ? '@' + u.user
+                    : 'آیدی انتخاب نشده';
+
+
+            muser2.textContent =
+                u.user
+                    ? '@' + u.user
+                    : 'آیدی انتخاب نشده';
+
+
+            muser.onclick =
+                muser2.onclick =
+                () => copyUser(u.user);
+
+
+            mphone.textContent =
+                adminOnly()
+                    ? MOHAMMAD
+                    : 'شماره مخفی شده';
+
+
+            mpic.innerHTML =
+                u.photo
+                    ? `<img src="${u.photo}">`
+                    : '👤';
+
+
+            userProfile.style.display = 'flex';
+        }
+
+
+        /* =========================
+           Edit Profile
+        ========================= */
+
+        function editProfile() {
+
+            ename.value = p.name;
+
+            euser.value = p.user;
+
+            edit.style.display = 'flex';
+        }
+
+
+        function saveProfile() {
+
+            let u = euser.value
+                .trim()
+                .replace(/^@/, '')
+                .replace(/\s/g, '_')
+                .toLowerCase();
+
+
+            let n =
+                ename.value.trim() ||
+                'کاربر Virax';
+
+
+            if (!u) {
+                return msg(
+                    'نام کاربری را وارد کنید'
+                );
+            }
+
+
+            if (
+                Object.keys(users).some(
+                    k =>
+                        k !== phone &&
+                        (users[k].user || '')
+                            .toLowerCase() === u
+                )
+            ) {
+
+                return msg(
+                    'این نام کاربری قبلاً استفاده شده است'
+                );
+            }
+
+
+            p = {
+                name: n,
+                user: u,
+                photo: p.photo || ''
+            };
+
+
+            users[phone] = {
+                ...p
+            };
+
+
+            saveData();
+
+
+            edit.style.display = 'none';
+
+            render();
+
+            msg('پروفایل ذخیره شد');
+        }
+
+
+        /* =========================
+           Admin Panel
+        ========================= */
+
+        function panel() {
+
+            if (adminOnly()) {
+                $('panel').style.display = 'flex';
+            }
+        }
+
+
+        /* =========================
+           Add Admin
+        ========================= */
+
+        function addAdmin() {
+
+            if (phone !== ADMIN) {
+                return msg(
+                    'فقط ادمین اصلی مجاز است'
+                );
+            }
+
+
+            let n = adminPhone.value
+                .replace(/\D/g, '');
+
+
+            if (!/^09\d{9}$/.test(n)) {
+                return msg(
+                    'شماره معتبر نیست'
+                );
+            }
+
+
+            if (n === ADMIN) {
+                return msg(
+                    'ادمین اصلی قابل حذف نیست'
+                );
+            }
+
+
+            if (!users[n]) {
+                return msg(
+                    'این کاربر ثبت‌نام نکرده است'
+                );
+            }
+
+
+            if (admins.includes(n)) {
+                return msg(
+                    'این کاربر از قبل ادمین است'
+                );
+            }
+
+
+            admins.push(n);
+
+            localStorage.admins =
+                JSON.stringify(admins);
+
+
+            adminPhone.value = '';
+
+            msg('کاربر ادمین شد');
+        }
+
+
+        /* =========================
+           Remove Admin
+        ========================= */
+
+        function removeAdmin() {
+
+            if (phone !== ADMIN) {
+                return msg(
+                    'فقط ادمین اصلی مجاز است'
+                );
+            }
+
+
+            let n = adminPhone.value
+                .replace(/\D/g, '');
+
+
+            if (!/^09\d{9}$/.test(n)) {
+                return msg(
+                    'شماره معتبر نیست'
+                );
+            }
+
+
+            if (n === ADMIN) {
+                return msg(
+                    'ادمین اصلی قابل حذف نیست'
+                );
+            }
+
+
+            if (!admins.includes(n)) {
+                return msg(
+                    'این کاربر ادمین نیست'
+                );
+            }
+
+
+            admins = admins.filter(
+                x => x !== n
+            );
+
+
+            localStorage.admins =
+                JSON.stringify(admins);
+
+
+            adminPhone.value = '';
+
+            msg(
+                'دسترسی ادمینی حذف شد'
+            );
+        }
+
+
+        /* =========================
+           Find User
+        ========================= */
+
+        function findUser() {
+
+            let q = target.value
+                .trim()
+                .replace(/^@/, '')
+                .toLowerCase();
+
+
+            if (!q) {
+                return msg(
+                    'شماره یا یوزرنیم را وارد کنید'
+                );
+            }
+
+
+            let n =
+                /^09\d{9}$/.test(q)
+                    ? q
+                    : Object.keys(users).find(
+                        k =>
+                            (users[k].user || '')
+                                .toLowerCase() === q
+                    );
+
+
+            return n ||
+                (
+                    msg('کاربر پیدا نشد'),
+                    null
+                );
+        }
+
+
+        /* =========================
+           Blue Verification
+        ========================= */
+
+        function blue(x) {
+
+            let n = findUser();
+
+            if (!n) {
+                return;
+            }
+
+
+            if (x) {
+                blueDB[n] = 1;
+            } else {
+                delete blueDB[n];
+            }
+
+
+            localStorage.blue =
+                JSON.stringify(blueDB);
+
+
+            render();
+
+
+            msg(
+                x
+                    ? 'تیک آبی اضافه شد'
+                    : 'تیک آبی حذف شد'
+            );
+        }
+
+
+        /* =========================
+           Ban
+        ========================= */
+
+        function ban() {
+
+            let n = findUser();
+
+            if (!n) {
+                return;
+            }
+
+
+            let d = +days.value;
+
+
+            banDB[n] =
+                d < 0
+                    ? -1
+                    : Date.now() + d * 864e5;
+
+
+            localStorage.bans =
+                JSON.stringify(banDB);
+
+
+            msg(
+                d < 0
+                    ? 'بن دائم شد'
+                    : `بن ${d} روزه شد`
+            );
+        }
+
+
+        /* =========================
+           Unban
+        ========================= */
+
+        function unban() {
+
+            let n = findUser();
+
+            if (!n) {
+                return;
+            }
+
+
+            delete banDB[n];
+
+
+            localStorage.bans =
+                JSON.stringify(banDB);
+
+
+            msg('بن رفع شد');
+        }
+
+
+        /* =========================
+           Messages
+        ========================= */
+
+        function msgKey() {
+
+            return (
+                'virax_' +
+                phone +
+                '_' +
+                room +
+                '_messages'
+            );
+        }
+
+
+        function loadMsg() {
+
+            let a = JSON.parse(
+                localStorage[msgKey()] || '[]'
+            );
+
+
+            messages.innerHTML =
+                a
+                    .map(
+                        x =>
+                            `<div class="message">${esc(x)}</div>`
+                    )
+                    .join('');
+
+
+            messages.scrollTop =
+                messages.scrollHeight;
+        }
+
+
+        function sendMsg() {
+
+            let x =
+                messageInput.value.trim();
+
+
+            if (!x) {
+                return;
+            }
+
+
+            let a = JSON.parse(
+                localStorage[msgKey()] || '[]'
+            );
+
+
+            a.push(x);
+
+
+            localStorage[msgKey()] =
+                JSON.stringify(a);
+
+
+            messageInput.value = '';
+
+            loadMsg();
+        }
+
+
+        messageInput.onkeydown = e => {
+
+            if (e.key === 'Enter') {
+                sendMsg();
+            }
+
+        };
+
+
+        /* =========================
+           Escape HTML
+        ========================= */
+
+        function esc(x) {
+
+            return x.replace(
+                /[&<>"']/g,
+                m =>
+                    ({
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        '"': '&quot;',
+                        "'": '&#039;'
+                    })[m]
+            );
+        }
+
+
+        /* =========================
+           Logout
+        ========================= */
+
+        function logout() {
+
+            localStorage.removeItem('phone');
+
+            phone = '';
+
+            p = null;
+
+
+            app.style.display = 'none';
+
+            auth.style.display = 'grid';
+
+
+            phoneInput.value = '';
+
+            unbanBtn.style.display = 'none';
+        }
+
+
+        /* =========================
+           Settings
+        ========================= */
+
+        function soon() {
+
+            msg(
+                '⚙️ تنظیمات به‌زودی در دسترس خواهد بود'
+            );
+        }
+
+
+        /* =========================
+           Toast Message
+        ========================= */
+
+        function msg(x) {
+
+            let t = toast;
+
+
+            t.textContent = x;
+
+            t.classList.add('show');
+
+
+            clearTimeout(window.tm);
+
+
+            window.tm = setTimeout(
+                () =>
+                    t.classList.remove('show'),
+                2000
+            );
+        }
+
+
+        /* =========================
+           Search
+        ========================= */
+
+        find.oninput = e => {
+
+            let q = e.target.value
+                .trim()
+                .toLowerCase();
+
+
+            document
+                .querySelectorAll('#chats .chat')
+                .forEach(c => {
+
+                    c.style.display =
+                        !q ||
+                        c.innerText
+                            .toLowerCase()
+                            .includes(q)
+                            ? 'flex'
+                            : 'none';
+
+                });
+        };
+
+
+        /* =========================
+           Auto Login
+        ========================= */
+
+        if (phone) {
+
+            auth.style.display = 'none';
+
+            app.style.display = 'block';
+
+            render();
+        }
+    </script>
+
+</body>
+
+  </html>

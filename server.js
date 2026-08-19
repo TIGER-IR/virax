@@ -1,840 +1,1049 @@
 const express = require("express");
 const http = require("http");
-const { Server } = require("socket.io");
 const path = require("path");
+const { Server } = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
+const io = new Server(server);
 
-const io = new Server(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-    }
-});
+const PORT = process.env.PORT || 10000;
 
-const PORT = process.env.PORT || 3000;
+/* =========================
+   تنظیمات
+========================= */
+
+const MAIN_ADMIN = "09001115958";
+
+/*
+  فعلاً دیتابیس نداریم.
+  اطلاعات تا وقتی سرور Restart نشود
+  داخل RAM نگهداری می‌شوند.
+*/
+
+const users = new Map();
+const messages = new Map();
+
+const admins = new Set();
+const blueUsers = new Set();
+const bans = new Map();
+
+const sockets = new Map();
 
 /* =========================
    Middleware
 ========================= */
 
-app.use(express.json({ limit: "5mb" }));
+app.use(
+  express.json({
+    limit: "5mb"
+  })
+);
 
-app.use(express.static(
+app.use(
+  express.static(
     path.join(__dirname, "public")
-));
-
-
-/* =========================
-   In-Memory Database
-   فعلاً بدون دیتابیس
-========================= */
-
-const users = new Map();
-const messages = new Map();
-const onlineUsers = new Map();
-const admins = new Set();
-
-const MAIN_ADMIN = "09001115958";
-
-admins.add(MAIN_ADMIN);
-
+  )
+);
 
 /* =========================
    Helpers
 ========================= */
 
-function cleanPhone(phone) {
-    return String(phone || "")
-        .replace(/\D/g, "");
-}
-
-function cleanUsername(username) {
-    return String(username || "")
-        .trim()
-        .replace(/^@/, "")
-        .toLowerCase();
-}
-
 function validPhone(phone) {
-    return /^09\d{9}$/.test(phone);
+  return /^09\d{9}$/.test(
+    String(phone || "")
+  );
+}
+
+function chatKey(a, b) {
+  return [a, b]
+    .sort()
+    .join(":");
 }
 
 function getUser(phone) {
-    phone = cleanPhone(phone);
 
-    return users.get(phone) || {
-        phone,
-        name: "کاربر Virax",
-        username: "",
-        photo: "",
-        verified: false,
-        createdAt: Date.now()
-    };
+  return users.get(phone) || {
+    name: "کاربر Virax",
+    user: "",
+    photo: ""
+  };
+
 }
 
-function publicUser(user) {
-    return {
-        phone: user.phone,
-        name: user.name,
-        username: user.username,
-        photo: user.photo,
-        verified: user.verified
-    };
+function isAdmin(phone) {
+
+  return (
+    phone === MAIN_ADMIN ||
+    admins.has(phone)
+  );
+
 }
 
-function roomKey(a, b) {
-    return [a, b]
-        .sort()
-        .join(":");
+function isBanned(phone) {
+
+  const ban = bans.get(phone);
+
+  if (!ban) {
+    return false;
+  }
+
+  /* بن دائمی */
+
+  if (ban === -1) {
+    return true;
+  }
+
+  /* بن موقت */
+
+  if (ban > Date.now()) {
+    return true;
+  }
+
+  /* بن تمام شده */
+
+  bans.delete(phone);
+
+  return false;
 }
 
-function getRoomMessages(a, b) {
-    const key = roomKey(a, b);
+function publicUser(phone) {
 
-    if (!messages.has(key)) {
-        messages.set(key, []);
-    }
+  const user = getUser(phone);
 
-    return messages.get(key);
+  return {
+
+    phone,
+
+    name: user.name,
+
+    user: user.user,
+
+    photo: user.photo,
+
+    verified:
+      blueUsers.has(phone),
+
+    online:
+      sockets.has(phone)
+
+  };
+
 }
 
+function sendError(res, code, text) {
+
+  return res.status(code).json({
+    error: text
+  });
+
+}
 
 /* =========================
-   Create / Update User
-========================= */
-
-function createUser(phone) {
-    phone = cleanPhone(phone);
-
-    if (!validPhone(phone)) {
-        return null;
-    }
-
-    if (!users.has(phone)) {
-        users.set(phone, {
-            phone,
-            name: "کاربر Virax",
-            username: "",
-            photo: "",
-            verified: false,
-            createdAt: Date.now()
-        });
-    }
-
-    return users.get(phone);
-}
-
-
-/* =========================
-   Health
-========================= */
-
-app.get("/health", (req, res) => {
-    res.json({
-        status: "ok",
-        app: "Virax",
-        online: onlineUsers.size,
-        users: users.size,
-        uptime: Math.floor(process.uptime())
-    });
-});
-
-
-/* =========================
-   API - Register / Login
+   LOGIN / REGISTER
 ========================= */
 
 app.post("/api/login", (req, res) => {
-    const phone = cleanPhone(req.body.phone);
 
-    if (!validPhone(phone)) {
-        return res.status(400).json({
-            ok: false,
-            error: "شماره موبایل معتبر نیست"
-        });
-    }
+  const phone =
+    String(req.body.phone || "")
+      .replace(/\D/g, "");
 
-    const user = createUser(phone);
+  if (!validPhone(phone)) {
 
-    res.json({
-        ok: true,
-        user: publicUser(user)
-    });
-});
-
-
-/* =========================
-   API - Search Users
-========================= */
-
-app.get("/api/users/search", (req, res) => {
-    const q = String(req.query.q || "")
-        .trim()
-        .toLowerCase()
-        .replace(/^@/, "");
-
-    if (!q) {
-        return res.json({
-            ok: true,
-            users: []
-        });
-    }
-
-    const result = [];
-
-    for (const user of users.values()) {
-
-        const phoneMatch =
-            user.phone.includes(q);
-
-        const usernameMatch =
-            user.username &&
-            user.username.toLowerCase().includes(q);
-
-        const nameMatch =
-            user.name &&
-            user.name.toLowerCase().includes(q);
-
-        if (
-            phoneMatch ||
-            usernameMatch ||
-            nameMatch
-        ) {
-            result.push(
-                publicUser(user)
-            );
-        }
-
-        if (result.length >= 30) {
-            break;
-        }
-    }
-
-    res.json({
-        ok: true,
-        users: result
-    });
-});
-
-
-/* =========================
-   API - User Profile
-========================= */
-
-app.get("/api/users/:phone", (req, res) => {
-    const phone = cleanPhone(
-        req.params.phone
+    return sendError(
+      res,
+      400,
+      "شماره موبایل معتبر نیست"
     );
 
-    const user = users.get(phone);
+  }
 
-    if (!user) {
-        return res.status(404).json({
-            ok: false,
-            error: "کاربر پیدا نشد"
-        });
-    }
+  if (isBanned(phone)) {
 
-    res.json({
-        ok: true,
-        user: publicUser(user)
-    });
-});
-
-
-/* =========================
-   API - Update Profile
-========================= */
-
-app.post("/api/profile", (req, res) => {
-
-    const phone = cleanPhone(
-        req.body.phone
+    return sendError(
+      res,
+      403,
+      "این حساب مسدود شده است"
     );
 
-    if (!validPhone(phone)) {
-        return res.status(400).json({
-            ok: false,
-            error: "شماره معتبر نیست"
-        });
-    }
+  }
 
-    const user = createUser(phone);
+  /*
+    اگر کاربر جدید باشد
+    ساخته می‌شود.
+  */
 
-    const name =
-        String(req.body.name || "")
-            .trim()
-            .slice(0, 50);
+  if (!users.has(phone)) {
 
-    const username =
-        cleanUsername(
-            req.body.username
-        ).slice(0, 30);
+    users.set(phone, {
 
-    if (username) {
+      name: "کاربر Virax",
 
-        for (const u of users.values()) {
+      user: "",
 
-            if (
-                u.phone !== phone &&
-                u.username === username
-            ) {
-                return res.status(409).json({
-                    ok: false,
-                    error: "این نام کاربری قبلاً استفاده شده است"
-                });
-            }
-        }
-    }
+      photo: ""
 
-    user.name =
-        name || "کاربر Virax";
+    });
 
-    user.username = username;
+  }
+
+  res.json({
+
+    ok: true,
+
+    user:
+      publicUser(phone),
+
+    admin:
+      isAdmin(phone)
+
+  });
+
+});
+
+/* =========================
+   GET USERS
+========================= */
+
+app.get("/api/users", (req, res) => {
+
+  const query =
+    String(req.query.q || "")
+      .trim()
+      .toLowerCase();
+
+  const result = [];
+
+  for (const phone of users.keys()) {
+
+    const user =
+      getUser(phone);
 
     if (
-        typeof req.body.photo === "string" &&
-        req.body.photo.length < 4_000_000
+
+      !query ||
+
+      phone.includes(query) ||
+
+      user.name
+        .toLowerCase()
+        .includes(query) ||
+
+      user.user
+        .toLowerCase()
+        .includes(query)
+
     ) {
-        user.photo = req.body.photo;
+
+      result.push(
+        publicUser(phone)
+      );
+
     }
 
-    users.set(phone, user);
+  }
 
-    io.emit("user_updated", publicUser(user));
+  res.json(result);
 
-    res.json({
-        ok: true,
-        user: publicUser(user)
-    });
 });
 
-
 /* =========================
-   Socket.IO
+   GET PROFILE
 ========================= */
 
-io.on("connection", (socket) => {
+app.get(
+  "/api/profile/:phone",
+  (req, res) => {
 
-    console.log(
-        "Socket connected:",
-        socket.id
+    const phone =
+      req.params.phone;
+
+    if (
+      !validPhone(phone) ||
+      !users.has(phone)
+    ) {
+
+      return sendError(
+        res,
+        404,
+        "کاربر پیدا نشد"
+      );
+
+    }
+
+    res.json(
+      publicUser(phone)
     );
 
+  }
+);
 
-    /* =========================
-       Join
-    ========================= */
+/* =========================
+   UPDATE PROFILE
+========================= */
 
-    socket.on("join", (phone, callback) => {
+app.post(
+  "/api/profile",
+  (req, res) => {
 
-        phone = cleanPhone(phone);
+    const phone =
+      String(req.body.phone || "");
 
-        if (!validPhone(phone)) {
+    if (
+      !validPhone(phone) ||
+      !users.has(phone)
+    ) {
 
-            if (typeof callback === "function") {
-                callback({
-                    ok: false,
-                    error: "شماره موبایل معتبر نیست"
-                });
-            }
+      return sendError(
+        res,
+        401,
+        "کاربر معتبر نیست"
+      );
 
-            return;
+    }
+
+    const name =
+      String(
+        req.body.name ||
+        "کاربر Virax"
+      )
+      .trim()
+      .slice(0, 40);
+
+    const username =
+      String(req.body.user || "")
+        .replace(/^@/, "")
+        .replace(/\s/g, "_")
+        .toLowerCase()
+        .slice(0, 32);
+
+    const photo =
+      String(
+        req.body.photo || ""
+      );
+
+    if (!username) {
+
+      return sendError(
+        res,
+        400,
+        "نام کاربری الزامی است"
+      );
+
+    }
+
+    /*
+      بررسی تکراری نبودن username
+    */
+
+    for (
+      const [
+        otherPhone,
+        user
+      ] of users
+    ) {
+
+      if (
+
+        otherPhone !== phone &&
+
+        user.user
+          .toLowerCase() ===
+          username
+
+      ) {
+
+        return sendError(
+          res,
+          409,
+          "این نام کاربری قبلاً استفاده شده است"
+        );
+
+      }
+
+    }
+
+    users.set(phone, {
+
+      name,
+
+      user: username,
+
+      photo
+
+    });
+
+    /*
+      اطلاع‌رسانی به تمام کاربران
+    */
+
+    io.emit(
+      "profile:update",
+      publicUser(phone)
+    );
+
+    res.json({
+
+      ok: true,
+
+      user:
+        publicUser(phone)
+
+    });
+
+  }
+);
+
+/* =========================
+   GET CHAT MESSAGES
+========================= */
+
+app.get(
+  "/api/messages/:other",
+  (req, res) => {
+
+    const me =
+      String(req.query.me || "");
+
+    const other =
+      req.params.other;
+
+    if (
+      !validPhone(me) ||
+      !validPhone(other)
+    ) {
+
+      return sendError(
+        res,
+        400,
+        "شماره نامعتبر است"
+      );
+
+    }
+
+    const key =
+      chatKey(me, other);
+
+    const chat =
+      messages.get(key) || [];
+
+    /*
+      فقط پیام‌های همین دو نفر
+      برگردانده می‌شوند.
+    */
+
+    res.json(chat);
+
+  }
+);
+
+/* =========================
+   ADMIN MANAGEMENT
+========================= */
+
+app.post(
+  "/api/admin",
+  (req, res) => {
+
+    const actor =
+      String(req.body.actor || "");
+
+    const target =
+      String(req.body.target || "");
+
+    const action =
+      String(req.body.action || "");
+
+    /*
+      فقط ادمین اصلی
+    */
+
+    if (actor !== MAIN_ADMIN) {
+
+      return sendError(
+        res,
+        403,
+        "فقط ادمین اصلی اجازه این کار را دارد"
+      );
+
+    }
+
+    if (
+      !validPhone(target) ||
+      !users.has(target)
+    ) {
+
+      return sendError(
+        res,
+        404,
+        "کاربر پیدا نشد"
+      );
+
+    }
+
+    /*
+      ادمین اصلی قابل حذف نیست
+    */
+
+    if (target === MAIN_ADMIN) {
+
+      return sendError(
+        res,
+        400,
+        "ادمین اصلی قابل تغییر نیست"
+      );
+
+    }
+
+    if (action === "add") {
+
+      admins.add(target);
+
+    }
+
+    else if (action === "remove") {
+
+      admins.delete(target);
+
+    }
+
+    else {
+
+      return sendError(
+        res,
+        400,
+        "عملیات نامعتبر است"
+      );
+
+    }
+
+    res.json({
+      ok: true
+    });
+
+  }
+);
+
+/* =========================
+   BLUE / BAN
+========================= */
+
+app.post(
+  "/api/moderation",
+  (req, res) => {
+
+    const actor =
+      String(req.body.actor || "");
+
+    const target =
+      String(req.body.target || "");
+
+    const action =
+      String(req.body.action || "");
+
+    if (!isAdmin(actor)) {
+
+      return sendError(
+        res,
+        403,
+        "دسترسی ندارید"
+      );
+
+    }
+
+    if (
+      !validPhone(target) ||
+      !users.has(target)
+    ) {
+
+      return sendError(
+        res,
+        404,
+        "کاربر پیدا نشد"
+      );
+
+    }
+
+    /*
+      تیک آبی
+    */
+
+    if (action === "blue") {
+
+      blueUsers.add(target);
+
+    }
+
+    /*
+      حذف تیک
+    */
+
+    else if (action === "unblue") {
+
+      blueUsers.delete(target);
+
+    }
+
+    /*
+      بن
+    */
+
+    else if (action === "ban") {
+
+      const days =
+        Number(req.body.days);
+
+      if (
+        !Number.isFinite(days)
+      ) {
+
+        return sendError(
+          res,
+          400,
+          "مدت بن نامعتبر است"
+        );
+
+      }
+
+      const expires =
+        days < 0
+          ? -1
+          : Date.now() +
+            days * 86400000;
+
+      bans.set(
+        target,
+        expires
+      );
+
+      /*
+        اگر کاربر آنلاین است
+        فوراً از سرور خارج شود.
+      */
+
+      const socketId =
+        sockets.get(target);
+
+      if (socketId) {
+
+        io.to(socketId)
+          .emit("banned");
+
+        const targetSocket =
+          io.sockets.sockets.get(
+            socketId
+          );
+
+        if (targetSocket) {
+          targetSocket.disconnect(true);
         }
 
-        const user = createUser(phone);
+      }
 
-        socket.phone = phone;
+    }
 
-        socket.join(`user:${phone}`);
+    /*
+      رفع بن
+    */
 
-        onlineUsers.set(phone, socket.id);
+    else if (action === "unban") {
 
-        socket.broadcast.emit(
-            "user_online",
+      bans.delete(target);
+
+    }
+
+    else {
+
+      return sendError(
+        res,
+        400,
+        "عملیات نامعتبر است"
+      );
+
+    }
+
+    /*
+      اطلاع‌رسانی تغییر وضعیت
+    */
+
+    io.emit(
+      "profile:update",
+      publicUser(target)
+    );
+
+    res.json({
+      ok: true
+    });
+
+  }
+);
+
+/* =========================
+   SOCKET.IO
+========================= */
+
+io.on(
+  "connection",
+  socket => {
+
+    console.log(
+      "Socket connected:",
+      socket.id
+    );
+
+    /*
+      احراز هویت Socket
+    */
+
+    socket.on(
+      "auth",
+      phone => {
+
+        phone =
+          String(phone || "");
+
+        if (
+
+          !validPhone(phone) ||
+
+          !users.has(phone) ||
+
+          isBanned(phone)
+
+        ) {
+
+          socket.emit(
+            "auth:error",
             {
-                phone
+              error:
+                "ورود نامعتبر یا حساب مسدود است"
             }
-        );
+          );
 
-        socket.emit(
-            "online_users",
-            Array.from(onlineUsers.keys())
-        );
+          socket.disconnect(true);
 
-        if (typeof callback === "function") {
-            callback({
-                ok: true,
-                user: publicUser(user)
-            });
+          return;
+
         }
 
-        console.log(
-            "User joined:",
-            phone
-        );
-    });
+        socket.phone =
+          phone;
 
+        /*
+          اگر کاربر قبلاً
+          با یک دستگاه دیگر
+          وصل بوده، اتصال قبلی
+          را قطع می‌کنیم.
+        */
 
-    /* =========================
-       Search
-    ========================= */
+        const oldSocketId =
+          sockets.get(phone);
 
-    socket.on("search_users", (query, callback) => {
+        if (oldSocketId) {
 
-        const q = String(query || "")
-            .trim()
-            .toLowerCase()
-            .replace(/^@/, "");
-
-        const result = [];
-
-        if (q) {
-
-            for (const user of users.values()) {
-
-                if (
-                    user.phone.includes(q) ||
-                    user.username
-                        .toLowerCase()
-                        .includes(q) ||
-                    user.name
-                        .toLowerCase()
-                        .includes(q)
-                ) {
-                    result.push(
-                        publicUser(user)
-                    );
-                }
-
-                if (result.length >= 30) {
-                    break;
-                }
-            }
-        }
-
-        if (typeof callback === "function") {
-            callback({
-                ok: true,
-                users: result
-            });
-        }
-    });
-
-
-    /* =========================
-       Open Chat
-    ========================= */
-
-    socket.on("get_messages", (target, callback) => {
-
-        if (!socket.phone) {
-            return;
-        }
-
-        const targetPhone =
-            cleanPhone(target);
-
-        if (!validPhone(targetPhone)) {
-            return;
-        }
-
-        const data =
-            getRoomMessages(
-                socket.phone,
-                targetPhone
+          const oldSocket =
+            io.sockets.sockets.get(
+              oldSocketId
             );
 
-        if (typeof callback === "function") {
-            callback({
-                ok: true,
-                messages: data
-            });
-        }
-    });
+          if (oldSocket) {
 
+            oldSocket.disconnect(
+              true
+            );
 
-    /* =========================
-       Send Message
-    ========================= */
+          }
 
-    socket.on("send_message", (data, callback) => {
-
-        if (!socket.phone) {
-
-            if (typeof callback === "function") {
-                callback({
-                    ok: false,
-                    error: "ابتدا وارد حساب شوید"
-                });
-            }
-
-            return;
         }
 
-        const target =
-            cleanPhone(data?.to);
+        sockets.set(
+          phone,
+          socket.id
+        );
+
+        /*
+          اطلاع آنلاین شدن
+        */
+
+        io.emit(
+          "presence",
+          {
+            phone,
+            online: true
+          }
+        );
+
+        console.log(
+          "User online:",
+          phone
+        );
+
+      }
+    );
+
+    /*
+      ارسال پیام
+    */
+
+    socket.on(
+      "send",
+      data => {
+
+        const from =
+          socket.phone;
+
+        if (!from) {
+          return;
+        }
+
+        const to =
+          String(
+            data?.to || ""
+          );
 
         const text =
-            String(data?.message || "")
-                .trim()
-                .slice(0, 4000);
+          String(
+            data?.text || ""
+          )
+          .trim()
+          .slice(0, 4000);
 
-        if (!validPhone(target)) {
-
-            if (typeof callback === "function") {
-                callback({
-                    ok: false,
-                    error: "کاربر مقصد معتبر نیست"
-                });
-            }
-
-            return;
+        if (!validPhone(to)) {
+          return;
         }
 
         if (!text) {
-
-            if (typeof callback === "function") {
-                callback({
-                    ok: false,
-                    error: "پیام خالی است"
-                });
-            }
-
-            return;
+          return;
         }
 
-        createUser(target);
+        if (!users.has(to)) {
+
+          socket.emit(
+            "error:msg",
+            {
+              error:
+                "کاربر پیدا نشد"
+            }
+          );
+
+          return;
+        }
+
+        if (isBanned(from)) {
+
+          socket.emit(
+            "error:msg",
+            {
+              error:
+                "حساب شما مسدود است"
+            }
+          );
+
+          return;
+        }
+
+        /*
+          ساخت پیام
+        */
 
         const message = {
-            id:
-                `${Date.now()}_${Math.random()
-                    .toString(36)
-                    .slice(2, 10)}`,
 
-            from: socket.phone,
+          id:
+            Date.now() +
+            "-" +
+            Math.random()
+              .toString(36)
+              .slice(2),
 
-            to: target,
+          from,
 
-            message: text,
+          to,
 
-            time: Date.now()
+          text,
+
+          time:
+            Date.now()
+
         };
 
-        const room =
-            getRoomMessages(
-                socket.phone,
-                target
-            );
-
-        room.push(message);
-
-        /* جلوگیری از رشد بی‌نهایت حافظه */
-
-        if (room.length > 1000) {
-            room.splice(
-                0,
-                room.length - 1000
-            );
-        }
-
-        /* ارسال به فرستنده */
-
-        socket.emit(
-            "new_message",
-            message
-        );
-
-        /* ارسال به گیرنده */
-
-        io.to(`user:${target}`).emit(
-            "new_message",
-            message
-        );
-
-        if (typeof callback === "function") {
-            callback({
-                ok: true,
-                message
-            });
-        }
-    });
-
-
-    /* =========================
-       Typing
-    ========================= */
-
-    socket.on("typing", (target) => {
-
-        if (!socket.phone) {
-            return;
-        }
-
-        const targetPhone =
-            cleanPhone(target);
-
-        if (!validPhone(targetPhone)) {
-            return;
-        }
-
-        io.to(`user:${targetPhone}`).emit(
-            "typing",
-            {
-                from: socket.phone
-            }
-        );
-    });
-
-
-    socket.on("stop_typing", (target) => {
-
-        if (!socket.phone) {
-            return;
-        }
-
-        const targetPhone =
-            cleanPhone(target);
-
-        io.to(`user:${targetPhone}`).emit(
-            "stop_typing",
-            {
-                from: socket.phone
-            }
-        );
-    });
-
-
-    /* =========================
-       Delete Message
-    ========================= */
-
-    socket.on(
-        "delete_message",
-        (data, callback) => {
-
-            if (!socket.phone) {
-                return;
-            }
-
-            const messageId =
-                String(data?.id || "");
-
-            const target =
-                cleanPhone(data?.to);
-
-            const room =
-                getRoomMessages(
-                    socket.phone,
-                    target
-                );
-
-            const index =
-                room.findIndex(
-                    x => x.id === messageId
-                );
-
-            if (index === -1) {
-
-                if (typeof callback === "function") {
-                    callback({
-                        ok: false,
-                        error: "پیام پیدا نشد"
-                    });
-                }
-
-                return;
-            }
-
-            if (
-                room[index].from !==
-                socket.phone
-            ) {
-
-                if (typeof callback === "function") {
-                    callback({
-                        ok: false,
-                        error: "اجازه حذف این پیام را ندارید"
-                    });
-                }
-
-                return;
-            }
-
-            room.splice(index, 1);
-
-            io.to(`user:${target}`).emit(
-                "message_deleted",
-                {
-                    id: messageId
-                }
-            );
-
-            socket.emit(
-                "message_deleted",
-                {
-                    id: messageId
-                }
-            );
-
-            if (typeof callback === "function") {
-                callback({
-                    ok: true
-                });
-            }
-        }
-    );
-
-
-    /* =========================
-       Admin
-    ========================= */
-
-    socket.on("admin_action", (data, callback) => {
-
-        if (!socket.phone) {
-            return;
-        }
+        const key =
+          chatKey(
+            from,
+            to
+          );
 
         if (
-            socket.phone !== MAIN_ADMIN &&
-            !admins.has(socket.phone)
+          !messages.has(key)
         ) {
 
-            if (typeof callback === "function") {
-                callback({
-                    ok: false,
-                    error: "دسترسی ندارید"
-                });
-            }
+          messages.set(
+            key,
+            []
+          );
 
-            return;
         }
 
-        const action =
-            String(data?.action || "");
+        messages
+          .get(key)
+          .push(message);
 
-        const target =
-            cleanPhone(data?.phone);
+        /*
+          پیام برای فرستنده
+        */
 
-        if (!validPhone(target)) {
-            return;
-        }
+        socket.emit(
+          "message",
+          message
+        );
 
-        if (action === "add_admin") {
+        /*
+          پیام برای گیرنده
+        */
 
-            if (socket.phone !== MAIN_ADMIN) {
-                return;
-            }
+        const receiverSocketId =
+          sockets.get(to);
 
-            admins.add(target);
-        }
+        if (receiverSocketId) {
 
-        if (action === "remove_admin") {
+          io.to(
+            receiverSocketId
+          ).emit(
+            "message",
+            message
+          );
 
-            if (target !== MAIN_ADMIN) {
-                admins.delete(target);
-            }
-        }
-
-        if (action === "verify") {
-
-            const user = users.get(target);
-
-            if (user) {
-                user.verified =
-                    Boolean(data.value);
-
-                users.set(target, user);
-
-                io.emit(
-                    "user_updated",
-                    publicUser(user)
-                );
-            }
-        }
-
-        if (typeof callback === "function") {
-            callback({
-                ok: true
-            });
-        }
-    });
-
-
-    /* =========================
-       Disconnect
-    ========================= */
-
-    socket.on("disconnect", () => {
-
-        if (socket.phone) {
-
-            const current =
-                onlineUsers.get(
-                    socket.phone
-                );
-
-            if (current === socket.id) {
-
-                onlineUsers.delete(
-                    socket.phone
-                );
-
-                socket.broadcast.emit(
-                    "user_offline",
-                    {
-                        phone: socket.phone
-                    }
-                );
-            }
         }
 
         console.log(
-            "Socket disconnected:",
-            socket.id
+          `Message: ${from} -> ${to}`
         );
-    });
 
-});
+      }
+    );
 
+    /*
+      قطع اتصال
+    */
+
+    socket.on(
+      "disconnect",
+      () => {
+
+        if (!socket.phone) {
+          return;
+        }
+
+        /*
+          فقط اگر همین Socket
+          اتصال فعلی کاربر باشد
+        */
+
+        if (
+          sockets.get(
+            socket.phone
+          ) === socket.id
+        ) {
+
+          sockets.delete(
+            socket.phone
+          );
+
+          io.emit(
+            "presence",
+            {
+              phone:
+                socket.phone,
+
+              online:
+                false
+            }
+          );
+
+        }
+
+        console.log(
+          "User offline:",
+          socket.phone
+        );
+
+      }
+    );
+
+  }
+);
 
 /* =========================
-   Error Handler
+   HEALTH CHECK
 ========================= */
 
-app.use((err, req, res, next) => {
+app.get(
+  "/health",
+  (req, res) => {
 
-    console.error(err);
-
-    res.status(500).json({
-        ok: false,
-        error: "خطای داخلی سرور"
+    res.json({
+      ok: true,
+      service: "Virax",
+      users: users.size,
+      online: sockets.size,
+      chats: messages.size
     });
-});
 
+  }
+);
 
 /* =========================
-   Start Server
+   FRONTEND
+========================= */
+
+app.get(
+  "*",
+  (req, res) => {
+
+    res.sendFile(
+      path.join(
+        __dirname,
+        "public",
+        "index.html"
+      )
+    );
+
+  }
+);
+
+/* =========================
+   START SERVER
 ========================= */
 
 server.listen(
-    PORT,
-    "0.0.0.0",
-    () => {
+  PORT,
+  "0.0.0.0",
+  () => {
 
-        console.log(
-            `⚡ Virax server running on port ${PORT}`
-        );
+    console.log(
+      "================================"
+    );
 
-        console.log(
-            `🌐 Port: ${PORT}`
-        );
+    console.log(
+      "⚡ Virax Messenger"
+    );
 
-        console.log(
-            `👥 Main admin: ${MAIN_ADMIN}`
-        );
-    }
+    console.log(
+      `🚀 Server running on port ${PORT}`
+    );
+
+    console.log(
+      `👑 Main admin: ${MAIN_ADMIN}`
+    );
+
+    console.log(
+      "💬 Socket.IO: ENABLED"
+    );
+
+    console.log(
+      "================================"
+    );
+
+  }
 );

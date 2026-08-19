@@ -1,8 +1,7 @@
 {
   "name": "virax",
   "version": "1.0.0",
-  "description": "Virax real-time messenger",
-  "main": "server.js",
+  "private": true,
   "scripts": {
     "start": "node server.js"
   },

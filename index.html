@@ -1,2176 +1,3378 @@
 <!doctype html>
 <html lang="fa" dir="rtl">
+
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<meta
+  name="viewport"
+  content="width=device-width,initial-scale=1"
+>
+
 <title>Virax</title>
 
+<script src="/socket.io/socket.io.js"></script>
+
 <style>
-*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
-body{height:100vh;overflow:hidden;background:#080c20;color:#fff;font:13px Tahoma}
-button,input{font:inherit;border:0;outline:0}
-button{color:#fff;background:none;cursor:pointer}
-input{user-select:text}
 
-#auth{height:100%;display:grid;place-items:center;padding:20px}
-.box,.modal{background:#151a36;border:1px solid #ffffff10;border-radius:24px}
-.login{width:min(380px,100%);padding:25px;text-align:center}
-.logo{font-size:30px;color:#8995ff;font-weight:bold;margin-bottom:15px}
-.login p{color:#858ba2;font-size:11px;margin-bottom:15px}
-input{height:44px;padding:0 13px;border-radius:13px;background:#0e1330;color:#fff}
-.login input,.modal input{width:100%;margin-bottom:8px}
-.primary{width:100%;height:44px;border-radius:13px;background:linear-gradient(135deg,#667eea,#7650a9);font-weight:bold}
-
-#app{display:none;height:100%}
-.header{height:60px;padding:0 16px;display:flex;align-items:center;gap:9px;background:#111630}
-.header-logo{font-size:22px;color:#8995ff}
-.header-title{font-weight:bold;font-size:16px}
-
-.search{height:58px;padding:7px 11px;display:flex;gap:8px}
-.search input{flex:1;height:44px;border-radius:23px}
-
-.page{display:none;height:calc(100% - 118px);overflow:auto}
-.page.active{display:block}
-
-.chat{
-margin:9px 12px;
-padding:11px 13px;
-display:flex;
-align-items:center;
-border-radius:28px;
-background:#181e3bcc;
-border:1px solid #ffffff0d;
-cursor:pointer
+*{
+  box-sizing:border-box;
+  margin:0;
+  -webkit-tap-highlight-color:transparent;
 }
 
-.avatar,.chatpic{
-display:grid;
-place-items:center;
-overflow:hidden;
-border-radius:50%;
-background:linear-gradient(135deg,#667eea,#764ba2)
+body{
+  height:100vh;
+  overflow:hidden;
+  background:#080c20;
+  color:#fff;
+  font:13px Tahoma;
+  user-select:none;
+}
+
+button,
+input,
+select{
+  font:inherit;
+  border:0;
+  outline:0;
+}
+
+button{
+  color:#fff;
+  background:none;
+  cursor:pointer;
+}
+
+input{
+  user-select:text;
+}
+
+/* =========================
+        AUTH
+========================= */
+
+#auth{
+  height:100%;
+  display:grid;
+  place-items:center;
+  padding:20px;
+}
+
+.box,
+.modal{
+  background:#151a36;
+  border:1px solid #ffffff10;
+  border-radius:24px;
+}
+
+.login{
+  width:min(380px,100%);
+  padding:25px;
+  text-align:center;
+}
+
+.logo{
+  font-size:30px;
+  color:#8995ff;
+  font-weight:bold;
+  margin-bottom:15px;
+}
+
+.login p{
+  color:#858ba2;
+  font-size:11px;
+  margin-bottom:15px;
+}
+
+.login input{
+  width:100%;
+  height:44px;
+  padding:0 13px;
+  border-radius:13px;
+  background:#0e1330;
+  color:#fff;
+  margin-bottom:8px;
+}
+
+.primary{
+  width:100%;
+  height:44px;
+  border-radius:13px;
+  background:linear-gradient(
+    135deg,
+    #667eea,
+    #7650a9
+  );
+  font-weight:bold;
+}
+
+/* =========================
+          APP
+========================= */
+
+#app{
+  display:none;
+  height:100%;
+}
+
+.header{
+  height:60px;
+  padding:0 16px;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  background:#111630;
+}
+
+.header-logo{
+  font-size:22px;
+  color:#8995ff;
+}
+
+.header-title{
+  font-weight:bold;
+  font-size:16px;
+}
+
+.search{
+  height:58px;
+  padding:7px 11px;
+  display:flex;
+  gap:8px;
+}
+
+.search input{
+  flex:1;
+  height:44px;
+  border-radius:23px;
+  padding:0 14px;
+  background:#0e1330;
+  color:#fff;
+}
+
+.admin{
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  background:#181e3b;
+  border:1px solid #ffffff12;
+}
+
+.page{
+  display:none;
+  height:calc(100% - 118px);
+  overflow:auto;
+}
+
+.page.active{
+  display:block;
+}
+
+/* =========================
+          CHAT LIST
+========================= */
+
+.chat{
+  margin:9px 12px;
+  padding:11px 13px;
+  display:flex;
+  align-items:center;
+  border-radius:28px;
+  background:#181e3bcc;
+  border:1px solid #ffffff0d;
+  cursor:pointer;
+}
+
+.chat:hover{
+  background:#202747;
+}
+
+.avatar,
+.pavatar,
+.chatpic{
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  border-radius:50%;
+  background:
+    linear-gradient(
+      135deg,
+      #667eea,
+      #764ba2
+    );
 }
 
 .avatar{
-width:50px;
-height:50px;
-margin-left:11px;
-font-size:21px;
-flex:none
+  width:50px;
+  height:50px;
+  margin-left:11px;
+  font-size:21px;
+  flex:none;
 }
 
-.avatar img,.chatpic img{
-width:100%;
-height:100%;
-object-fit:cover
+.avatar img,
+.pavatar img,
+.chatpic img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
 }
 
-.info{flex:1}
-.top{display:flex;justify-content:space-between}
-.name{font-weight:bold}
-.time{font-size:9px;color:#777d96}
-.msg{color:#8d93a8;font-size:11px;margin-top:6px}
-
-.empty{text-align:center;padding:100px 20px;color:#858ba2}
-
-.nav{
-position:fixed;
-bottom:10px;
-left:50%;
-transform:translateX(-50%);
-width:calc(100% - 20px);
-max-width:620px;
-height:68px;
-padding:5px;
-display:grid;
-grid-template-columns:repeat(4,1fr);
-gap:4px;
-background:#181e3bf5;
-border:1px solid #ffffff12;
-border-radius:38px;
-box-shadow:0 8px 25px #0005;
-backdrop-filter:blur(18px)
+.info{
+  flex:1;
+  min-width:0;
 }
 
-.nav button{
-border-radius:30px;
-font-size:9px;
-color:#747b94
+.top{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
 }
 
-.nav .on{
-background:#ffffff12;
-color:#fff
+.name{
+  font-weight:bold;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 
-.nav b{
-display:block;
-font-size:19px;
-margin-bottom:2px
+.time{
+  font-size:9px;
+  color:#777d96;
+  white-space:nowrap;
 }
 
-#savedChat{
-display:none;
-height:100%;
-position:relative;
-overflow:hidden
+.msg{
+  color:#8d93a8;
+  font-size:11px;
+  margin-top:6px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 
-#chatHead{
-height:58px;
-background:#111630;
-border-bottom:1px solid #ffffff08;
-display:flex;
-align-items:center;
-padding:5px 12px;
-gap:10px
+.empty{
+  text-align:center;
+  padding:100px 20px;
+  color:#858ba2;
 }
 
-.back{
-width:40px;
-height:40px;
-border-radius:50%;
-font-size:22px;
-background:#ffffff08
-}
-
-.chatpic{
-width:45px;
-height:45px;
-flex:none;
-font-size:20px
-}
-
-.chatUser{
-min-width:0;
-cursor:pointer
-}
-
-.chatUser b{
-display:block;
-font-size:13px
-}
-
-.chatUser span{
-display:block;
-color:#4ade80;
-font-size:9px;
-margin-top:2px
-}
-
-#messages{
-height:calc(100% - 116px);
-overflow:auto;
-padding:8px 12px 12px
-}
-
-.message{
-width:max-content;
-max-width:78%;
-margin:5px 0;
-padding:9px 12px;
-border-radius:15px 15px 4px 15px;
-word-break:break-word;
-user-select:text
-}
-
-.message.mine{
-margin-right:auto;
-margin-left:0;
-background:#667eea
-}
-
-.message.other{
-margin-left:auto;
-margin-right:0;
-background:#293354
-}
-
-.message small{
-display:block;
-font-size:8px;
-color:#d8dcff;
-margin-top:4px;
-opacity:.7
-}
-
-.sendbar{
-height:58px;
-position:absolute;
-bottom:0;
-left:0;
-right:0;
-padding:7px 11px;
-display:flex;
-gap:7px;
-background:#111630
-}
-
-.sendbar input{
-flex:1;
-height:44px;
-border-radius:23px
-}
-
-.send{
-width:44px;
-height:44px;
-border-radius:50%;
-background:#667eea;
-font-size:18px
-}
-
-#userProfile,#edit{
-display:none;
-position:fixed;
-inset:0;
-z-index:5;
-align-items:center;
-justify-content:center;
-background:#000b;
-padding:15px
-}
-
-.modal{
-width:min(430px,100%);
-padding:20px
-}
-
-.modal h3{
-margin-bottom:15px
-}
-
-.toast{
-position:fixed;
-bottom:90px;
-left:50%;
-transform:translate(-50%,20px);
-opacity:0;
-padding:10px 15px;
-border-radius:14px;
-background:#1d2445ee;
-font-size:11px;
-transition:.2s;
-z-index:20
-}
-
-.toast.show{
-opacity:1;
-transform:translate(-50%,0)
-}
+/* =========================
+          PROFILE
+========================= */
 
 .profile{
-text-align:center;
-padding:18px 14px
+  padding:18px 14px;
+  text-align:center;
 }
 
 .pavatar{
-width:90px;
-height:90px;
-margin:auto;
-border-radius:50%;
-display:grid;
-place-items:center;
-background:linear-gradient(135deg,#667eea,#764ba2);
-font-size:40px;
-overflow:hidden
-}
-
-.pavatar img{
-width:100%;
-height:100%;
-object-fit:cover
+  width:100px;
+  height:100px;
+  margin:auto;
+  font-size:45px;
+  cursor:pointer;
+  box-shadow:
+    0 10px 30px #667eea35;
 }
 
 .pname{
-font-size:20px;
-font-weight:bold;
-margin-top:12px
+  font-size:20px;
+  font-weight:bold;
+  margin-top:12px;
 }
 
 .user{
-color:#8995ff;
-margin-top:5px
+  color:#8995ff;
+  font-size:11px;
+  margin-top:5px;
+}
+
+.online{
+  color:#4ade80;
+  font-size:10px;
+  margin-top:5px;
+}
+
+.verify{
+  display:inline-grid;
+  place-items:center;
+  width:17px;
+  height:17px;
+  margin-right:4px;
+  border-radius:50%;
+  background:#229ed9;
+  font:bold 11px Arial;
+  font-style:normal;
 }
 
 .card{
-max-width:500px;
-margin:18px auto 0;
-border-radius:21px;
-overflow:hidden;
-background:#181e3bcc;
-text-align:right
+  max-width:500px;
+  margin:18px auto 0;
+  border-radius:21px;
+  overflow:hidden;
+  background:#181e3bcc;
+  border:1px solid #ffffff0d;
+  text-align:right;
 }
 
 .row{
-padding:12px 14px;
-border-bottom:1px solid #ffffff08
+  padding:12px 14px;
+  border-bottom:1px solid #ffffff08;
+  cursor:pointer;
+}
+
+.row:last-child{
+  border:0;
 }
 
 .label{
-font-size:9px;
-color:#7d849d
+  font-size:9px;
+  color:#7d849d;
 }
 
 .value{
-margin-top:4px
+  margin-top:4px;
 }
 
 .logout{
-width:100%;
-height:43px;
-margin-top:12px;
-border-radius:20px;
-background:#ef44441a;
-color:#ff7373
+  width:100%;
+  max-width:500px;
+  height:43px;
+  margin:10px auto;
+  border-radius:20px;
+  background:#ef44441a;
+  color:#ff7373;
 }
 
-.status{
-font-size:9px;
-color:#4ade80;
-margin-top:3px
+/* =========================
+          NAV
+========================= */
+
+.nav{
+  position:fixed;
+  bottom:10px;
+  left:50%;
+  transform:translateX(-50%);
+  width:calc(100% - 20px);
+  max-width:620px;
+  height:68px;
+  padding:5px;
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:4px;
+  background:#181e3bf5;
+  border:1px solid #ffffff12;
+  border-radius:38px;
+  box-shadow:0 8px 25px #0005;
+  backdrop-filter:blur(18px);
+  z-index:4;
 }
 
-.search-title{
-padding:10px 15px 3px;
-font-size:10px;
-color:#7d849d
+.nav button{
+  border-radius:30px;
+  font-size:9px;
+  color:#747b94;
 }
+
+.nav .on{
+  background:#ffffff12;
+  color:#fff;
+}
+
+.nav b{
+  display:block;
+  font-size:19px;
+  margin-bottom:2px;
+}
+
+/* =========================
+          MODALS
+========================= */
+
+#edit,
+#panel,
+#userProfile{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:10;
+  align-items:center;
+  justify-content:center;
+  background:#000b;
+  padding:15px;
+}
+
+.modal{
+  width:min(430px,100%);
+  padding:20px;
+}
+
+.modal h3{
+  margin-bottom:15px;
+}
+
+.modal input,
+.modal select{
+  width:100%;
+  height:42px;
+  margin:5px 0;
+  padding:0 12px;
+  border-radius:12px;
+  background:#0e1330;
+  color:#fff;
+}
+
+.actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:7px;
+  margin-top:8px;
+}
+
+.danger{
+  background:#ef444425;
+  color:#ff7777;
+}
+
+.safe{
+  background:#22c55e22;
+  color:#66e89a;
+}
+
+.mbtn{
+  width:100%;
+  height:40px;
+  border-radius:12px;
+  margin-top:6px;
+  background:#ffffff0b;
+}
+
+#file{
+  display:none;
+}
+
+/* =========================
+          TOAST
+========================= */
+
+.toast{
+  position:fixed;
+  bottom:90px;
+  left:50%;
+  transform:translate(-50%,20px);
+  opacity:0;
+  padding:10px 15px;
+  border-radius:14px;
+  background:#1d2445ee;
+  font-size:11px;
+  transition:.2s;
+  z-index:30;
+  pointer-events:none;
+}
+
+.toast.show{
+  opacity:1;
+  transform:translate(-50%,0);
+}
+
+/* =========================
+          CHAT
+========================= */
+
+#savedChat{
+  display:none;
+  height:100%;
+  position:relative;
+  overflow:hidden;
+}
+
+#chatHead{
+  height:58px;
+  background:#111630;
+  border-bottom:1px solid #ffffff08;
+  display:flex;
+  align-items:flex-start;
+  padding:5px 12px;
+  gap:10px;
+}
+
+.back{
+  width:40px;
+  height:40px;
+  border-radius:50%;
+  font-size:22px;
+  background:#ffffff08;
+}
+
+.chatpic{
+  width:45px;
+  height:45px;
+  flex:none;
+  font-size:20px;
+}
+
+.chatUser{
+  min-width:0;
+  cursor:pointer;
+  padding-top:3px;
+}
+
+.chatUser b{
+  display:block;
+  font-size:13px;
+  line-height:18px;
+}
+
+.chatUser span{
+  display:block;
+  color:#4ade80;
+  font-size:9px;
+  margin-top:2px;
+}
+
+#messages{
+  height:calc(100% - 116px);
+  overflow:auto;
+  padding:8px 12px 12px;
+}
+
+.message{
+  width:max-content;
+  max-width:78%;
+  margin:5px 0 5px auto;
+  padding:9px 12px;
+  border-radius:15px 15px 4px 15px;
+  background:#667eea;
+  word-break:break-word;
+  user-select:text;
+}
+
+.message.other{
+  margin:5px auto 5px 0;
+  background:#181e3b;
+  border-radius:
+    15px 15px 15px 4px;
+}
+
+.meta{
+  font-size:8px;
+  opacity:.65;
+  margin-top:4px;
+  direction:ltr;
+  text-align:right;
+}
+
+.sendbar{
+  height:58px;
+  position:absolute;
+  bottom:0;
+  left:0;
+  right:0;
+  padding:7px 11px;
+  display:flex;
+  gap:7px;
+  background:#111630;
+}
+
+.sendbar input{
+  flex:1;
+  height:44px;
+  border-radius:23px;
+  padding:0 15px;
+  background:#0e1330;
+  color:#fff;
+}
+
+.send{
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  background:#667eea;
+  font-size:18px;
+}
+
+/* =========================
+          ONLINE
+========================= */
+
+.status-online{
+  color:#4ade80 !important;
+}
+
+.status-offline{
+  color:#777d96 !important;
+}
+
+/* =========================
+          MOBILE
+========================= */
+
+@media(max-width:500px){
+
+  .chat{
+    margin:7px 9px;
+  }
+
+  .message{
+    max-width:85%;
+  }
+
+  .modal{
+    border-radius:20px;
+  }
+
+}
+
 </style>
+
 </head>
 
 <body>
 
-<!-- LOGIN -->
+<!-- =========================
+          AUTH
+========================= -->
 
 <div id="auth">
-    <div class="login box">
 
-        <div class="logo">⚡ 𝐕𝐢𝐫𝐚𝐱</div>
+  <div class="login box">
 
-        <p>شماره موبایل خود را وارد کنید</p>
-
-        <input
-            id="phoneInput"
-            inputmode="numeric"
-            maxlength="11"
-            placeholder="09123456789"
-        >
-
-        <button
-            class="primary"
-            onclick="login()"
-        >
-            ورود / ثبت‌نام
-        </button>
-
+    <div class="logo">
+      ⚡ 𝐕𝐢𝐫𝐚𝐱
     </div>
+
+    <p>
+      شماره موبایل خود را وارد کنید
+    </p>
+
+    <input
+      id="phoneInput"
+      inputmode="numeric"
+      maxlength="11"
+      placeholder="09123456789"
+    >
+
+    <button
+      class="primary"
+      onclick="login()"
+    >
+      ورود / ثبت‌نام
+    </button>
+
+  </div>
+
 </div>
 
 
-<!-- APP -->
+<!-- =========================
+            APP
+========================= -->
 
 <div id="app">
 
-<header class="header" id="mainHeader">
+  <header
+    class="header"
+    id="mainHeader"
+  >
 
-    <span class="header-logo">⚡</span>
-
-    <span
-        class="header-title"
-        id="title"
-    >
-        𝐕𝐢𝐫𝐚𝐱
+    <span class="header-logo">
+      ⚡
     </span>
 
-</header>
+    <span
+      class="header-title"
+      id="title"
+    >
+      𝐕𝐢𝐫𝐚𝐱
+    </span>
+
+  </header>
 
 
-<!-- SEARCH -->
-
-<div
+  <div
     class="search"
     id="search"
->
+  >
 
     <input
-        id="find"
-        placeholder="جستجوی کاربر یا گفتگو..."
-        autocomplete="off"
+      id="find"
+      placeholder="جستجوی گفتگوها..."
     >
 
-</div>
+    <button
+      id="admin"
+      class="admin"
+      onclick="openAdmin()"
+      style="display:none"
+    >
+      🛡
+    </button>
+
+  </div>
 
 
-<!-- CHATS -->
+  <!-- =========================
+          CHATS
+  ========================= -->
 
-<section
+  <section
     id="chats"
     class="page active"
->
-
-    <div id="chatList">
-
-        <div
-            class="chat"
-            onclick="openSaved()"
-        >
-
-            <div class="avatar">
-                🔖
-            </div>
-
-            <div class="info">
-
-                <div class="top">
-
-                    <b class="name">
-                        پیام‌های ذخیره‌شده
-                    </b>
-
-                    <span class="time">
-                        اکنون
-                    </span>
-
-                </div>
-
-                <div class="msg">
-                    پیام‌های ذخیره‌شده شما
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-
-    <div id="searchResults"></div>
-
-</section>
-
-
-<!-- CONTACTS -->
-
-<section
-    id="contacts"
-    class="page"
->
+  >
 
     <div class="empty">
-
-        👥
-
-        <br><br>
-
-        <b style="color:#fff">
-            مخاطبین شما
-        </b>
-
-        <br><br>
-
-        کاربران را از قسمت جستجو پیدا کنید.
-
+      در حال بارگذاری...
     </div>
 
-</section>
+  </section>
 
 
-<!-- PROFILE -->
+  <!-- =========================
+         CONTACTS
+  ========================= -->
 
-<section
+  <section
+    id="contacts"
+    class="page"
+  >
+
+    <div id="usersList"></div>
+
+  </section>
+
+
+  <!-- =========================
+          PROFILE
+  ========================= -->
+
+  <section
     id="profile"
     class="page"
->
+  >
 
     <div class="profile">
 
+      <div
+        class="pavatar"
+        id="pic"
+        onclick="pickPhoto()"
+      >
+        👤
+      </div>
+
+      <div
+        class="pname"
+        id="pn"
+      >
+      </div>
+
+      <div
+        class="user"
+        id="pu"
+      >
+      </div>
+
+      <div
+        class="online"
+        id="myOnline"
+      >
+        ● آنلاین
+      </div>
+
+
+      <div class="card">
+
         <div
-            class="pavatar"
-            id="pic"
+          class="row"
+          onclick="editProfile()"
         >
-            👤
-        </div>
 
-        <div
-            class="pname"
-            id="pn"
-        ></div>
+          <div class="label">
+            نام
+          </div>
 
-        <div
-            class="user"
-            id="pu"
-        ></div>
-
-
-        <div class="card">
-
-            <div class="row">
-
-                <div class="label">
-                    نام
-                </div>
-
-                <div
-                    class="value"
-                    id="rn"
-                ></div>
-
-            </div>
-
-
-            <div class="row">
-
-                <div class="label">
-                    نام کاربری
-                </div>
-
-                <div
-                    class="value"
-                    id="ru"
-                ></div>
-
-            </div>
-
-
-            <div class="row">
-
-                <div class="label">
-                    شماره موبایل
-                </div>
-
-                <div
-                    class="value"
-                    id="rp"
-                ></div>
-
-            </div>
+          <div
+            class="value"
+            id="rn"
+          >
+          </div>
 
         </div>
 
 
-        <button
-            class="logout"
-            onclick="logout()"
+        <div
+          class="row"
+          onclick="editProfile()"
         >
-            خروج از حساب
-        </button>
+
+          <div class="label">
+            نام کاربری
+          </div>
+
+          <div
+            class="value"
+            id="ru"
+          >
+          </div>
+
+        </div>
+
+
+        <div class="row">
+
+          <div class="label">
+            شماره موبایل
+          </div>
+
+          <div
+            class="value"
+            id="rp"
+          >
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <button
+        class="logout"
+        onclick="logout()"
+      >
+        خروج از حساب کاربری
+      </button>
 
     </div>
 
-</section>
+  </section>
 
 
-<!-- CHAT -->
+  <!-- =========================
+            NAV
+  ========================= -->
+
+  <nav class="nav">
+
+    <button
+      class="on"
+      onclick="go('chats',this)"
+    >
+
+      <b>💬</b>
+
+      گفتگوها
+
+    </button>
+
+
+    <button
+      onclick="go('contacts',this)"
+    >
+
+      <b>👥</b>
+
+      مخاطبین
+
+    </button>
+
+
+    <button
+      onclick="go('profile',this)"
+    >
+
+      <b>👤</b>
+
+      پروفایل
+
+    </button>
+
+
+    <button
+      onclick="soon()"
+    >
+
+      <b>⚙️</b>
+
+      تنظیمات
+
+    </button>
+
+  </nav>
+
+</div>
+
+
+<!-- =========================
+           CHAT
+========================= -->
 
 <section id="savedChat">
 
-    <div id="chatHead">
+  <div id="chatHead">
 
-        <button
-            class="back"
-            onclick="closeChat()"
-        >
-            ‹
-        </button>
+    <button
+      class="back"
+      onclick="closeChat()"
+    >
+      ‹
+    </button>
 
-        <div
-            class="chatpic"
-            id="chatPic"
-        >
-            👤
-        </div>
 
-        <div
-            class="chatUser"
-            onclick="openUserProfile()"
-        >
-
-            <b id="chatName"></b>
-
-            <span id="chatStatus">
-                ● آنلاین
-            </span>
-
-        </div>
-
+    <div
+      class="chatpic"
+      id="chatPic"
+    >
+      👤
     </div>
 
 
-    <div id="messages"></div>
+    <div
+      class="chatUser"
+      onclick="openUserProfile()"
+    >
 
+      <b id="chatName">
+      </b>
 
-    <div class="sendbar">
-
-        <input
-            id="messageInput"
-            placeholder="پیام..."
-            autocomplete="off"
-        >
-
-        <button
-            class="send"
-            onclick="sendMsg()"
-        >
-            ➤
-        </button>
+      <span
+        id="chatStatus"
+      >
+        ● آنلاین
+      </span>
 
     </div>
+
+  </div>
+
+
+  <div id="messages"></div>
+
+
+  <div class="sendbar">
+
+    <input
+      id="messageInput"
+      placeholder="پیام..."
+      autocomplete="off"
+    >
+
+    <button
+      class="send"
+      onclick="sendMessage()"
+    >
+      ➤
+    </button>
+
+  </div>
 
 </section>
 
 
-<!-- NAV -->
-
-<nav class="nav">
-
-    <button
-        class="on"
-        onclick="go('chats',this)"
-    >
-        <b>💬</b>
-        گفتگوها
-    </button>
-
-    <button
-        onclick="go('contacts',this)"
-    >
-        <b>👥</b>
-        مخاطبین
-    </button>
-
-    <button
-        onclick="go('profile',this)"
-    >
-        <b>👤</b>
-        پروفایل
-    </button>
-
-    <button onclick="soon()">
-        <b>⚙️</b>
-        تنظیمات
-    </button>
-
-</nav>
-
-</div>
-
-
-<!-- USER PROFILE -->
+<!-- =========================
+       USER PROFILE
+========================= -->
 
 <div id="userProfile">
 
-    <div class="modal profile">
+  <div class="modal profile">
 
-        <div
-            class="pavatar"
-            id="mpic"
-        >
-            👤
+    <div
+      class="pavatar"
+      id="mpic"
+    >
+      👤
+    </div>
+
+
+    <div
+      class="pname"
+      id="mprofile"
+    >
+    </div>
+
+
+    <div
+      class="user"
+      id="muser"
+    >
+    </div>
+
+
+    <div
+      class="online"
+      id="mstatus"
+    >
+      ● آنلاین
+    </div>
+
+
+    <div class="card">
+
+      <div class="row">
+
+        <div class="label">
+          نام کاربری
         </div>
 
         <div
-            class="pname"
-            id="mprofile"
-        ></div>
-
-        <div
-            class="user"
-            id="muser"
-        ></div>
-
-        <div class="card">
-
-            <div class="row">
-
-                <div class="label">
-                    شماره
-                </div>
-
-                <div
-                    class="value"
-                    id="mphone"
-                >
-                    شماره مخفی
-                </div>
-
-            </div>
-
+          class="value"
+          id="muser2"
+        >
         </div>
 
-        <button
-            class="primary"
-            style="margin-top:12px"
-            onclick="$('userProfile').style.display='none'"
+      </div>
+
+
+      <div class="row">
+
+        <div class="label">
+          شماره موبایل
+        </div>
+
+        <div
+          class="value"
+          id="mphone"
         >
-            بستن
-        </button>
+        </div>
+
+      </div>
 
     </div>
+
+
+    <button
+      class="primary"
+      style="margin-top:12px"
+      onclick="closeUserProfile()"
+    >
+      بستن
+    </button>
+
+  </div>
 
 </div>
 
 
-<!-- EDIT -->
+<!-- =========================
+          EDIT
+========================= -->
 
 <div id="edit">
 
-    <div class="modal">
+  <div class="modal">
 
-        <h3>
-            ویرایش پروفایل
-        </h3>
+    <h3>
+      ویرایش پروفایل
+    </h3>
 
-        <input
-            id="ename"
-            placeholder="نام"
-        >
 
-        <input
-            id="euser"
-            placeholder="نام کاربری"
-            dir="ltr"
-        >
+    <input
+      id="ename"
+      placeholder="نام"
+    >
 
-        <button
-            class="primary"
-            onclick="saveProfile()"
-        >
-            ذخیره
-        </button>
 
-    </div>
+    <input
+      id="euser"
+      placeholder="نام کاربری"
+      dir="ltr"
+    >
+
+
+    <button
+      class="primary"
+      onclick="saveProfile()"
+    >
+      ذخیره
+    </button>
+
+  </div>
 
 </div>
 
 
+<!-- =========================
+          ADMIN
+========================= -->
+
+<div id="panel">
+
+  <div class="modal">
+
+    <h3>
+      🛡 پنل مدیریت
+    </h3>
+
+
+    <input
+      id="adminPhone"
+      inputmode="numeric"
+      maxlength="11"
+      placeholder="شماره کاربر"
+    >
+
+
+    <div class="actions">
+
+      <button
+        class="mbtn safe"
+        onclick="adminAction('add')"
+      >
+        👑 ادمین کردن
+      </button>
+
+
+      <button
+        class="mbtn danger"
+        onclick="adminAction('remove')"
+      >
+        ❌ حذف ادمین
+      </button>
+
+    </div>
+
+
+    <input
+      id="target"
+      placeholder="شماره یا @یوزرنیم"
+    >
+
+
+    <div class="actions">
+
+      <button
+        class="mbtn safe"
+        onclick="moderation('blue')"
+      >
+        🔵 افزودن تیک
+      </button>
+
+
+      <button
+        class="mbtn danger"
+        onclick="moderation('unblue')"
+      >
+        ❌ حذف تیک
+      </button>
+
+    </div>
+
+
+    <select id="days">
+
+      <option value="1">
+        ۱ روز
+      </option>
+
+      <option value="3">
+        ۳ روز
+      </option>
+
+      <option value="7">
+        ۷ روز
+      </option>
+
+      <option value="30">
+        ۳۰ روز
+      </option>
+
+      <option value="-1">
+        بن دائم
+      </option>
+
+    </select>
+
+
+    <div class="actions">
+
+      <button
+        class="mbtn danger"
+        onclick="moderation('ban')"
+      >
+        🚫 بن کاربر
+      </button>
+
+
+      <button
+        class="mbtn safe"
+        onclick="moderation('unban')"
+      >
+        🔓 رفع بن
+      </button>
+
+    </div>
+
+
+    <button
+      class="primary"
+      style="margin-top:8px"
+      onclick="closeAdmin()"
+    >
+      بستن
+    </button>
+
+  </div>
+
+</div>
+
+
+<!-- =========================
+          FILE
+========================= -->
+
+<input
+  id="file"
+  type="file"
+  accept="image/*"
+>
+
+
+<!-- =========================
+          TOAST
+========================= -->
+
 <div
-    id="toast"
-    class="toast"
+  id="toast"
+  class="toast"
 ></div>
 
 
-<script src="/socket.io/socket.io.js"></script>
-
 <script>
 
-const $ = id =>
-    document.getElementById(id);
+/* ==================================================
+                VIRAX CLIENT
+================================================== */
+
+const $ =
+  id => document.getElementById(id);
 
 
-/* =========================
-   State
-========================= */
+/* ==================================================
+                STATE
+================================================== */
+
+let phone =
+  localStorage.getItem("phone") || "";
+
+let profile = null;
+
+let currentChat = null;
+
+let currentChatUser = null;
 
 let socket = null;
 
-let phone =
-    localStorage.getItem("phone") || "";
+let reconnecting = false;
 
-let profile =
-    JSON.parse(
-        localStorage.getItem(
-            "virax_profile"
-        ) || "null"
+
+/* ==================================================
+                HELPERS
+================================================== */
+
+function escapeHTML(value){
+
+  return String(value || "")
+    .replace(
+      /[&<>"']/g,
+      char => ({
+        "&":"&amp;",
+        "<":"&lt;",
+        ">":"&gt;",
+        '"':"&quot;",
+        "'":"&#039;"
+      })[char]
     );
 
-let currentUser = null;
-
-let currentUserData = null;
-
-let room = null;
-
-let renderedMessageIds =
-    new Set();
-
-
-/* =========================
-   Toast
-========================= */
-
-function msg(text){
-
-    const t = $("toast");
-
-    t.textContent = text;
-
-    t.classList.add("show");
-
-    clearTimeout(window.tm);
-
-    window.tm =
-        setTimeout(
-            () =>
-                t.classList.remove("show"),
-            2200
-        );
 }
 
 
-/* =========================
-   Escape
-========================= */
+function verify(user){
 
-function esc(x){
+  return user && user.verified
+    ? '<i class="verify">✓</i>'
+    : "";
 
-    return String(x)
-        .replace(
-            /[&<>"']/g,
-            m =>
-                ({
-                    "&":"&amp;",
-                    "<":"&lt;",
-                    ">":"&gt;",
-                    '"':"&quot;",
-                    "'":"&#039;"
-                })[m]
-        );
 }
 
 
-/* =========================
-   Local Profile
-========================= */
+function showToast(text){
 
-function saveProfileLocal(){
+  const toast =
+    $("toast");
 
-    localStorage.setItem(
-        "phone",
-        phone
+  toast.textContent =
+    text;
+
+  toast.classList.add(
+    "show"
+  );
+
+  clearTimeout(
+    window.toastTimer
+  );
+
+  window.toastTimer =
+    setTimeout(
+      () => {
+        toast.classList.remove(
+          "show"
+        );
+      },
+      2200
     );
 
-    localStorage.setItem(
-        "virax_profile",
-        JSON.stringify(profile)
-    );
 }
 
 
-/* =========================
-   Login
-========================= */
+function formatTime(timestamp){
 
-function login(){
+  return new Date(timestamp)
+    .toLocaleTimeString(
+      "fa-IR",
+      {
+        hour:"2-digit",
+        minute:"2-digit"
+      }
+    );
 
-    const p =
-        $("phoneInput")
-            .value
-            .replace(/\D/g,"");
+}
 
-    if(!/^09\d{9}$/.test(p)){
 
-        return msg(
-            "شماره موبایل معتبر وارد کنید"
-        );
-    }
+/* ==================================================
+                  API
+================================================== */
 
-    phone = p;
+async function api(
+  url,
+  options = {}
+){
+
+  const response =
+    await fetch(
+      url,
+      {
+        ...options,
+
+        headers:{
+          "Content-Type":
+            "application/json",
+
+          ...(options.headers || {})
+        }
+      }
+    );
+
+  let data = {};
+
+  try{
+
+    data =
+      await response.json();
+
+  }catch{
+
+  }
+
+  if(!response.ok){
+
+    throw new Error(
+      data.error ||
+      "خطایی رخ داد"
+    );
+
+  }
+
+  return data;
+
+}
+
+
+/* ==================================================
+                  LOGIN
+================================================== */
+
+async function login(){
+
+  const input =
+    $("phoneInput");
+
+  const number =
+    input.value
+      .replace(/\D/g,"");
+
+  if(
+    !/^09\d{9}$/.test(number)
+  ){
+
+    showToast(
+      "شماره موبایل معتبر نیست"
+    );
+
+    return;
+
+  }
+
+  try{
+
+    const data =
+      await api(
+        "/api/login",
+        {
+          method:"POST",
+
+          body:
+            JSON.stringify({
+              phone:number
+            })
+        }
+      );
+
+    phone =
+      number;
 
     profile =
-        profile || {
-            name:"کاربر Virax",
-            username:"",
-            photo:""
-        };
+      data.user;
 
-    saveProfileLocal();
-
-    startApp();
-}
-
-
-/* =========================
-   Start
-========================= */
-
-function startApp(){
+    localStorage.setItem(
+      "phone",
+      phone
+    );
 
     $("auth").style.display =
-        "none";
+      "none";
 
     $("app").style.display =
-        "block";
+      "block";
 
     renderProfile();
 
-    if(!socket){
+    connectSocket();
 
-        connectSocket();
+    await loadChats();
 
-    }
+  }
+  catch(error){
+
+    showToast(
+      error.message
+    );
+
+  }
 
 }
 
 
-/* =========================
-   Socket
-========================= */
+/* ==================================================
+             SOCKET CONNECTION
+================================================== */
 
 function connectSocket(){
 
-    socket =
-        io({
-            transports:[
-                "websocket",
-                "polling"
-            ]
-        });
+  if(socket){
+
+    socket.disconnect();
+
+  }
+
+  socket =
+    io({
+      transports:[
+        "websocket",
+        "polling"
+      ]
+    });
 
 
-    socket.on(
-        "connect",
-        () => {
+  socket.on(
+    "connect",
+    () => {
 
-            /*
-             * سرور فعلی:
-             * socket.on("join", (phone, callback))
-             */
+      console.log(
+        "Virax Socket connected"
+      );
 
-            socket.emit(
-                "join",
-                phone,
-                response => {
+      socket.emit(
+        "auth",
+        phone
+      );
 
-                    if(
-                        response &&
-                        response.ok &&
-                        response.user
-                    ){
-
-                        profile = {
-                            name:
-                                response.user.name ||
-                                "کاربر Virax",
-
-                            username:
-                                response.user.username ||
-                                "",
-
-                            photo:
-                                response.user.photo ||
-                                ""
-                        };
-
-                        saveProfileLocal();
-
-                        renderProfile();
-
-                        msg(
-                            "به سرور Virax متصل شدی"
-                        );
-
-                    }else{
-
-                        msg(
-                            response?.error ||
-                            "ورود به سرور ناموفق بود"
-                        );
-
-                    }
-
-                }
-            );
-
-        }
-    );
+    }
+  );
 
 
-    socket.on(
-        "disconnect",
-        () => {
+  socket.on(
+    "auth:error",
+    data => {
 
-            msg(
-                "اتصال به سرور قطع شد"
-            );
+      showToast(
+        data.error ||
+        "احراز هویت ناموفق بود"
+      );
 
-        }
-    );
+      logout();
 
-
-    /* =========================
-       New Message
-    ========================= */
-
-    socket.on(
-        "new_message",
-        data => {
-
-            if(!data) return;
-
-            /*
-             * اگر پیام مربوط به چت باز است
-             * آن را فقط یک بار نمایش بده.
-             */
-
-            const belongsToCurrentChat =
-                room === "user" &&
-                currentUser &&
-                (
-                    data.from === currentUser ||
-                    data.to === currentUser
-                );
-
-            if(!belongsToCurrentChat){
-
-                return;
-
-            }
-
-            addMessage(
-                data,
-                data.from === phone
-            );
-
-        }
-    );
+    }
+  );
 
 
-    /* =========================
-       Online
-    ========================= */
+  socket.on(
+    "disconnect",
+    () => {
 
-    socket.on(
-        "user_online",
-        data => {
+      if(
+        currentChat
+      ){
 
-            if(
-                currentUser &&
-                data?.phone === currentUser
-            ){
+        setChatStatus(
+          false
+        );
 
-                $("chatStatus").textContent =
-                    "● آنلاین";
+      }
 
-            }
-
-        }
-    );
+    }
+  );
 
 
-    socket.on(
-        "user_offline",
-        data => {
+  /* =========================
+       MESSAGE RECEIVED
+  ========================= */
 
-            if(
-                currentUser &&
-                data?.phone === currentUser
-            ){
+  socket.on(
+    "message",
+    message => {
 
-                $("chatStatus").textContent =
-                    "● آفلاین";
+      /*
+        اگر پیام مربوط به چت باز
+        باشد، همان لحظه نمایش بده.
+      */
 
-            }
+      if(
 
-        }
-    );
+        currentChat &&
+
+        (
+          (
+            message.from === phone &&
+            message.to === currentChat
+          )
+          ||
+          (
+            message.to === phone &&
+            message.from === currentChat
+          )
+        )
+
+      ){
+
+        addMessage(
+          message
+        );
+
+      }
+
+      /*
+        لیست گفتگوها
+        هم به‌روزرسانی شود.
+      */
+
+      loadChats();
+
+    }
+  );
 
 
-    socket.on(
-        "online_users",
-        list => {
+  /* =========================
+        ONLINE / OFFLINE
+  ========================= */
 
-            if(
-                currentUser &&
-                Array.isArray(list)
-            ){
+  socket.on(
+    "presence",
+    data => {
 
-                $("chatStatus").textContent =
-                    list.includes(currentUser)
-                        ? "● آنلاین"
-                        : "● آفلاین";
+      if(
+        currentChat === data.phone
+      ){
 
-            }
+        setChatStatus(
+          data.online
+        );
 
-        }
-    );
+      }
+
+      loadChats();
+
+    }
+  );
 
 
-    /* =========================
-       User Updated
-    ========================= */
+  /* =========================
+        PROFILE UPDATE
+  ========================= */
 
-    socket.on(
-        "user_updated",
-        user => {
+  socket.on(
+    "profile:update",
+    data => {
 
-            if(
-                user &&
-                user.phone === currentUser
-            ){
+      if(
+        data.phone === phone
+      ){
 
-                currentUserData =
-                    user;
+        profile =
+          data;
 
-                renderChatUser(user);
+        renderProfile();
 
-            }
+      }
 
-            if(
-                user &&
-                user.phone === phone
-            ){
+      if(
+        currentChat === data.phone
+      ){
 
-                profile = {
-                    name:user.name,
-                    username:user.username,
-                    photo:user.photo
-                };
+        updateChatHeader(
+          data
+        );
 
-                saveProfileLocal();
+      }
 
-                renderProfile();
+      loadChats();
 
-            }
+    }
+  );
 
-        }
-    );
+
+  /* =========================
+             BAN
+  ========================= */
+
+  socket.on(
+    "banned",
+    () => {
+
+      showToast(
+        "حساب شما مسدود شد"
+      );
+
+      setTimeout(
+        logout,
+        700
+      );
+
+    }
+  );
+
+
+  /* =========================
+        SERVER ERROR
+  ========================= */
+
+  socket.on(
+    "error:msg",
+    data => {
+
+      showToast(
+        data.error ||
+        "خطا در ارسال پیام"
+      );
+
+    }
+  );
 
 }
 
 
-/* =========================
-   Profile Render
-========================= */
+/* ==================================================
+              PROFILE RENDER
+================================================== */
 
 function renderProfile(){
 
-    $("pn").textContent =
-        profile.name ||
-        "کاربر Virax";
+  if(!profile){
 
-    $("pu").textContent =
-        profile.username
-            ? "@" + profile.username
-            : "آیدی انتخاب نشده";
+    return;
 
-    $("rn").textContent =
-        profile.name ||
-        "کاربر Virax";
+  }
 
-    $("ru").textContent =
-        profile.username
-            ? "@" + profile.username
-            : "آیدی انتخاب نشده";
+  $("pn").innerHTML =
+    escapeHTML(
+      profile.name
+    ) +
+    verify(profile);
 
-    $("rp").textContent =
-        phone;
+  $("rn").textContent =
+    profile.name;
 
-    $("pic").innerHTML =
-        profile.photo
-            ? `<img src="${esc(profile.photo)}">`
-            : "👤";
+  $("pu").textContent =
+    profile.user
+      ? "@" + profile.user
+      : "آیدی انتخاب نشده";
 
-}
+  $("ru").textContent =
+    profile.user
+      ? "@" + profile.user
+      : "آیدی انتخاب نشده";
 
+  $("rp").textContent =
+    phone;
 
-/* =========================
-   Navigation
-========================= */
+  $("pic").innerHTML =
+    profile.photo
+      ? `<img src="${escapeHTML(profile.photo)}">`
+      : "👤";
 
-function go(id,button){
+  /*
+    پنل ادمین اصلی
+  */
 
-    document
-        .querySelectorAll(".page")
-        .forEach(
-            x =>
-                x.classList.remove("active")
-        );
-
-    $("savedChat").style.display =
-        "none";
-
-    $("mainHeader").style.display =
-        "flex";
-
-    $("search").style.display =
-        id === "chats"
-            ? "flex"
-            : "none";
-
-    $(""+id).classList.add(
-        "active"
-    );
-
-    document
-        .querySelectorAll(".nav button")
-        .forEach(
-            x =>
-                x.classList.remove("on")
-        );
-
-    button.classList.add("on");
-
-    $("title").textContent =
-        {
-            chats:"𝐕𝐢𝐫𝐚𝐱",
-            contacts:"مخاطبین",
-            profile:"پروفایل"
-        }[id] || "𝐕𝐢𝐫𝐚𝐱";
+  $("admin").style.display =
+    phone === "09001115958"
+      ? "block"
+      : "none";
 
 }
 
 
-/* =========================
-   Search
-========================= */
+/* ==================================================
+                 LOAD CHATS
+================================================== */
 
-let searchTimer = null;
+async function loadChats(){
 
-function searchUsers(){
+  try{
 
-    const q =
-        $("find")
-            .value
-            .trim();
-
-    clearTimeout(
-        searchTimer
-    );
-
-    if(!q){
-
-        $("searchResults")
-            .innerHTML = "";
-
-        return;
-
-    }
-
-    if(
-        !socket ||
-        !socket.connected
-    ){
-
-        return msg(
-            "اتصال به سرور برقرار نیست"
-        );
-
-    }
-
-    searchTimer =
-        setTimeout(
-            () => {
-
-                socket.emit(
-                    "search_users",
-                    q,
-                    response => {
-
-                        if(
-                            !response ||
-                            !response.ok
-                        ){
-
-                            return msg(
-                                response?.error ||
-                                "خطا در جستجو"
-                            );
-
-                        }
-
-                        renderSearchResults(
-                            response.users || []
-                        );
-
-                    }
-                );
-
-            },
-            250
-        );
-
-}
-
-
-$("find").addEventListener(
-    "input",
-    searchUsers
-);
-
-
-/* =========================
-   Search Results
-========================= */
-
-function renderSearchResults(
-    users
-){
+    const users =
+      await api(
+        "/api/users"
+      );
 
     const container =
-        $("searchResults");
+      $("chats");
 
-    container.innerHTML = "";
+    let html = `
 
-    if(!users.length){
+      <div
+        class="chat"
+        onclick="openSavedMessages()"
+      >
 
-        container.innerHTML =
-            `<div class="empty">
-                کاربری پیدا نشد
-            </div>`;
+        <div class="avatar">
+          🔖
+        </div>
 
-        return;
+        <div class="info">
 
-    }
+          <div class="top">
 
-    const title =
-        document.createElement(
-            "div"
-        );
+            <b class="name">
+              پیام‌های ذخیره‌شده
+            </b>
 
-    title.className =
-        "search-title";
+            <span class="time">
+              شخصی
+            </span>
 
-    title.textContent =
-        "نتایج جستجو";
+          </div>
 
-    container.appendChild(title);
+          <div class="msg">
+            پیام‌های ذخیره‌شده شما
+          </div>
 
+        </div>
 
-    users.forEach(
-        user => {
-
-            /*
-             * خود کاربر را در نتایج نشان نده
-             */
-
-            if(
-                user.phone === phone
-            ){
-
-                return;
-
-            }
-
-            const div =
-                document.createElement(
-                    "div"
-                );
-
-            div.className =
-                "chat";
-
-            div.innerHTML = `
-
-                <div class="avatar">
-
-                    ${
-                        user.photo
-                            ? `<img src="${esc(user.photo)}">`
-                            : "👤"
-                    }
-
-                </div>
-
-                <div class="info">
-
-                    <div class="top">
-
-                        <b class="name">
-                            ${esc(
-                                user.name ||
-                                "کاربر Virax"
-                            )}
-                        </b>
-
-                    </div>
-
-                    <div class="msg">
-
-                        ${
-                            user.username
-                                ? "@" +
-                                  esc(
-                                      user.username
-                                  )
-                                : "بدون آیدی"
-                        }
-
-                    </div>
-
-                </div>
-            `;
-
-            div.onclick =
-                () =>
-                    openUser(user);
-
-            container.appendChild(
-                div
-            );
-
-        }
-    );
-
-}
-
-
-/* =========================
-   Open User
-========================= */
-
-function openUser(user){
-
-    if(
-        !user ||
-        !user.phone
-    ){
-
-        return;
-
-    }
-
-    currentUser =
-        user.phone;
-
-    currentUserData =
-        user;
-
-    room =
-        "user";
-
-    renderedMessageIds =
-        new Set();
-
-
-    $("search").style.display =
-        "none";
-
-    $("mainHeader").style.display =
-        "none";
-
-    $("savedChat").style.display =
-        "block";
-
-    document
-        .querySelector(".nav")
-        .style.display =
-        "none";
-
-
-    renderChatUser(user);
-
-    $("messages").innerHTML = "";
-
-
-    if(
-        socket &&
-        socket.connected
-    ){
-
-        socket.emit(
-            "get_messages",
-            currentUser,
-            response => {
-
-                if(
-                    !response ||
-                    !response.ok
-                ){
-
-                    return msg(
-                        response?.error ||
-                        "دریافت پیام‌ها ناموفق بود"
-                    );
-
-                }
-
-                $("messages")
-                    .innerHTML = "";
-
-                renderedMessageIds =
-                    new Set();
-
-                (
-                    response.messages ||
-                    []
-                ).forEach(
-                    message => {
-
-                        addMessage(
-                            message,
-                            message.from === phone
-                        );
-
-                    }
-                );
-
-                scrollMessages();
-
-            }
-        );
-
-    }
-
-    $("messageInput").focus();
-
-}
-
-
-/* =========================
-   Chat User
-========================= */
-
-function renderChatUser(user){
-
-    $("chatName").textContent =
-        user.name ||
-        "کاربر Virax";
-
-    $("chatPic").innerHTML =
-        user.photo
-            ? `<img src="${esc(user.photo)}">`
-            : "👤";
-
-    $("mprofile").textContent =
-        user.name ||
-        "کاربر Virax";
-
-    $("muser").textContent =
-        user.username
-            ? "@" + user.username
-            : "بدون آیدی";
-
-}
-
-
-/* =========================
-   Saved Messages
-========================= */
-
-function openSaved(){
-
-    room =
-        "saved";
-
-    currentUser =
-        null;
-
-    currentUserData =
-        null;
-
-    $("search").style.display =
-        "none";
-
-    $("mainHeader").style.display =
-        "none";
-
-    $("savedChat").style.display =
-        "block";
-
-    document
-        .querySelector(".nav")
-        .style.display =
-        "none";
-
-    $("chatName").textContent =
-        "پیام‌های ذخیره‌شده";
-
-    $("chatPic").textContent =
-        "🔖";
-
-    $("chatStatus").textContent =
-        "خصوصی";
-
-    loadSavedMessages();
-
-}
-
-
-function openChat(type){
-
-    if(
-        type === "saved"
-    ){
-
-        openSaved();
-
-    }
-
-}
-
-
-/* =========================
-   Close Chat
-========================= */
-
-function closeChat(){
-
-    $("savedChat").style.display =
-        "none";
-
-    $("mainHeader").style.display =
-        "flex";
-
-    $("search").style.display =
-        "flex";
-
-    document
-        .querySelector(".nav")
-        .style.display =
-        "grid";
-
-    $("chats").classList.add(
-        "active"
-    );
-
-}
-
-
-/* =========================
-   Send Message
-========================= */
-
-function sendMsg(){
-
-    const text =
-        $("messageInput")
-            .value
-            .trim();
-
-    if(!text){
-
-        return;
-
-    }
-
-
-    /* Saved */
-
-    if(
-        room === "saved"
-    ){
-
-        const list =
-            JSON.parse(
-                localStorage.getItem(
-                    "virax_saved_messages"
-                ) || "[]"
-            );
-
-        list.push({
-
-            id:
-                Date.now() +
-                "_" +
-                Math.random(),
-
-            message:
-                text,
-
-            time:
-                Date.now()
-
-        });
-
-        localStorage.setItem(
-            "virax_saved_messages",
-            JSON.stringify(list)
-        );
-
-        $("messageInput").value = "";
-
-        loadSavedMessages();
-
-        return;
-
-    }
-
-
-    /* Real Chat */
-
-    if(
-        !socket ||
-        !socket.connected
-    ){
-
-        return msg(
-            "به سرور متصل نیستی"
-        );
-
-    }
-
-    if(!currentUser){
-
-        return msg(
-            "کاربری انتخاب نشده"
-        );
-
-    }
-
-
-    socket.emit(
-        "send_message",
-        {
-            to:
-                currentUser,
-
-            message:
-                text
-
-        },
-        response => {
-
-            if(
-                !response ||
-                !response.ok
-            ){
-
-                return msg(
-                    response?.error ||
-                    "ارسال پیام ناموفق بود"
-                );
-
-            }
-
-            /*
-             * سرور خودش new_message
-             * را برای فرستنده ارسال می‌کند.
-             * پس اینجا پیام را دستی اضافه نمی‌کنیم.
-             */
-
-        }
-    );
-
-
-    $("messageInput").value = "";
-
-}
-
-
-/* =========================
-   Add Message
-========================= */
-
-function addMessage(
-    data,
-    mine
-){
-
-    if(!data){
-
-        return;
-
-    }
-
-    /*
-     * جلوگیری از دوبار نمایش دادن
-     */
-
-    if(
-        data.id &&
-        renderedMessageIds.has(
-            data.id
-        )
-    ){
-
-        return;
-
-    }
-
-    if(data.id){
-
-        renderedMessageIds.add(
-            data.id
-        );
-
-    }
-
-
-    const div =
-        document.createElement(
-            "div"
-        );
-
-    div.className =
-        "message " +
-        (
-            mine
-                ? "mine"
-                : "other"
-        );
-
-
-    const text =
-        data.message ||
-        data.text ||
-        "";
-
-
-    const time =
-        data.time
-            ? new Date(
-                data.time
-            ).toLocaleTimeString(
-                "fa-IR",
-                {
-                    hour:"2-digit",
-                    minute:"2-digit"
-                }
-            )
-            : "";
-
-
-    div.innerHTML = `
-
-        ${esc(text)}
-
-        <small>
-            ${time}
-        </small>
+      </div>
 
     `;
 
 
-    $("messages")
-        .appendChild(div);
+    users
+      .filter(
+        user =>
+          user.phone !== phone
+      )
+      .forEach(
+        user => {
 
-    scrollMessages();
+          html += `
 
-}
+            <div
+              class="chat"
+              data-phone="${escapeHTML(user.phone)}"
+              onclick="openChat('${escapeHTML(user.phone)}')"
+            >
+
+              <div class="avatar">
+
+                ${
+                  user.photo
+                    ? `<img src="${escapeHTML(user.photo)}">`
+                    : "👤"
+                }
+
+              </div>
+
+              <div class="info">
+
+                <div class="top">
+
+                  <b class="name">
+
+                    ${escapeHTML(
+                      user.name
+                    )}
+
+                    ${verify(user)}
+
+                  </b>
+
+                  <span
+                    class="time ${
+                      user.online
+                        ? "status-online"
+                        : "status-offline"
+                    }"
+                  >
+
+                    ${
+                      user.online
+                        ? "آنلاین"
+                        : "آفلاین"
+                    }
+
+                  </span>
+
+                </div>
+
+                <div class="msg">
+
+                  ${
+                    user.user
+                      ? "@" +
+                        escapeHTML(
+                          user.user
+                        )
+                      : "آیدی انتخاب نشده"
+                  }
+
+                </div>
+
+              </div>
+
+            </div>
+
+          `;
+
+        }
+      );
 
 
-/* =========================
-   Saved Messages
-========================= */
+    if(
+      users.filter(
+        user =>
+          user.phone !== phone
+      ).length === 0
+    ){
 
-function loadSavedMessages(){
+      html += `
 
-    $("messages")
-        .innerHTML = "";
+        <div class="empty">
 
-    renderedMessageIds =
-        new Set();
+          👥
 
-    const list =
-        JSON.parse(
-            localStorage.getItem(
-                "virax_saved_messages"
-            ) || "[]"
-        );
+          <br><br>
 
-    list.forEach(
-        x =>
-            addMessage(
-                x,
-                true
-            )
+          هنوز کاربر دیگری
+          ثبت‌نام نکرده است.
+
+        </div>
+
+      `;
+
+    }
+
+
+    container.innerHTML =
+      html;
+
+  }
+  catch(error){
+
+    console.error(
+      error
     );
 
-    scrollMessages();
+  }
 
 }
 
 
-/* =========================
-   Scroll
-========================= */
+/* ==================================================
+              LOAD CONTACTS
+================================================== */
+
+async function loadContacts(){
+
+  try{
+
+    const users =
+      await api(
+        "/api/users"
+      );
+
+    const list =
+      users.filter(
+        user =>
+          user.phone !== phone
+      );
+
+    if(
+      list.length === 0
+    ){
+
+      $("usersList").innerHTML = `
+
+        <div class="empty">
+
+          👥
+
+          <br><br>
+
+          کاربر دیگری وجود ندارد.
+
+        </div>
+
+      `;
+
+      return;
+
+    }
+
+
+    $("usersList").innerHTML =
+      list.map(
+        user => `
+
+          <div
+            class="chat"
+            onclick="openChat('${escapeHTML(user.phone)}')"
+          >
+
+            <div class="avatar">
+
+              ${
+                user.photo
+                  ? `<img src="${escapeHTML(user.photo)}">`
+                  : "👤"
+              }
+
+            </div>
+
+            <div class="info">
+
+              <div class="top">
+
+                <b class="name">
+
+                  ${escapeHTML(
+                    user.name
+                  )}
+
+                  ${verify(user)}
+
+                </b>
+
+                <span
+                  class="time ${
+                    user.online
+                      ? "status-online"
+                      : "status-offline"
+                  }"
+                >
+
+                  ${
+                    user.online
+                      ? "آنلاین"
+                      : "آفلاین"
+                  }
+
+                </span>
+
+              </div>
+
+              <div class="msg">
+
+                ${
+                  user.user
+                    ? "@" +
+                      escapeHTML(
+                        user.user
+                      )
+                    : "آیدی انتخاب نشده"
+                }
+
+              </div>
+
+            </div>
+
+          </div>
+
+        `
+      )
+      .join("");
+
+  }
+  catch(error){
+
+    showToast(
+      error.message
+    );
+
+  }
+
+}
+
+
+/* ==================================================
+                NAVIGATION
+================================================== */
+
+function go(
+  page,
+  button
+){
+
+  document
+    .querySelectorAll(
+      ".page"
+    )
+    .forEach(
+      element =>
+        element.classList.remove(
+          "active"
+        )
+    );
+
+
+  $("savedChat").style.display =
+    "none";
+
+
+  $("mainHeader").style.display =
+    "flex";
+
+
+  $("search").style.display =
+    page === "chats"
+      ? "flex"
+      : "none";
+
+
+  document
+    .querySelector(".nav")
+    .style.display =
+      "grid";
+
+
+  $(page)
+    .classList.add(
+      "active"
+    );
+
+
+  document
+    .querySelectorAll(
+      ".nav button"
+    )
+    .forEach(
+      element =>
+        element.classList.remove(
+          "on"
+        )
+    );
+
+
+  button.classList.add(
+    "on"
+  );
+
+
+  const titles = {
+
+    chats:
+      "𝐕𝐢𝐫𝐚𝐱",
+
+    contacts:
+      "مخاطبین",
+
+    profile:
+      "پروفایل"
+
+  };
+
+
+  $("title").textContent =
+    titles[page] ||
+    "Virax";
+
+
+  if(
+    page === "contacts"
+  ){
+
+    loadContacts();
+
+  }
+
+}
+
+
+/* ==================================================
+              OPEN SAVED
+================================================== */
+
+function openSavedMessages(){
+
+  currentChat =
+    null;
+
+  currentChatUser =
+    null;
+
+  $("chatName").textContent =
+    "پیام‌های ذخیره‌شده";
+
+  $("chatPic").textContent =
+    "🔖";
+
+  $("chatStatus").textContent =
+    "";
+
+  showChat();
+
+  loadSavedMessages();
+
+}
+
+
+/* ==================================================
+                 OPEN CHAT
+================================================== */
+
+async function openChat(
+  targetPhone,
+  refresh = false
+){
+
+  try{
+
+    const user =
+      await api(
+        "/api/profile/" +
+        encodeURIComponent(
+          targetPhone
+        )
+      );
+
+
+    currentChat =
+      targetPhone;
+
+    currentChatUser =
+      user;
+
+
+    updateChatHeader(
+      user
+    );
+
+
+    if(!refresh){
+
+      showChat();
+
+    }
+
+
+    await loadMessages();
+
+  }
+  catch(error){
+
+    showToast(
+      error.message
+    );
+
+  }
+
+}
+
+
+/* ==================================================
+            CHAT HEADER
+================================================== */
+
+function updateChatHeader(
+  user
+){
+
+  $("chatName").innerHTML =
+    escapeHTML(
+      user.name
+    ) +
+    verify(user);
+
+
+  $("chatPic").innerHTML =
+    user.photo
+      ? `<img src="${escapeHTML(user.photo)}">`
+      : "👤";
+
+
+  setChatStatus(
+    user.online
+  );
+
+}
+
+
+function setChatStatus(
+  online
+){
+
+  const status =
+    $("chatStatus");
+
+  status.textContent =
+    online
+      ? "● آنلاین"
+      : "● آفلاین";
+
+
+  status.className =
+    online
+      ? "status-online"
+      : "status-offline";
+
+}
+
+
+/* ==================================================
+              SHOW CHAT
+================================================== */
+
+function showChat(){
+
+  $("mainHeader").style.display =
+    "none";
+
+  $("search").style.display =
+    "none";
+
+  $("savedChat").style.display =
+    "block";
+
+  $("app").style.display =
+    "block";
+
+  document
+    .querySelector(".nav")
+    .style.display =
+      "none";
+
+  $("messages").innerHTML =
+    "";
+
+}
+
+
+/* ==================================================
+               CLOSE CHAT
+================================================== */
+
+function closeChat(){
+
+  $("savedChat").style.display =
+    "none";
+
+  $("mainHeader").style.display =
+    "flex";
+
+  $("search").style.display =
+    "flex";
+
+  document
+    .querySelector(".nav")
+    .style.display =
+      "grid";
+
+  document
+    .querySelectorAll(
+      ".page"
+    )
+    .forEach(
+      element =>
+        element.classList.remove(
+          "active"
+        )
+    );
+
+  $("chats")
+    .classList.add(
+      "active"
+    );
+
+
+  currentChat =
+    null;
+
+  currentChatUser =
+    null;
+
+}
+
+
+/* ==================================================
+             LOAD MESSAGES
+================================================== */
+
+async function loadMessages(){
+
+  if(!currentChat){
+
+    return;
+
+  }
+
+  try{
+
+    const messages =
+      await api(
+        "/api/messages/" +
+        encodeURIComponent(
+          currentChat
+        ) +
+        "?me=" +
+        encodeURIComponent(
+          phone
+        )
+      );
+
+
+    $("messages").innerHTML =
+      "";
+
+
+    messages.forEach(
+      addMessage
+    );
+
+
+    scrollMessages();
+
+  }
+  catch(error){
+
+    showToast(
+      error.message
+    );
+
+  }
+
+}
+
+
+/* ==================================================
+             ADD MESSAGE
+================================================== */
+
+function addMessage(
+  message
+){
+
+  /*
+    جلوگیری از دوباره نمایش دادن پیام
+  */
+
+  if(
+    document.querySelector(
+      `[data-message-id="${message.id}"]`
+    )
+  ){
+
+    return;
+
+  }
+
+
+  const element =
+    document.createElement(
+      "div"
+    );
+
+
+  element.className =
+    "message" +
+    (
+      message.from !== phone
+        ? " other"
+        : ""
+    );
+
+
+  element.dataset.messageId =
+    message.id;
+
+
+  element.innerHTML = `
+
+    ${escapeHTML(
+      message.text
+    )}
+
+    <div class="meta">
+
+      ${formatTime(
+        message.time
+      )}
+
+    </div>
+
+  `;
+
+
+  $("messages")
+    .appendChild(
+      element
+    );
+
+
+  scrollMessages();
+
+}
+
+
+/* ==================================================
+             SCROLL
+================================================== */
 
 function scrollMessages(){
 
-    $("messages").scrollTop =
-        $("messages").scrollHeight;
+  const box =
+    $("messages");
+
+  box.scrollTop =
+    box.scrollHeight;
 
 }
 
 
-/* =========================
-   Enter
-========================= */
+/* ==================================================
+              SEND MESSAGE
+================================================== */
 
-$("messageInput")
-    .addEventListener(
-        "keydown",
-        e => {
+function sendMessage(){
 
-            if(
-                e.key === "Enter"
-            ){
+  const input =
+    $("messageInput");
 
-                e.preventDefault();
+  const text =
+    input.value.trim();
 
-                sendMsg();
 
-            }
+  if(!text){
 
-        }
+    return;
+
+  }
+
+
+  /*
+    پیام ذخیره‌شده
+  */
+
+  if(!currentChat){
+
+    const saved =
+      JSON.parse(
+        localStorage.getItem(
+          "virax_saved"
+        ) || "[]"
+      );
+
+
+    saved.push({
+
+      id:
+        Date.now(),
+
+      text,
+
+      time:
+        Date.now()
+
+    });
+
+
+    localStorage.setItem(
+      "virax_saved",
+      JSON.stringify(
+        saved
+      )
     );
 
 
-/* =========================
-   Edit Profile
-========================= */
+    input.value =
+      "";
+
+    loadSavedMessages();
+
+    return;
+
+  }
+
+
+  /*
+    چک اتصال
+  */
+
+  if(
+    !socket ||
+    !socket.connected
+  ){
+
+    showToast(
+      "اتصال به سرور برقرار نیست"
+    );
+
+    return;
+
+  }
+
+
+  /*
+    ارسال واقعی
+    از طریق Socket.IO
+  */
+
+  socket.emit(
+    "send",
+    {
+
+      to:
+        currentChat,
+
+      text
+
+    }
+  );
+
+
+  input.value =
+    "";
+
+}
+
+
+/* ==================================================
+          ENTER TO SEND
+================================================== */
+
+$("messageInput")
+  .addEventListener(
+    "keydown",
+    event => {
+
+      if(
+        event.key === "Enter"
+      ){
+
+        event.preventDefault();
+
+        sendMessage();
+
+      }
+
+    }
+  );
+
+
+/* ==================================================
+          SAVED MESSAGES
+================================================== */
+
+function loadSavedMessages(){
+
+  const saved =
+    JSON.parse(
+      localStorage.getItem(
+        "virax_saved"
+      ) || "[]"
+    );
+
+
+  $("messages").innerHTML =
+    "";
+
+
+  saved.forEach(
+    message => {
+
+      const element =
+        document.createElement(
+          "div"
+        );
+
+
+      element.className =
+        "message";
+
+
+      element.innerHTML = `
+
+        ${escapeHTML(
+          message.text
+        )}
+
+        <div class="meta">
+
+          ${formatTime(
+            message.time
+          )}
+
+        </div>
+
+      `;
+
+
+      $("messages")
+        .appendChild(
+          element
+        );
+
+    }
+  );
+
+
+  scrollMessages();
+
+}
+
+
+/* ==================================================
+          SEARCH
+================================================== */
+
+$("find")
+  .addEventListener(
+    "input",
+    event => {
+
+      const query =
+        event.target.value
+          .trim()
+          .toLowerCase();
+
+
+      document
+        .querySelectorAll(
+          "#chats .chat"
+        )
+        .forEach(
+          chat => {
+
+            chat.style.display =
+              !query ||
+              chat.innerText
+                .toLowerCase()
+                .includes(query)
+                ? "flex"
+                : "none";
+
+          }
+        );
+
+    }
+  );
+
+
+/* ==================================================
+            EDIT PROFILE
+================================================== */
 
 function editProfile(){
 
-    $("ename").value =
-        profile.name || "";
+  if(!profile){
 
-    $("euser").value =
-        profile.username || "";
+    return;
 
-    $("edit").style.display =
-        "flex";
+  }
+
+
+  $("ename").value =
+    profile.name || "";
+
+
+  $("euser").value =
+    profile.user || "";
+
+
+  $("edit").style.display =
+    "flex";
 
 }
 
 
-$("pn").onclick =
-    editProfile;
+async function saveProfile(){
 
-$("pu").onclick =
-    editProfile;
-
-$("rn").onclick =
-    editProfile;
-
-$("ru").onclick =
-    editProfile;
+  const name =
+    $("ename")
+      .value
+      .trim() ||
+    "کاربر Virax";
 
 
-/* =========================
-   Save Profile
-========================= */
-
-function saveProfile(){
-
-    const name =
-        $("ename")
-            .value
-            .trim() ||
-        "کاربر Virax";
-
-    const username =
-        $("euser")
-            .value
-            .trim()
-            .replace(/^@/,"")
-            .replace(/\s/g,"_")
-            .toLowerCase();
+  const user =
+    $("euser")
+      .value
+      .trim()
+      .replace(/^@/,"")
+      .replace(/\s/g,"_")
+      .toLowerCase();
 
 
-    if(!username){
+  if(!user){
 
-        return msg(
-            "نام کاربری را وارد کنید"
-        );
-
-    }
-
-
-    if(
-        !socket ||
-        !socket.connected
-    ){
-
-        return msg(
-            "به سرور متصل نیستی"
-        );
-
-    }
-
-
-    /*
-     * API واقعی سرور
-     */
-
-    fetch(
-        "/api/profile",
-        {
-            method:"POST",
-
-            headers:{
-                "Content-Type":
-                    "application/json"
-            },
-
-            body:
-                JSON.stringify({
-
-                    phone:
-                        phone,
-
-                    name:
-                        name,
-
-                    username:
-                        username,
-
-                    photo:
-                        profile.photo ||
-                        ""
-
-                })
-
-        }
-    )
-    .then(
-        r => r.json()
-    )
-    .then(
-        response => {
-
-            if(
-                !response ||
-                !response.ok
-            ){
-
-                return msg(
-                    response?.error ||
-                    "ذخیره پروفایل ناموفق بود"
-                );
-
-            }
-
-
-            profile = {
-
-                name:
-                    response.user.name,
-
-                username:
-                    response.user.username,
-
-                photo:
-                    response.user.photo ||
-                    ""
-
-            };
-
-
-            saveProfileLocal();
-
-            renderProfile();
-
-            $("edit").style.display =
-                "none";
-
-            msg(
-                "پروفایل ذخیره شد"
-            );
-
-        }
-    )
-    .catch(
-        () =>
-            msg(
-                "خطا در ارتباط با سرور"
-            )
+    showToast(
+      "نام کاربری را وارد کنید"
     );
 
+    return;
+
+  }
+
+
+  try{
+
+    const data =
+      await api(
+        "/api/profile",
+        {
+
+          method:"POST",
+
+          body:
+            JSON.stringify({
+
+              phone,
+
+              name,
+
+              user,
+
+              photo:
+                profile.photo || ""
+
+            })
+
+        }
+      );
+
+
+    profile =
+      data.user;
+
+
+    $("edit").style.display =
+      "none";
+
+
+    renderProfile();
+
+    loadChats();
+
+    showToast(
+      "پروفایل ذخیره شد"
+    );
+
+  }
+  catch(error){
+
+    showToast(
+      error.message
+    );
+
+  }
+
 }
 
 
-/* =========================
-   User Profile
-========================= */
+/* ==================================================
+              PROFILE PHOTO
+================================================== */
 
-function openUserProfile(){
+function pickPhoto(){
 
-    if(
-        !currentUserData
-    ){
+  $("file").click();
+
+}
+
+
+$("file")
+  .addEventListener(
+    "change",
+    event => {
+
+      const file =
+        event.target.files[0];
+
+
+      if(!file){
 
         return;
 
-    }
+      }
 
-    $("mprofile").textContent =
-        currentUserData.name ||
-        "کاربر Virax";
+
+      if(
+        file.size >
+        3 * 1024 * 1024
+      ){
+
+        showToast(
+          "حجم تصویر باید کمتر از ۳ مگابایت باشد"
+        );
+
+        return;
+
+      }
+
+
+      const reader =
+        new FileReader();
+
+
+      reader.onload =
+        async () => {
+
+          try{
+
+            const data =
+              await api(
+                "/api/profile",
+                {
+
+                  method:"POST",
+
+                  body:
+                    JSON.stringify({
+
+                      phone,
+
+                      name:
+                        profile.name,
+
+                      user:
+                        profile.user,
+
+                      photo:
+                        reader.result
+
+                    })
+
+                }
+              );
+
+
+            profile =
+              data.user;
+
+
+            renderProfile();
+
+            loadChats();
+
+
+            showToast(
+              "تصویر پروفایل تغییر کرد"
+            );
+
+          }
+          catch(error){
+
+            showToast(
+              error.message
+            );
+
+          }
+
+        };
+
+
+      reader.readAsDataURL(
+        file
+      );
+
+    }
+  );
+
+
+/* ==================================================
+            OTHER USER PROFILE
+================================================== */
+
+async function openUserProfile(){
+
+  if(!currentChat){
+
+    showToast(
+      "پروفایل برای پیام‌های ذخیره‌شده وجود ندارد"
+    );
+
+    return;
+
+  }
+
+
+  try{
+
+    const user =
+      await api(
+        "/api/profile/" +
+        encodeURIComponent(
+          currentChat
+        )
+      );
+
+
+    $("mprofile").innerHTML =
+      escapeHTML(
+        user.name
+      ) +
+      verify(user);
+
 
     $("muser").textContent =
-        currentUserData.username
-            ? "@" +
-              currentUserData.username
-            : "بدون آیدی";
+      user.user
+        ? "@" + user.user
+        : "آیدی انتخاب نشده";
+
+
+    $("muser2").textContent =
+      user.user
+        ? "@" + user.user
+        : "آیدی انتخاب نشده";
+
 
     $("mphone").textContent =
-        "شماره مخفی";
+      phone === "09001115958"
+        ? user.phone
+        : "شماره مخفی شده";
+
+
+    $("mstatus").textContent =
+      user.online
+        ? "● آنلاین"
+        : "● آفلاین";
+
+
+    $("mstatus").className =
+      user.online
+        ? "online status-online"
+        : "online status-offline";
+
 
     $("mpic").innerHTML =
-        currentUserData.photo
-            ? `<img src="${esc(
-                currentUserData.photo
-            )}">`
-            : "👤";
+      user.photo
+        ? `<img src="${escapeHTML(user.photo)}">`
+        : "👤";
+
 
     $("userProfile").style.display =
-        "flex";
+      "flex";
+
+  }
+  catch(error){
+
+    showToast(
+      error.message
+    );
+
+  }
 
 }
 
 
-/* =========================
-   Logout
-========================= */
+function closeUserProfile(){
+
+  $("userProfile").style.display =
+    "none";
+
+}
+
+
+/* ==================================================
+              ADMIN PANEL
+================================================== */
+
+function openAdmin(){
+
+  if(
+    phone !== "09001115958"
+  ){
+
+    showToast(
+      "دسترسی ندارید"
+    );
+
+    return;
+
+  }
+
+
+  $("panel").style.display =
+    "flex";
+
+}
+
+
+function closeAdmin(){
+
+  $("panel").style.display =
+    "none";
+
+}
+
+
+/* ==================================================
+             ADMIN MANAGEMENT
+================================================== */
+
+async function adminAction(
+  action
+){
+
+  const target =
+    $("adminPhone")
+      .value
+      .replace(/\D/g,"");
+
+
+  if(
+    !/^09\d{9}$/.test(
+      target
+    )
+  ){
+
+    showToast(
+      "شماره کاربر معتبر نیست"
+    );
+
+    return;
+
+  }
+
+
+  try{
+
+    await api(
+      "/api/admin",
+      {
+
+        method:"POST",
+
+        body:
+          JSON.stringify({
+
+            actor:
+              phone,
+
+            target,
+
+            action
+
+          })
+
+      }
+    );
+
+
+    $("adminPhone").value =
+      "";
+
+
+    showToast(
+      action === "add"
+        ? "کاربر ادمین شد"
+        : "دسترسی ادمینی حذف شد"
+    );
+
+  }
+  catch(error){
+
+    showToast(
+      error.message
+    );
+
+  }
+
+}
+
+
+/* ==================================================
+             MODERATION
+================================================== */
+
+async function moderation(
+  action
+){
+
+  let target =
+    $("target")
+      .value
+      .trim()
+      .replace(/^@/,"");
+
+
+  /*
+    اگر شماره نیست،
+    username را پیدا می‌کنیم.
+  */
+
+  if(
+    !/^09\d{9}$/.test(
+      target
+    )
+  ){
+
+    try{
+
+      const users =
+        await api(
+          "/api/users?q=" +
+          encodeURIComponent(
+            target
+          )
+        );
+
+
+      const found =
+        users.find(
+          user =>
+            (
+              user.user || ""
+            ).toLowerCase() ===
+            target.toLowerCase()
+        );
+
+
+      if(!found){
+
+        showToast(
+          "کاربر پیدا نشد"
+        );
+
+        return;
+
+      }
+
+
+      target =
+        found.phone;
+
+    }
+    catch(error){
+
+      showToast(
+        error.message
+      );
+
+      return;
+
+    }
+
+  }
+
+
+  try{
+
+    await api(
+      "/api/moderation",
+      {
+
+        method:"POST",
+
+        body:
+          JSON.stringify({
+
+            actor:
+              phone,
+
+            target,
+
+            action,
+
+            days:
+              Number(
+                $("days").value
+              )
+
+          })
+
+      }
+    );
+
+
+    showToast(
+      "عملیات با موفقیت انجام شد"
+    );
+
+
+    loadChats();
+
+  }
+  catch(error){
+
+    showToast(
+      error.message
+    );
+
+  }
+
+}
+
+
+/* ==================================================
+                  LOGOUT
+================================================== */
 
 function logout(){
 
-    if(socket){
+  if(socket){
 
-        socket.disconnect();
+    socket.disconnect();
 
-        socket = null;
+  }
 
-    }
 
-    localStorage.removeItem(
-        "phone"
-    );
+  localStorage.removeItem(
+    "phone"
+  );
 
-    localStorage.removeItem(
-        "virax_profile"
-    );
 
-    phone = "";
+  phone =
+    "";
 
-    profile = null;
+  profile =
+    null;
 
-    currentUser = null;
+  currentChat =
+    null;
 
-    currentUserData = null;
 
-    room = null;
+  $("app").style.display =
+    "none";
 
-    $("app").style.display =
-        "none";
 
-    $("auth").style.display =
-        "grid";
+  $("savedChat").style.display =
+    "none";
 
-    $("phoneInput").value =
-        "";
+
+  $("auth").style.display =
+    "grid";
+
+
+  $("phoneInput").value =
+    "";
 
 }
 
 
-/* =========================
-   Settings
-========================= */
+/* ==================================================
+                  SETTINGS
+================================================== */
 
 function soon(){
 
-    msg(
-        "⚙️ تنظیمات به‌زودی فعال می‌شود"
+  showToast(
+    "⚙️ تنظیمات به‌زودی در دسترس خواهد بود"
+  );
+
+}
+
+
+/* ==================================================
+             AUTO LOGIN
+================================================== */
+
+async function autoLogin(){
+
+  if(!phone){
+
+    return;
+
+  }
+
+
+  try{
+
+    const data =
+      await api(
+        "/api/login",
+        {
+
+          method:"POST",
+
+          body:
+            JSON.stringify({
+              phone
+            })
+
+        }
+      );
+
+
+    profile =
+      data.user;
+
+
+    $("auth").style.display =
+      "none";
+
+
+    $("app").style.display =
+      "block";
+
+
+    renderProfile();
+
+    connectSocket();
+
+    await loadChats();
+
+  }
+  catch(error){
+
+    localStorage.removeItem(
+      "phone"
     );
 
-}
+    phone =
+      "";
 
-
-/* =========================
-   Auto Login
-========================= */
-
-if(
-    phone &&
-    profile
-){
-
-    startApp();
+  }
 
 }
+
+
+/* ==================================================
+             START VIRAX
+================================================== */
+
+autoLogin();
 
 </script>
 
 </body>
-    </html>
+
+          </html>

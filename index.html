@@ -1041,6 +1041,12 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 <button onclick="adminFullReset()" style="background:linear-gradient(#c0392b,#8a2020);color:#fff;width:100%">🔄 ریست کامل</button>
 </div>
 </div>
+<div class="clan-section"><h3>💾 بازیابی از بکاپ</h3>
+<div class="settings-item">
+<p style="color:#99ff99;font-size:11px;line-height:1.7">در صورتی که به اشتباه ریست کردی، می‌توانی از آخرین بکاپ بازیابی کنی.</p>
+<button onclick="adminRestoreFromBackup()" style="background:linear-gradient(#2d6b2d,#1a4a1a);color:#fff;width:100%">♻️ بازیابی از آخرین بکاپ</button>
+</div>
+</div>
 <div class="clan-section"><h3>📢 مدیریت اعلامیه‌ها</h3>
 <div class="settings-item">
 <textarea id="adminAnnTitle" placeholder="عنوان اعلامیه" style="height:40px"></textarea>
@@ -1249,9 +1255,27 @@ async function continueBoot(installed) {
   const t0 = performance.now();
 
   try {
-    if (!installed) resetAppStorage();
+    // ✅ اول داده‌های حذف شده رو لود کن
     loadDeletedData();
+
+    // ✅ فقط اگه هیچ داده‌ی قبلی وجود نداره، ریست کن
+    if (!installed) {
+      const hasExistingAccounts = localStorage.getItem("mafia_accounts");
+      const hasExistingCurrent = localStorage.getItem("mafia_current_user");
+      // فقط وقتی واقعاً نصب تازه است، ریست کن
+      if (!hasExistingAccounts && !hasExistingCurrent) {
+        resetAppStorage();
+      }
+    }
+
+    // ✅ سعی کن از بکاپ بازیابی کنی (اگه لازم باشه)
+    try { restoreFromBackupIfNeeded(); } catch(e) { console.warn("backup restore failed", e); }
+
+    // ✅ حالا اکانت‌های ویژه رو بساز (بدون پاک کردن بقیه)
     ensureSpecialAccounts();
+
+    // ✅ بکاپ خودکار
+    try { saveAccountsBackup(); } catch(e) {}
 
     LoadingScreen.setProgress(installed ? 50 : 15);
 
@@ -1587,9 +1611,7 @@ function ensureSpecialAccounts() {
     let acc = {};
     try { acc = JSON.parse(localStorage.getItem("mafia_accounts") || "{}"); } catch(e) { acc = {}; }
 
-    Object.keys(acc).forEach(ph => {
-      if (ph !== CREATOR_PHONE) delete acc[ph];
-    });
+    // ✅ فقط کاربرانی که صریحاً حذف شدن رو پاک کن (نه همه!)
     Object.keys(deletedUsers).forEach(ph => {
       if (acc[ph]) delete acc[ph];
     });
@@ -1667,7 +1689,74 @@ function getAccounts() {
     return acc; 
   } catch(e) { return {}; }
 }
-function saveAccounts(a) { localStorage.setItem("mafia_accounts", JSON.stringify(a)); }
+function saveAccounts(a) { 
+  localStorage.setItem("mafia_accounts", JSON.stringify(a)); 
+  // ✅ بکاپ خودکار
+  try { saveAccountsBackup(); } catch(e) {}
+}
+
+// ============ 🛡️ BACKUP SYSTEM ============
+const BACKUP_KEY = "mafia_accounts_backup_v1";
+const BACKUP_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // ۷ روز
+
+function saveAccountsBackup() {
+  try {
+    const accStr = localStorage.getItem("mafia_accounts");
+    if (!accStr) return;
+    const acc = JSON.parse(accStr);
+    const count = Object.keys(acc).filter(ph => ph !== CREATOR_PHONE).length;
+    if (count === 0) return; // اگه فقط سازنده هست، بکاپ نگیر
+
+    const backup = {
+      timestamp: Date.now(),
+      count: count,
+      data: acc
+    };
+    localStorage.setItem(BACKUP_KEY, JSON.stringify(backup));
+  } catch(e) { console.warn("Backup failed:", e); }
+}
+
+function restoreFromBackupIfNeeded() {
+  try {
+    const backupStr = localStorage.getItem(BACKUP_KEY);
+    if (!backupStr) return false;
+
+    const backup = JSON.parse(backupStr);
+    if (!backup || !backup.data) return false;
+
+    const current = JSON.parse(localStorage.getItem("mafia_accounts") || "{}");
+    const currentCount = Object.keys(current).filter(ph => ph !== CREATOR_PHONE).length;
+    const backupCount = Object.keys(backup.data).filter(ph => ph !== CREATOR_PHONE).length;
+
+    // اگه اکانت‌های فعلی خالی هستن ولی بکاپ اکانت داره => بازیابی کن
+    if (currentCount === 0 && backupCount > 0) {
+      Object.keys(deletedUsers).forEach(ph => {
+        if (backup.data[ph]) delete backup.data[ph];
+      });
+      localStorage.setItem("mafia_accounts", JSON.stringify(backup.data));
+      console.log("✅ Accounts restored from backup:", backupCount);
+      return true;
+    }
+
+    // اگه بکاپ تازه‌تره و اکانت‌های بیشتری داره
+    if (backupCount > currentCount && (Date.now() - backup.timestamp) < BACKUP_MAX_AGE) {
+      Object.keys(current).forEach(ph => {
+        if (ph === CREATOR_PHONE) backup.data[ph] = current[ph];
+      });
+      Object.keys(deletedUsers).forEach(ph => {
+        if (backup.data[ph]) delete backup.data[ph];
+      });
+      localStorage.setItem("mafia_accounts", JSON.stringify(backup.data));
+      console.log("✅ Accounts merged from backup");
+      return true;
+    }
+    return false;
+  } catch(e) { return false; }
+}
+
+// هر 20 ثانیه بکاپ بگیر
+setInterval(saveAccountsBackup, 20000);
+
 function getLobbies() { return sharedLobbies.length ? sharedLobbies : (JSON.parse(localStorage.getItem("mafia_lobbies") || "[]")); }
 function saveLobbies(l) { sharedLobbies = l; localStorage.setItem("mafia_lobbies", JSON.stringify(l)); }
 function getClans() {
@@ -1752,7 +1841,6 @@ function applyRemoteUser(data) {
 
 // ============ 🕐 NEW: مدیریت خروج سازنده لابی ============
 
-// چک کردن اینکه سازنده داخل لابی هست یا نه
 function isCreatorInsideLobby(lobby) {
   if (!lobby) return false;
   const creatorPhone = lobby.creator;
@@ -1762,12 +1850,10 @@ function isCreatorInsideLobby(lobby) {
   return !!(inSeat || inSpec);
 }
 
-// زمان‌بندی حذف لابی در صورتی که سازنده برنگرده
 function scheduleCreatorLeaveCleanup(lobby) {
   if (!lobby || !lobby.id) return;
   const lobbyId = lobby.id;
   
-  // اگر سازنده داخل لابی هست، تایمر پاک میشه
   if (isCreatorInsideLobby(lobby)) {
     if (creatorLeaveTimers[lobbyId]) {
       clearTimeout(creatorLeaveTimers[lobbyId]);
@@ -1776,48 +1862,39 @@ function scheduleCreatorLeaveCleanup(lobby) {
     return;
   }
   
-  // اگه قبلاً تایمری هست، اول لغوش کن
   if (creatorLeaveTimers[lobbyId]) {
     clearTimeout(creatorLeaveTimers[lobbyId]);
     delete creatorLeaveTimers[lobbyId];
   }
   
-  // محاسبه‌ی زمان باقی‌مونده
   const leftAt = Number(lobby.creatorLeftAt || Date.now());
   const elapsed = Date.now() - leftAt;
   const remaining = CREATOR_LEAVE_TIMEOUT_MS - elapsed;
   
-  // اگه زمان تمام شده، همین حالا حذف کن
   if (remaining <= 0) {
     forceDeleteLobbyForInactiveCreator(lobbyId);
     return;
   }
   
-  // زمان‌بندی حذف
   creatorLeaveTimers[lobbyId] = setTimeout(() => {
     delete creatorLeaveTimers[lobbyId];
     const lb = getLobbies().find(l => l.id === lobbyId);
     if (!lb) return;
-    // دوباره چک کن سازنده برگشته یا نه
     if (isCreatorInsideLobby(lb)) {
-      // برگشته - فقط پرچم رو پاک کن
       lb.creatorLeftAt = null;
       saveCurrentLobby(lb);
       publishRoomState(lb);
       return;
     }
-    // برنگشته - حذف کن
     forceDeleteLobbyForInactiveCreator(lobbyId);
   }, remaining);
 }
 
-// حذف اجباری لابی (سازنده برنگشته)
 function forceDeleteLobbyForInactiveCreator(lobbyId) {
   const lobbies = getLobbies();
   const lobby = lobbies.find(l => l.id === lobbyId);
   if (!lobby) return;
   
-  // اطمینان نهایی: سازنده واقعاً نیومده باشه
   if (isCreatorInsideLobby(lobby)) {
     lobby.creatorLeftAt = null;
     saveCurrentLobby(lobby);
@@ -1825,22 +1902,18 @@ function forceDeleteLobbyForInactiveCreator(lobbyId) {
     return;
   }
   
-  // حذف لابی
   sharedLobbies = sharedLobbies.filter(l => l.id !== lobbyId);
   saveLobbies(sharedLobbies);
   if (ablyLobbyListCh && isAblyReady) ablyLobbyListCh.publish('lobby_delete', { id: lobbyId });
   
-  // اگه ما داخل این لابی هستیم، خارج شو
   if (currentLobbyId === lobbyId) {
     showToast("⏰ زمان انتظار تموم شد - لابی حذف شد");
     leaveLobbyRoom();
   }
-  // اگه صفحه لابی‌ها بازه، آپدیت کن
   if (document.getElementById('lobbyPage')?.classList.contains('show')) renderLobbies();
   console.log('Lobby deleted due to creator inactivity:', lobbyId);
 }
 
-// چک کردن همه لابی‌ها برای انقضا (به عنوان پشتیبان)
 function checkAllLobbiesForExpiredCreators() {
   const lobbies = getLobbies();
   lobbies.forEach(lobby => {
@@ -1855,7 +1928,6 @@ function checkAllLobbiesForExpiredCreators() {
   });
 }
 
-// هر دقیقه یک‌بار چک کن (پشتیبان)
 setInterval(() => {
   try { checkAllLobbiesForExpiredCreators(); } catch(e) { console.warn(e); }
 }, 60 * 1000);
@@ -2486,15 +2558,12 @@ function initAbly() {
       if (!msg.data?.id) return;
       const incoming = msg.data;
       
-      // ✅ NEW: چک کن سازنده لابی خیلی وقته رفته و باید لابی حذف بشه
       if (incoming.creatorLeftAt && !isCreatorInsideLobby(incoming)) {
         const elapsed = Date.now() - incoming.creatorLeftAt;
         if (elapsed >= CREATOR_LEAVE_TIMEOUT_MS) {
-          // منقضی شده - حذف کن
           forceDeleteLobbyForInactiveCreator(incoming.id);
           return;
         } else if (!creatorLeaveTimers[incoming.id]) {
-          // زمان‌بندی حذف
           scheduleCreatorLeaveCleanup(incoming);
         }
       }
@@ -2511,7 +2580,6 @@ function initAbly() {
       saveLobbies(sharedLobbies);
       if (currentLobbyId === msg.data.id) leaveLobbyRoom();
       if (document.getElementById('lobbyPage')?.classList.contains('show')) renderLobbies();
-      // لغو تایمر
       if (creatorLeaveTimers[msg.data.id]) {
         clearTimeout(creatorLeaveTimers[msg.data.id]);
         delete creatorLeaveTimers[msg.data.id];
@@ -2592,7 +2660,6 @@ function subscribeLobbyRoom(lobbyId) {
   ablyRoomCh.subscribe('room_state', msg => {
     if (!msg.data || msg.data.id !== currentLobbyId) return;
     
-    // ✅ NEW: چک کن سازنده خیلی وقته رفته
     const incoming = msg.data;
     if (incoming.creatorLeftAt && !isCreatorInsideLobby(incoming)) {
       const elapsed = Date.now() - incoming.creatorLeftAt;
@@ -2604,7 +2671,6 @@ function subscribeLobbyRoom(lobbyId) {
         scheduleCreatorLeaveCleanup(incoming);
       }
     } else if (incoming.creatorLeftAt === null || incoming.creatorLeftAt === undefined) {
-      // اگه سازنده برگشته بود، تایمر رو پاک کن
       if (creatorLeaveTimers[incoming.id]) {
         clearTimeout(creatorLeaveTimers[incoming.id]);
         delete creatorLeaveTimers[incoming.id];
@@ -2691,11 +2757,9 @@ function enterLobbyRoom(id) {
   const btn = document.getElementById('lrMicBtn'); if (btn) btn.classList.remove('mic-on');
   disconnectAllPeers();
   
-  // ✅ NEW: اگه سازنده داره برمیگرده، تایمر رو لغو کن
   const u = getCurrentUser();
   const lobby = getLobbies().find(l => l.id === id);
   if (lobby && u && lobby.creator === u.phone) {
-    // کاربر برگشته داخل لابی
     if (creatorLeaveTimers[id]) {
       clearTimeout(creatorLeaveTimers[id]);
       delete creatorLeaveTimers[id];
@@ -2703,7 +2767,6 @@ function enterLobbyRoom(id) {
     if (lobby.creatorLeftAt) {
       lobby.creatorLeftAt = null;
       saveCurrentLobby(lobby);
-      // اعلام به بقیه که سازنده برگشته
       setTimeout(() => { 
         const lb = getCurrentLobby(); 
         if (lb) publishRoomState(lb); 
@@ -2711,7 +2774,6 @@ function enterLobbyRoom(id) {
     }
   }
   
-  // ✅ NEW: چک کن لابی منقضی نشده باشه (برای بقیه‌ی کاربران)
   if (lobby && lobby.creatorLeftAt && !isCreatorInsideLobby(lobby)) {
     const elapsed = Date.now() - lobby.creatorLeftAt;
     if (elapsed >= CREATOR_LEAVE_TIMEOUT_MS) {
@@ -2721,7 +2783,6 @@ function enterLobbyRoom(id) {
       goHome();
       return;
     }
-    // زمان‌بندی حذف در صورت انقضا
     if (!creatorLeaveTimers[id]) {
       scheduleCreatorLeaveCleanup(lobby);
     }
@@ -2734,7 +2795,6 @@ function enterLobbyRoom(id) {
   if (u && ADMIN_PHONES.indexOf(u.phone) !== -1) document.getElementById('ghostBtn').classList.add('show');
 }
 
-// ✅ دکمه خروج سریع از لابی
 function lrExitLobby() {
   const lobby = getCurrentLobby();
   const u = getCurrentUser();
@@ -2761,7 +2821,6 @@ function leaveLobbyRoom() {
     if (lobby) {
       const isCreatorLeaving = (lobby.creator === u.phone);
       
-      // حذف کاربر از صندلی
       const si = lobby.seats.findIndex(s => s && s.phone === u.phone);
       if (si !== -1) { lobby.seats[si] = null; }
       if (lobby.spectators) {
@@ -2770,14 +2829,12 @@ function leaveLobbyRoom() {
       }
       
       if (isCreatorLeaving) {
-        // ✅ NEW: سازنده خارج شد - لابی حذف نشه، ۳۰ دقیقه مهلت بده
         lobby.creatorLeftAt = Date.now();
         saveCurrentLobby(lobby);
         publishRoomState(lobby);
         scheduleCreatorLeaveCleanup(lobby);
         showToast("⏰ لابی ۳۰ دقیقه باز می‌مونه. اگه برنگردی، خودکار حذف میشه");
       } else {
-        // کاربر عادی - فقط از صندلی حذف شه
         saveCurrentLobby(lobby);
         publishRoomState(lobby);
         u.leaves = (u.leaves || 0) + 1; u.updated = Date.now();
@@ -2818,7 +2875,6 @@ function renderLobbyRoom() {
     let hostName = hostUser ? hostUser.name : (lobby.creatorName || "ناشناس");
     const hostVerified = hostUser && hostUser.verified ? " " + VERIFIED_BADGE : "";
     const hostNameParsed = parseColoredName(hostName);
-    // اگه سازنده رفته، نشون بده
     if (lobby.creatorLeftAt && !isCreatorInsideLobby(lobby)) {
       const elapsed = Date.now() - lobby.creatorLeftAt;
       const remainMin = Math.max(0, Math.ceil((CREATOR_LEAVE_TIMEOUT_MS - elapsed) / 60000));
@@ -3062,10 +3118,8 @@ function lrTransferHost() {
   if (selectedSeatPhone && selectedSeatPhone.startsWith('bot_')) { showToast("نمی‌توانید مدیریت را به بات بدهید"); return; }
   if (confirm("آیا مطمئن هستید؟ مدیریت لابی به این بازیکن منتقل خواهد شد.")) {
     lobby.creator = selectedSeatPhone;
-    // پاک کردن پرچم غیبت سازنده قبلی
     lobby.creatorLeftAt = null;
     saveCurrentLobby(lobby); publishRoomState(lobby); publishHostTransfer(selectedSeatPhone);
-    // لغو تایمر
     if (creatorLeaveTimers[lobby.id]) {
       clearTimeout(creatorLeaveTimers[lobby.id]);
       delete creatorLeaveTimers[lobby.id];
@@ -3292,10 +3346,8 @@ function lrTakeLobby() {
   if (isGhostMode) { showToast("در حالت روح نمی‌توانید لابی را بگیرید"); return; }
   if (confirm("آیا مطمئن هستید؟ مدیریت لابی را می‌گیرید؟")) {
     lobby.creator = u.phone;
-    // پاک کردن پرچم غیبت
     lobby.creatorLeftAt = null;
     saveCurrentLobby(lobby); publishRoomState(lobby); publishHostTransfer(u.phone);
-    // لغو تایمر
     if (creatorLeaveTimers[lobby.id]) {
       clearTimeout(creatorLeaveTimers[lobby.id]);
       delete creatorLeaveTimers[lobby.id];
@@ -3344,7 +3396,6 @@ function openLobbyPage() {
   document.getElementById("lobbyPage").classList.add("show");
   setLobbyFilter("all"); renderLobbies();
   AssetCache.load("https://cdn.imgurl.ir/uploads/f786452_file_00000000baec81f493d6186757323e01.png", "low");
-  // ✅ چک لابی‌های منقضی
   try { checkAllLobbiesForExpiredCreators(); } catch(e) {}
 }
 function closeLobbyPage() { document.getElementById("lobbyPage").classList.remove("show"); }
@@ -3378,7 +3429,6 @@ function renderLobbies() {
     const tick = lobby.hasTick ? " " + VERIFIED_BADGE : "";
     const pc = (lobby.seats ? lobby.seats.filter(s => s && !s.isGhost).length : 1);
     const colored = parseColoredName(lobby.name);
-    // ✅ نمایش وضعیت غیبت سازنده
     let creatorStatusHtml = "";
     if (lobby.creatorLeftAt && !isCreatorInsideLobby(lobby)) {
       const elapsed = Date.now() - lobby.creatorLeftAt;
@@ -3394,7 +3444,6 @@ function filterLobbies() { renderLobbies(); }
 function refreshLobbies() {
   if (ablyLobbyListCh && isAblyReady) ablyLobbyListCh.publish('sync_request', { from: getCurrentPhone() });
   renderLobbies(); showToast("لیست لابی‌ها به‌روز شد ↻");
-  // ✅ چک لابی‌های منقضی
   try { checkAllLobbiesForExpiredCreators(); } catch(e) {}
 }
 function openCreateLobby() {
@@ -3461,7 +3510,6 @@ function joinLobby(id) {
   const u = getCurrentUser(); if (!u) return;
   if (lobby.blocked && lobby.blocked.indexOf(u.phone) !== -1) { showToast("شما از این لابی مسدود شده‌اید!"); return; }
   
-  // ✅ چک: اگه لابی منقضی شده، نذار ورود کنه
   if (lobby.creatorLeftAt && !isCreatorInsideLobby(lobby)) {
     const elapsed = Date.now() - lobby.creatorLeftAt;
     if (elapsed >= CREATOR_LEAVE_TIMEOUT_MS) {
@@ -3483,7 +3531,6 @@ function joinLobby(id) {
     const empty = lobby.seats.findIndex(s => !s);
     if (empty === -1) { showToast("لابی پر است!"); return; }
     lobby.seats[empty] = { phone: u.phone, name: u.name, avatar: u.avatar || DEFAULT_AVATAR, ready: false, spectator: false };
-    // اگه کاربر همون سازنده‌ست، پرچم غیبت پاک شه
     if (lobby.creator === u.phone) {
       lobby.creatorLeftAt = null;
       if (creatorLeaveTimers[lobby.id]) {
@@ -4398,8 +4445,32 @@ function adminLogin() {
 }
 
 function adminFullReset() {
+  // ✅ هشدار اول
   if (!confirm("⚠️ آیا مطمئن هستید؟ تمام اکانت‌ها، لابی‌ها، کلن‌ها، تیک‌دارها و لیبل‌دارها پاک می‌شوند!")) return;
-  if (!confirm("⚠️⚠️ تأیید نهایی: این عملیات قابل بازگشت نیست!")) return;
+
+  // ✅ بکاپ خودکار قبل از ریست
+  const accStr = localStorage.getItem("mafia_accounts");
+  if (accStr) {
+    try {
+      const userCount = Object.keys(JSON.parse(accStr)).filter(p => p !== CREATOR_PHONE).length;
+      const adminBackup = {
+        timestamp: Date.now(),
+        data: accStr,
+        lobbies: localStorage.getItem("mafia_lobbies"),
+        clans: localStorage.getItem("mafia_clans"),
+        userCount: userCount
+      };
+      localStorage.setItem("mafia_admin_reset_backup", JSON.stringify(adminBackup));
+      console.log("📦 Backup saved before reset:", userCount, "users");
+    } catch(e) { console.warn("Admin backup failed:", e); }
+  }
+
+  // ✅ تأیید نهایی با کد
+  const confirmCode = prompt("برای تأیید نهایی، کد زیر را تایپ کنید:\n\n«RESET»");
+  if (confirmCode !== "RESET") {
+    showToast("❌ ریست لغو شد");
+    return;
+  }
 
   resetAppStorage();
 
@@ -4433,7 +4504,27 @@ function adminFullReset() {
   adminRenderPermBlocked();
   renderAdminList();
 
-  showToast("✅ ریست کامل انجام شد");
+  showToast("✅ ریست کامل انجام شد (بکاپ ذخیره شد)");
+}
+
+function adminRestoreFromBackup() {
+  try {
+    const backupStr = localStorage.getItem("mafia_admin_reset_backup");
+    if (!backupStr) { showToast("❌ بکاپی موجود نیست"); return; }
+    const backup = JSON.parse(backupStr);
+    const backupDate = new Date(backup.timestamp).toLocaleString("fa-IR");
+
+    if (!confirm(`بکاپ مربوط به:\n${backupDate}\nبا ${backup.userCount} کاربر\n\nآیا بازیابی شود؟`)) return;
+
+    if (backup.data) localStorage.setItem("mafia_accounts", backup.data);
+    if (backup.lobbies) localStorage.setItem("mafia_lobbies", backup.lobbies);
+    if (backup.clans) localStorage.setItem("mafia_clans", backup.clans);
+
+    showToast("✅ بازیابی انجام شد! اپ رو دوباره باز کن");
+    setTimeout(() => location.reload(), 1500);
+  } catch(e) {
+    showToast("❌ خطا در بازیابی");
+  }
 }
 
 function adminPublishAnnouncement() {
@@ -5518,6 +5609,8 @@ document.getElementById("registerForm").addEventListener("submit", function(e) {
   saveAccounts(acc); localStorage.setItem("mafia_current_user", phone); showApp();
   setTimeout(() => { const u = getCurrentUser(); if (u) publishFullUser(u); }, 1200);
   if (!ably) initAblyWhenReady(0);
+  // ✅ بکاپ فوری بعد از ثبت نام
+  setTimeout(saveAccountsBackup, 1000);
 });
 
 document.addEventListener("click", function(e) {

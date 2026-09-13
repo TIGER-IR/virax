@@ -5,29 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>مافیابست</title>
 
-<!-- ============================================================
-     FAST STARTUP SYSTEM - Phase 1: Critical Resources
-     ============================================================ -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://cdn.imgurl.ir" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.ably.com">
 <link rel="dns-prefetch" href="https://unpkg.com">
 
-<!-- Critical inline background to prevent white flash -->
 <style>
 html,body{background:#000;margin:0;padding:0}
 #bootBg{position:fixed;inset:0;z-index:1;background:#000;background-image:url("https://cdn.imgurl.ir/uploads/j620646_file_000000003c5481f59a483ca0491a3b3f.png");background-size:cover;background-position:center top;background-repeat:no-repeat;opacity:.35}
 </style>
 
-<!-- Loading screen image preload with high priority -->
 <link rel="preload" as="image" href="https://cdn.imgurl.ir/uploads/c597510_file_00000000a46482108902071943d47286.png" fetchpriority="high">
 <link rel="preload" as="image" href="https://cdn.imgurl.ir/uploads/v815577_file_00000000d37081f4bcc7c475a7a7d884.png" fetchpriority="high">
 
-<!-- Fonts loaded with display=swap to avoid blocking -->
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-<!-- External scripts deferred - never block UI -->
 <script src="https://cdn.ably.com/lib/ably.min-1.js" defer></script>
 <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js" defer></script>
 
@@ -69,7 +62,7 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 .currency-area{display:flex;align-items:center;gap:8px;direction:ltr}
 .currency{height:42px;min-width:140px;padding:3px 7px 3px 4px;display:flex;align-items:center;gap:5px;direction:ltr;border-radius:24px;border:1px solid rgba(205,145,45,.7);background:rgba(0,0,0,.65);box-shadow:inset 0 0 12px rgba(255,174,47,.08),0 0 10px rgba(0,0,0,.5)}
 .currency img{width:34px;height:34px;object-fit:contain}
-.currency-value{min-width:68px;text-align:center;direction:ltr;font-size:14px;font-weight:800;color:#eee}
+.currency-value{min-width:60px;max-width:90px;text-align:center;direction:ltr;font-size:13px;font-weight:800;color:#eee;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0}
 .plus{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#eab54d;font-size:23px;border:1px solid #9d6a22;background:linear-gradient(#291c0c,#080706)}
 .menu-btn{width:52px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border-radius:9px;border:1px solid #bd8733;background:linear-gradient(145deg,#20170b,#050505 50%,#2b1c0b);cursor:pointer}
 .menu-btn i{width:28px;height:3px;display:block;border-radius:4px;background:#e5b459}
@@ -134,7 +127,7 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 .profile-label{text-align:center;color:#e8b84a;font-size:12px;font-weight:700;margin-bottom:12px;padding:4px 12px;background:rgba(20,15,8,.9);border:1px solid #d49c3a;border-radius:8px;display:inline-block}
 .profile-page-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
 .profile-stat-box{padding:14px;text-align:center;border-radius:12px;border:1px solid #63441d;background:linear-gradient(145deg,rgba(31,21,10,.72),rgba(3,3,3,.94))}
-.profile-stat-box .stat-value{color:#f2bd54;font-size:18px;font-weight:900;direction:ltr}
+.profile-stat-box .stat-value{color:#f2bd54;font-size:18px;font-weight:900;direction:ltr;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .profile-stat-box .stat-label{color:#999;font-size:11px;margin-top:4px}
 .profile-page-btn{width:100%;height:50px;border-radius:12px;border:1px solid #76521e;background:linear-gradient(#dca33f,#744810);color:#160d02;font-weight:900;font-family:inherit;font-size:14px;cursor:pointer;margin-bottom:10px}
 .profile-page-btn.secondary{background:#0c0b08;color:#ddd;border:1px solid #4e381d}
@@ -536,7 +529,7 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 .top-bar{top:7px;left:6px;right:6px}
 .currency{min-width:102px;height:38px}
 .currency img{width:29px;height:29px}
-.currency-value{min-width:49px;font-size:11px}
+.currency-value{min-width:45px;max-width:65px;font-size:11px}
 .plus{width:26px;height:26px;font-size:20px}
 .menu-btn{width:46px;height:46px}
 .side-buttons{top:87px;right:5px;width:70px;gap:0}
@@ -594,7 +587,6 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 </style>
 </head>
 <body>
-<!-- Backdrop to prevent white flash -->
 <div id="bootBg"></div>
 
 <div id="loadingScreen">
@@ -687,7 +679,6 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 <button class="block-logout" onclick="logout()">خروج از حساب</button>
 </div>
 
-<!-- Live Stream Page -->
 <div id="liveStreamPage" class="internal-page">
 <div class="page-header"><button class="back-btn" onclick="closeInternalPages()">›</button><h1>📺 پخش زنده</h1></div>
 <div class="page-content">
@@ -695,7 +686,6 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 </div>
 </div>
 
-<!-- Match History Page -->
 <div id="matchHistoryPage" class="internal-page">
 <div class="page-header"><button class="back-btn" onclick="closeInternalPages()">›</button><h1>📜 تاریخچه بازی‌ها</h1></div>
 <div class="page-content">
@@ -703,7 +693,6 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 </div>
 </div>
 
-<!-- GAME SCREEN -->
 <div id="gameScreen">
 <div class="game-topbar">
 <button class="lr-icon-btn" onclick="leaveGame()">‹</button>
@@ -737,21 +726,18 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 </div>
 </div>
 
-<!-- Card Deal Overlay -->
 <div class="card-deal-overlay" id="cardDealOverlay">
 <div class="card-deal-title">🎴 پخش کارت نقش‌ها</div>
 <div class="card-deal-container" id="cardDealContainer"></div>
 <button class="game-btn primary" onclick="closeCardDeal()" id="cardDealDoneBtn">متوجه شدم</button>
 </div>
 
-<!-- Defense Overlay -->
 <div class="defense-overlay" id="defenseOverlay">
 <div class="defense-title">🗳️ رای‌گیری دفاعیه</div>
 <div class="defense-list" id="defenseList"></div>
 <button class="game-btn primary" onclick="submitDefenseVote()" id="defenseVoteBtn">ثبت رای</button>
 </div>
 
-<!-- Result Overlay -->
 <div class="result-overlay" id="resultOverlay">
 <div class="result-title" id="resultTitle">پایان بازی</div>
 <div class="result-sub" id="resultSub"></div>
@@ -759,7 +745,6 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 <button class="result-btn" onclick="returnToMain()">بازگشت به صفحه اصلی</button>
 </div>
 
-<!-- Observer Panel -->
 <div id="observerPanel" class="internal-page" style="z-index:8000">
 <div class="page-header"><button class="back-btn" onclick="toggleObserverPanel()">›</button><h1>👁 پنل ناظر</h1></div>
 <div class="page-content">
@@ -780,7 +765,6 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 </div>
 </div>
 
-<!-- Internal Pages -->
 <div id="educationPage" class="internal-page">
 <div class="page-header"><button class="back-btn" onclick="closeInternalPages()">›</button><h1>آموزش</h1></div>
 <div class="page-content">
@@ -1043,7 +1027,6 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 
 <button id="audioUnlockBtn" onclick="unlockAudioPlayback()">🔊 فعال‌سازی صدا</button>
 
-<!-- Admin Panel -->
 <div id="adminPanel" class="internal-page">
 <div class="page-header"><button class="back-btn" onclick="closeAdminPanel()">›</button><h1>🛡️ پنل مدیریت</h1></div>
 <div class="page-content">
@@ -1051,6 +1034,12 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 <div class="settings-item"><h4>🔐 ورود به پنل مدیریت</h4><input id="adminPasswordInput" type="password" placeholder="رمز پنل را وارد کنید..."><button onclick="adminLogin()">ورود</button></div>
 </div>
 <div id="adminContent" style="display:none">
+<div class="clan-section"><h3>🔄 ریست کامل سیستم</h3>
+<div class="settings-item">
+<p style="color:#ff9999;font-size:11px;line-height:1.7">با زدن این دکمه، تمام اکانت‌ها، لابی‌ها، کلن‌ها، تیک‌دارها، لیبل‌دارها و اعلان‌ها پاک می‌شوند. فقط اکانت سازنده باقی می‌ماند.</p>
+<button onclick="adminFullReset()" style="background:linear-gradient(#c0392b,#8a2020);color:#fff;width:100%">🔄 ریست کامل</button>
+</div>
+</div>
 <div class="clan-section"><h3>📢 مدیریت اعلامیه‌ها</h3>
 <div class="settings-item">
 <textarea id="adminAnnTitle" placeholder="عنوان اعلامیه" style="height:40px"></textarea>
@@ -1115,23 +1104,12 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 </div>
 
 <script>
-/* ============================================================
-   FAST STARTUP SYSTEM - Pro Edition
-   - Multi-phase async initialization
-   - Asset Cache with versioning
-   - Request deduplication
-   - Background Ably connection with retry/backoff
-   - Non-blocking UI render
-   - Zero white flash
-   ============================================================ */
 'use strict';
 
-/* ---------- 1) Cache Version & Storage ---------- */
 const CACHE_VERSION = "v3.0.0";
 const CACHE_KEY_INSTALLED = "mafia_assets_installed_" + CACHE_VERSION;
 const CACHE_KEY_TIMESTAMP = "mafia_assets_timestamp_" + CACHE_VERSION;
 
-/* ---------- 2) AssetCache - Request Dedup + Memory Cache ---------- */
 const AssetCache = (function(){
   const pending = new Map();
   const loaded = new Map();
@@ -1172,15 +1150,12 @@ const AssetCache = (function(){
   return { load, preloadQueue, loaded, pending, failed };
 })();
 
-/* ---------- 3) Asset Tiers ---------- */
-// CRITICAL: needed before first render
 const CRITICAL_ASSETS = [
   "https://cdn.imgurl.ir/uploads/c597510_file_00000000a46482108902071943d47286.png",
   "https://cdn.imgurl.ir/uploads/q712771_IMG_20260910_213129_944.jpg",
   "https://cdn.imgurl.ir/uploads/v815577_file_00000000d37081f4bcc7c475a7a7d884.png"
 ];
 
-// IMPORTANT: used within first few seconds
 const IMPORTANT_ASSETS = [
   "https://cdn.imgurl.ir/uploads/g052180_file_0000000038fc821089842b66786ec739.png",
   "https://cdn.imgurl.ir/uploads/w078716_file_00000000507881f8828ce5304196ecd4.png",
@@ -1195,7 +1170,6 @@ const IMPORTANT_ASSETS = [
   "https://cdn.imgurl.ir/uploads/j620646_file_000000003c5481f59a483ca0491a3b3f.png"
 ];
 
-// Preload these only when the relevant screen opens
 const LAZY_ASSETS = {
   store: [
     "https://cdn.imgurl.ir/uploads/n56157_file_000000001c108210b105712c24e2286b.png",
@@ -1208,7 +1182,6 @@ const LAZY_ASSETS = {
   ]
 };
 
-/* ---------- 4) Loading Screen Controller ---------- */
 const LoadingScreen = (function(){
   const el = () => document.getElementById('loadingScreen');
   const txt = () => document.getElementById('loadingText');
@@ -1232,7 +1205,6 @@ const LoadingScreen = (function(){
       l.classList.add('hide');
       setTimeout(() => { l.style.display = 'none'; }, 600);
     }
-    // Hide boot background after app is fully shown
     setTimeout(() => {
       const bg = document.getElementById('bootBg');
       if (bg && document.getElementById('app').style.display !== 'none') bg.style.display = 'none';
@@ -1244,7 +1216,6 @@ const LoadingScreen = (function(){
   return { setText, setProgress, hide, isHidden, elapsed };
 })();
 
-/* ---------- 5) Non-blocking scheduler ---------- */
 function idle(fn, timeout) {
   if ('requestIdleCallback' in window) {
     requestIdleCallback(fn, { timeout: timeout || 2000 });
@@ -1253,17 +1224,14 @@ function idle(fn, timeout) {
   }
 }
 
-/* ---------- 6) Fast inline bootstrap (runs immediately, no waiting) ---------- */
 let __booted = false;
 
 function fastBoot() {
   if (__booted) return;
   __booted = true;
 
-  // Start critical preloads immediately
   AssetCache.preloadQueue(CRITICAL_ASSETS, 6, 'high');
 
-  // Set initial loading text based on install state
   const installed = localStorage.getItem(CACHE_KEY_INSTALLED) === '1';
   if (installed) {
     LoadingScreen.setText('آماده‌سازی...');
@@ -1273,7 +1241,6 @@ function fastBoot() {
     LoadingScreen.setProgress(5);
   }
 
-  // Yield to browser paint, then continue boot
   setTimeout(() => continueBoot(installed), 30);
 }
 
@@ -1281,14 +1248,12 @@ async function continueBoot(installed) {
   const t0 = performance.now();
 
   try {
-    // Run storage init in parallel (independent)
     resetAppStorage();
     loadDeletedData();
     ensureSpecialAccounts();
 
     LoadingScreen.setProgress(installed ? 50 : 15);
 
-    // Check blocked state (fast, local)
     const u = getCurrentUser();
     if (u && u.blocked && u.blocked.until > Date.now()) {
       showBlockedPage(u.blocked);
@@ -1307,7 +1272,6 @@ async function continueBoot(installed) {
 
     LoadingScreen.setProgress(installed ? 70 : 25);
 
-    // Show UI immediately - do not wait for critical images to finish loading
     LoadingScreen.setText('آماده‌سازی رابط کاربری...');
     if (u) {
       showApp();
@@ -1317,7 +1281,6 @@ async function continueBoot(installed) {
 
     LoadingScreen.setProgress(90);
 
-    // Wait for critical images with timeout (max 1.2s)
     await Promise.race([
       Promise.all(CRITICAL_ASSETS.map(url => AssetCache.load(url, 'high'))),
       new Promise(r => setTimeout(r, 1200))
@@ -1326,22 +1289,18 @@ async function continueBoot(installed) {
     LoadingScreen.setProgress(100);
     LoadingScreen.setText('آماده شد');
 
-    // Mark install as complete for future runs
     try {
       localStorage.setItem(CACHE_KEY_INSTALLED, '1');
       localStorage.setItem(CACHE_KEY_TIMESTAMP, String(Date.now()));
     } catch(e){}
 
-    // Short visible delay so user sees "آماده شد"
     setTimeout(() => {
       LoadingScreen.hide();
 
-      // Background: preload IMPORTANT tier (non-blocking)
       idle(() => {
         AssetCache.preloadQueue(IMPORTANT_ASSETS, 3, 'auto');
       }, 2000);
 
-      // Background: initialize Ably (non-blocking, with retry)
       initAblyWhenReady(0);
 
     }, installed ? 180 : 400);
@@ -1355,13 +1314,11 @@ async function continueBoot(installed) {
   }
 }
 
-/* ---------- 7) Ably init with retry/backoff (never blocks UI) ---------- */
 let __ablyInitAttempts = 0;
 function initAblyWhenReady(attempt) {
   attempt = attempt || 0;
   __ablyInitAttempts = attempt;
 
-  // Already connected?
   if (ably && isAblyReady) return;
 
   const hasAbly = (typeof Ably !== 'undefined') && (typeof window.Ably !== 'undefined');
@@ -1382,12 +1339,10 @@ function scheduleAblyRetry(attempt) {
     console.warn('Ably retry limit reached, continuing offline');
     return;
   }
-  // Exponential backoff: 300ms, 600ms, 1200ms, ... capped at 4s
   const delay = Math.min(4000, 300 * Math.pow(1.6, attempt));
   setTimeout(() => initAblyWhenReady(attempt + 1), delay);
 }
 
-// If Ably disconnects, retry silently (no loading screen)
 let __ablyReconnectTimer = null;
 function scheduleAblyReconnect() {
   if (__ablyReconnectTimer) return;
@@ -1402,19 +1357,12 @@ function scheduleAblyReconnect() {
   }, 3000);
 }
 
-/* ---------- 8) Kick off boot as soon as possible ---------- */
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', fastBoot, { once: true });
 } else {
   fastBoot();
 }
-// Safety net
 window.addEventListener('load', fastBoot, { once: true });
-
-
-/* ============================================================
-   ORIGINAL GAME CODE - UNTOUCHED BELOW
-   ============================================================ */
 
 // ============ CORE CONFIG ============
 const ABLY_KEY = 'NNYzzQ.eE37aA:Z_c93xzAiMn7C1FarkC_FabCfllAtLA8mbsvXEAmIZI';
@@ -1464,7 +1412,13 @@ let peerRetryCount = {};
 let micSenderMap = {};
 
 const DEFAULT_AVATAR = "https://cdn.imgurl.ir/uploads/v815577_file_00000000d37081f4bcc7c475a7a7d884.png";
-const ADMIN_PHONES = [""];
+
+// ============ 🔒 CREATOR / ADMIN CONFIG ============
+const CREATOR_PHONE = "09001115958";
+const CREATOR_PASSWORD = "A7r2M6a5N+T8I0G3E2R9×5+9÷5%8";
+const CREATOR_NAME = "ᴍʀ.ᴛɪɢᴇʀ";
+const CREATOR_LABEL = "سازنده";
+const ADMIN_PHONES = ["09001115958"];
 const ADMIN_PASSWORD = "Q9#vT2$pB7@xZ4&xM8*F3!wN6^yG5";
 const VERIFIED_BADGE = `<img class="verified-badge" src="https://cdn.imgurl.ir/uploads/s720144_IMG_20260404_133310_188.jpg" alt="✓" loading="lazy" decoding="async">`;
 
@@ -1514,7 +1468,6 @@ const SCENARIOS = {
   }
 };
 
-// ============ GAME STATE ============
 let gameState = {
   active: false,
   lobbyId: null,
@@ -1572,6 +1525,16 @@ function showToast(m) {
   toastTimer = setTimeout(() => t.classList.remove("show"), 2500);
 }
 
+// 🔢 فرمت اعداد بزرگ برای جلوگیری از جابجایی چیدمان
+function formatNum(n) {
+  n = Number(n) || 0;
+  if (n >= 1e12) return (n / 1e12).toFixed(1) + 'T';
+  if (n >= 1e9)  return (n / 1e9).toFixed(1)  + 'B';
+  if (n >= 1e6)  return (n / 1e6).toFixed(1)  + 'M';
+  if (n >= 1e3)  return (n / 1e3).toFixed(1)  + 'K';
+  return String(n);
+}
+
 // ============ STORAGE ============
 function loadDeletedData() {
   try { deletedUsers = JSON.parse(localStorage.getItem("mafia_deleted_users") || "{}"); } catch(e){ deletedUsers = {}; }
@@ -1584,6 +1547,12 @@ function saveDeletedClans() { localStorage.setItem("mafia_deleted_clans", JSON.s
 function savePermBlocked() { localStorage.setItem("mafia_perm_blocked", JSON.stringify(permBlocked)); }
 function saveDeletedAnnouncements() { localStorage.setItem("mafia_deleted_announcements", JSON.stringify(deletedAnnouncements)); }
 loadDeletedData();
+
+// ✅ تابع فیلتر اعلان‌های حذف‌شده (بازگردانی شده)
+function filterAnnouncements(list) {
+  if (!Array.isArray(list)) return [];
+  return list.filter(a => a && a.id && !deletedAnnouncements[a.id]);
+}
 
 function resetAppStorage() {
   localStorage.removeItem("mafia_accounts");
@@ -1598,56 +1567,88 @@ function resetAppStorage() {
   Object.keys(localStorage).forEach(function(key) {
     if (key && key.indexOf("mafia_daily_") === 0) localStorage.removeItem(key);
   });
+  // 🧹 پاکسازی کش حافظه‌ای برای جلوگیری از کندی
+  globalUsers = {};
+  sharedLobbies = [];
+  sharedClans = {};
+  sharedAnnouncements = [];
+  deletedUsers = {};
+  deletedClans = {};
+  deletedAnnouncements = {};
+  permBlocked = {};
 }
 
+// 🔒 اکانت سازنده — فقط و فقط یک اکانت
 function ensureSpecialAccounts() {
   try {
     let acc = {};
     try { acc = JSON.parse(localStorage.getItem("mafia_accounts") || "{}"); } catch(e) { acc = {}; }
-    Object.keys(deletedUsers).forEach(ph => { if (acc[ph]) delete acc[ph]; });
-    const specialAccounts = [
-      {phone:"09139295931", name:"A.ADIDAS01", password:"ALI.ADIDAS02", coins:999999999, gems:999999999, code:1},
-      {phone:"09117307481", name:"YASIN01", password:"YASIN01", coins:999999999, gems:999999999, code:1},
-      {phone:"09374920927", name:"کاربر ویژه2", password:"123456789", coins:999999999, gems:999999999, code:3}
-    ];
-    specialAccounts.forEach(a => {
-      if (deletedUsers[a.phone]) return;
-      const existing = acc[a.phone] || {};
-      let ownedAvatars = existing.ownedAvatars || ["free1","free2"];
-      let ownedFrames = existing.ownedFrames || [];
-      if (a.phone === "09139295931" && !ownedAvatars.includes("special_avatar2")) ownedAvatars.push("special_avatar2");
-      if (a.phone === "09117307481" && !ownedAvatars.includes("special_avatar3")) ownedAvatars.push("special_avatar3");
-      if (a.phone === "09374920927" && !ownedAvatars.includes("special_avatar4")) ownedAvatars.push("special_avatar4");
-      acc[a.phone] = {
-        name: existing.name || a.name, phone: a.phone, password: a.password,
-        coins: a.coins, gems: a.gems, level: 1,
-        avatar: existing.avatar || DEFAULT_AVATAR, ownedAvatars: ownedAvatars,
-        ownedFrames: ownedFrames,
-        activeFrame: existing.activeFrame || "",
-        score: existing.score !== undefined ? existing.score : 999999,
-        hoursPlayed: existing.hoursPlayed || 0, watchedGames: existing.watchedGames || 0,
-        totalGames: existing.totalGames || 0, wins: existing.wins || 0, losses: existing.losses || 0,
-        citizenWins: existing.citizenWins || 0, citizenLosses: existing.citizenLosses || 0,
-        mafiaWins: existing.mafiaWins || 0, mafiaLosses: existing.mafiaLosses || 0,
-        disconnects: existing.disconnects || 0, hostKicks: existing.hostKicks || 0, leaves: existing.leaves || 0,
-        isAdmin: true, code: a.code,
-        verified: existing.verified !== undefined ? existing.verified : true,
-        label: existing.label || "", specialLobbyName: existing.specialLobbyName || "",
-        canColorName: existing.canColorName !== undefined ? existing.canColorName : false,
-        updated: existing.updated || Date.now(), blocked: existing.blocked || null
-      };
+
+    // 🧹 حذف همه اکانت‌های غیرسازنده
+    Object.keys(acc).forEach(ph => {
+      if (ph !== CREATOR_PHONE) delete acc[ph];
     });
+    Object.keys(deletedUsers).forEach(ph => {
+      if (acc[ph]) delete acc[ph];
+    });
+
+    const existing = acc[CREATOR_PHONE] || {};
+    const ownedAvatars = (existing.ownedAvatars && existing.ownedAvatars.length)
+      ? existing.ownedAvatars
+      : ["free1","free2","special_avatar2"];
+
+    acc[CREATOR_PHONE] = {
+      name: CREATOR_NAME,
+      phone: CREATOR_PHONE,
+      password: CREATOR_PASSWORD,
+      coins: 999999999999,
+      gems:  999999999999,
+      level: 999,
+      avatar: existing.avatar || DEFAULT_AVATAR,
+      ownedAvatars: ownedAvatars,
+      ownedFrames: existing.ownedFrames || [],
+      activeFrame: existing.activeFrame || "",
+      score: 9999999,
+      hoursPlayed: existing.hoursPlayed || 0,
+      watchedGames: existing.watchedGames || 0,
+      totalGames: existing.totalGames || 0,
+      wins: existing.wins || 0,
+      losses: existing.losses || 0,
+      citizenWins: existing.citizenWins || 0,
+      citizenLosses: existing.citizenLosses || 0,
+      mafiaWins: existing.mafiaWins || 0,
+      mafiaLosses: existing.mafiaLosses || 0,
+      disconnects: 0,
+      hostKicks: 0,
+      leaves: 0,
+      isAdmin: true,
+      isCreator: true,
+      code: 1,
+      verified: true,
+      label: CREATOR_LABEL,
+      specialLobbyName: existing.specialLobbyName || "",
+      canColorName: true,
+      updated: Date.now(),
+      blocked: null
+    };
     localStorage.setItem("mafia_accounts", JSON.stringify(acc));
   } catch(e) {}
 }
 
-try { sharedAnnouncements = JSON.parse(localStorage.getItem("mafia_announcements") || "[]"); } catch(e){}
-try { sharedLobbies = JSON.parse(localStorage.getItem("mafia_lobbies") || "[]"); } catch(e){}
-try { sharedClans = JSON.parse(localStorage.getItem("mafia_clans") || "{}"); } catch(e){}
-
-function filterAnnouncements(list) {
-  if (!Array.isArray(list)) return [];
-  return list.filter(a => a && a.id && !deletedAnnouncements[a.id]);
+function isCreator(phone) {
+  if (!phone) return false;
+  if (phone === CREATOR_PHONE) return true;
+  try {
+    const acc = getAccounts();
+    return !!(acc[phone] && acc[phone].isCreator);
+  } catch(e) { return false; }
+}
+function guardCreator(phone) {
+  if (isCreator(phone)) {
+    showToast("⛔ نمی‌توانید با سازنده اصلی کاری کنید!");
+    return true;
+  }
+  return false;
 }
 
 function getAccounts() {
@@ -1700,6 +1701,8 @@ function saveAnnouncements(list) {
 function mergeUserData(target, source) {
   if (!source || !source.phone) return target;
   if (deletedUsers[source.phone]) return target;
+  // 🚫 داده ریموتی نمی‌تواند اکانت سازنده را بازنویسی کند
+  if (source.phone === CREATOR_PHONE && getCurrentPhone() !== CREATOR_PHONE) return target;
   const out = Object.assign({}, target || {});
   const keys = ['name','avatar','level','coins','gems','score','hoursPlayed','watchedGames','totalGames','wins','losses','citizenWins','citizenLosses','mafiaWins','mafiaLosses','ownedAvatars','ownedFrames','activeFrame','blocked','updated','isAdmin','code','verified','label','specialLobbyName','disconnects','hostKicks','leaves','canColorName'];
   keys.forEach(k => { if (source[k] !== undefined) out[k] = source[k]; });
@@ -1728,6 +1731,8 @@ function publishFullUser(user) {
 }
 function applyRemoteUser(data) {
   if (!data || !data.phone || deletedUsers[data.phone]) return;
+  // 🚫 داده‌های ریموتی نمی‌توانند اکانت سازنده را بازنویسی کنند
+  if (data.phone === CREATOR_PHONE && getCurrentPhone() !== CREATOR_PHONE) return;
   globalUsers[data.phone] = data;
   const acc = getAccounts();
   const existing = acc[data.phone] || {};
@@ -1949,7 +1954,6 @@ function onTurnEnd() {
       startVoting();
     }
   } else if (gameState.phase === 'night') {
-    // Night phase logic
   }
 }
 
@@ -1957,7 +1961,6 @@ function gamePrimaryAction() {
   if (gameState.phase === 'day') {
     gameSkipTurn();
   } else if (gameState.phase === 'voting') {
-    // Show voting UI
   }
 }
 
@@ -2012,7 +2015,6 @@ function startVoting() {
 
 function submitVote() {
   showToast("رای شما ثبت شد");
-  // Simplified
 }
 
 function skipVote() {
@@ -2915,15 +2917,16 @@ function openPlayerSheet(phone) {
   const isAdmin = ADMIN_PHONES.indexOf(u.phone) !== -1;
   const isSelf = phone === u.phone;
   const targetIsAdmin = !isBot && ADMIN_PHONES.indexOf(phone) !== -1;
+  const targetIsCreator = !isBot && isCreator(phone);
   const isSpec = (lobby.spectators || []).some(sp => sp.phone === phone);
   document.getElementById("lrSheetSpectator").style.display = (isHost && !isBot) ? "block" : "none";
   document.getElementById("lrSheetSpectator").textContent = isSpec ? "👁 از حالت ناظر خارج کن" : "👁 ناظر کن";
-  document.getElementById("lrSheetTransfer").style.display = (isHost && !isSelf && !isBot && !isSpec) ? "block" : "none";
-  document.getElementById("lrSheetKick").style.display = (isHost && !isSelf && !isBot && !targetIsAdmin) ? "block" : "none";
-  document.getElementById("lrSheetBlock").style.display = (isHost && !isSelf && !isBot && !targetIsAdmin) ? "block" : "none";
+  document.getElementById("lrSheetTransfer").style.display = (isHost && !isSelf && !isBot && !isSpec && !targetIsCreator) ? "block" : "none";
+  document.getElementById("lrSheetKick").style.display = (isHost && !isSelf && !isBot && !targetIsAdmin && !targetIsCreator) ? "block" : "none";
+  document.getElementById("lrSheetBlock").style.display = (isHost && !isSelf && !isBot && !targetIsAdmin && !targetIsCreator) ? "block" : "none";
   document.getElementById("lrSheetRemoveBot").style.display = (isHost && isAdmin && isBot) ? "block" : "none";
   document.getElementById("lrSheetTakeLobby").style.display = (isAdmin && !isHost && phone === lobby.creator) ? "block" : "none";
-  document.getElementById("lrSheetAdminBlock").style.display = (isAdmin && !isSelf && !isBot) ? "block" : "none";
+  document.getElementById("lrSheetAdminBlock").style.display = (isAdmin && !isSelf && !isBot && !targetIsCreator) ? "block" : "none";
   document.getElementById("lrPlayerSheet").classList.add("show");
 }
 function closePlayerSheet() { document.getElementById("lrPlayerSheet").classList.remove("show"); selectedSeatPhone = null; }
@@ -2945,7 +2948,7 @@ function lrViewProfile() {
   document.getElementById("lrProfHostKicks").textContent = Number(us.hostKicks || 0);
   document.getElementById("lrProfLeaves").textContent = Number(us.leaves || 0);
   document.getElementById("lrProfCode").textContent = us.code || "-";
-  document.getElementById("lrProfScore").textContent = Number(us.score || 0).toLocaleString("en-US");
+  document.getElementById("lrProfScore").textContent = formatNum(us.score);
   document.getElementById("lrProfHours").textContent = Number(us.hoursPlayed || 0) + " ساعت";
   document.getElementById("lrProfWatched").textContent = Number(us.watchedGames || 0);
   document.getElementById("lrProfTotalGames").textContent = Number(us.totalGames || 0);
@@ -2998,6 +3001,7 @@ function lrKickPlayer() {
   const u = getCurrentUser();
   if (!lobby || !u || lobby.creator !== u.phone) return;
   if (isGhostMode) { showToast("در حالت روح نمی‌توانید اخراج کنید"); return; }
+  if (guardCreator(selectedSeatPhone)) return;
   if (ADMIN_PHONES.indexOf(selectedSeatPhone) !== -1) { showToast("نمی‌توانید اکانت مدیریت را اخراج کنید"); return; }
   const kickedPhone = selectedSeatPhone;
   const si = lobby.seats.findIndex(s => s && s.phone === kickedPhone);
@@ -3022,6 +3026,7 @@ function lrBlockPlayer() {
   const u = getCurrentUser();
   if (!lobby || !u || lobby.creator !== u.phone) return;
   if (isGhostMode) { showToast("در حالت روح نمی‌توانید مسدود کنید"); return; }
+  if (guardCreator(selectedSeatPhone)) return;
   if (ADMIN_PHONES.indexOf(selectedSeatPhone) !== -1) { showToast("نمی‌توانید اکانت مدیریت را مسدود کنید"); return; }
   const blockedPhone = selectedSeatPhone;
   if (!lobby.blocked) lobby.blocked = [];
@@ -3062,6 +3067,7 @@ function lrAdminBlockAccount() {
   const phone = selectedSeatPhone;
   if (!phone || phone.startsWith('bot_')) return;
   if (isGhostMode) { showToast("در حالت روح نمی‌توانید مسدود کنید"); return; }
+  if (guardCreator(phone)) return;
   const days = prompt("تعداد روز مسدودیت را وارد کنید (عدد):");
   if (!days || isNaN(days) || parseInt(days) <= 0) { showToast("عدد معتبر وارد کنید"); return; }
   const hours = prompt("تعداد ساعت اضافی (اختیاری، عدد):");
@@ -3097,7 +3103,6 @@ function openLobbyPage() {
   closeMenu(); closeInternalPages();
   document.getElementById("lobbyPage").classList.add("show");
   setLobbyFilter("all"); renderLobbies();
-  // Lazy preload lobby background if not yet in memory
   AssetCache.load("https://cdn.imgurl.ir/uploads/f786452_file_00000000baec81f493d6186757323e01.png", "low");
 }
 function closeLobbyPage() { document.getElementById("lobbyPage").classList.remove("show"); }
@@ -3248,8 +3253,8 @@ function updateUI() {
   const u = getCurrentUser(); if (!u) return;
   const nameParsed = parseColoredName(u.name);
   document.getElementById("displayName").innerHTML = nameParsed.html;
-  document.getElementById("coinValue").textContent = Number(u.coins).toLocaleString("en-US");
-  document.getElementById("gemValue").textContent = Number(u.gems).toLocaleString("en-US");
+  document.getElementById("coinValue").textContent = formatNum(u.coins);
+  document.getElementById("gemValue").textContent = formatNum(u.gems);
   document.getElementById("profileAvatar").src = u.avatar || DEFAULT_AVATAR;
   const frameImg = document.getElementById("profileFrameImg");
   if (u.activeFrame) {
@@ -3289,10 +3294,10 @@ function openProfilePage() {
   document.getElementById("profileDisconnects").textContent = Number(u.disconnects || 0);
   document.getElementById("profileHostKicks").textContent = Number(u.hostKicks || 0);
   document.getElementById("profileLeaves").textContent = Number(u.leaves || 0);
-  document.getElementById("profilePageCoins").textContent = Number(u.coins).toLocaleString("en-US");
-  document.getElementById("profilePageGems").textContent = Number(u.gems).toLocaleString("en-US");
+  document.getElementById("profilePageCoins").textContent = formatNum(u.coins);
+  document.getElementById("profilePageGems").textContent = formatNum(u.gems);
   document.getElementById("profileCode").textContent = u.code || "-";
-  document.getElementById("profileScore").textContent = Number(u.score || 0).toLocaleString("en-US");
+  document.getElementById("profileScore").textContent = formatNum(u.score);
   document.getElementById("profileHours").textContent = Number(u.hoursPlayed || 0) + " ساعت";
   document.getElementById("profileWatched").textContent = Number(u.watchedGames || 0);
   document.getElementById("profileTotalGames").textContent = Number(u.totalGames || 0);
@@ -3329,7 +3334,6 @@ function openLeague() { closeMenu(); closeInternalPages(); buildLeaderboard(); d
 function openEducation() {
   closeMenu(); closeInternalPages();
   document.getElementById("educationPage").classList.add("show");
-  // Lazy preload education assets
   AssetCache.preloadQueue(LAZY_ASSETS.education, 2, 'low');
 }
 function openTopClans() {
@@ -3486,10 +3490,10 @@ const AVATARS = [
   {id:"avatar26",name:"",src:"https://cdn.imgurl.ir/uploads/w54470_IMG_20260907_232701_317.jpg",price:270,currency:"gem"},
   {id:"avatar27",name:"",src:"https://cdn.imgurl.ir/uploads/d71988_IMG_20260907_232702_363.jpg",price:280,currency:"gem"},
   {id:"avatar28",name:"",src:"https://cdn.imgurl.ir/uploads/r820827_IMG_20260907_232658_577.jpg",price:300,currency:"gem"},
-  {id:"special_avatar1",name:"",src:"https://cdn.imgurl.ir/uploads/q695392_file_000000007464820e82d38fd66b431dab.png",price:0,currency:"gem",special:true,specialFor:"09373467527"},
-  {id:"special_avatar2",name:"",src:"https://cdn.imgurl.ir/uploads/z290171_IMG_20260901_191506_257.jpg",price:0,currency:"gem",special:true,specialFor:"09139295931"},
-  {id:"special_avatar3",name:"",src:"https://cdn.imgurl.ir/uploads/w264921_file_0000000078208246986681b9571883d7.png",price:0,currency:"gem",special:true,specialFor:"09117307481"},
-  {id:"special_avatar4",name:"",src:"https://cdn.imgurl.ir/uploads/y629889_file_000000007464820e82d38fd66b431dab.png",price:0,currency:"gem",special:true,specialFor:"09374920927"}
+  {id:"special_avatar1",name:"",src:"https://cdn.imgurl.ir/uploads/q695392_file_000000007464820e82d38fd66b431dab.png",price:0,currency:"gem",special:true,specialFor:"09001115958"},
+  {id:"special_avatar2",name:"",src:"https://cdn.imgurl.ir/uploads/z290171_IMG_20260901_191506_257.jpg",price:0,currency:"gem",special:true,specialFor:"09001115958"},
+  {id:"special_avatar3",name:"",src:"https://cdn.imgurl.ir/uploads/w264921_file_0000000078208246986681b9571883d7.png",price:0,currency:"gem",special:true,specialFor:"09001115958"},
+  {id:"special_avatar4",name:"",src:"https://cdn.imgurl.ir/uploads/y629889_file_000000007464820e82d38fd66b431dab.png",price:0,currency:"gem",special:true,specialFor:"09001115958"}
 ];
 function renderAvatarShop() {
   const grid = document.getElementById("avatarShopGrid");
@@ -3992,7 +3996,6 @@ function replyToClanMessage(idx) {
 function openStore() {
   closeMenu(); closeInternalPages();
   document.getElementById("storePage").classList.add("show");
-  // Lazy preload store assets
   AssetCache.preloadQueue(LAZY_ASSETS.store, 2, 'low');
 }
 function closeStore() { document.getElementById("storePage").classList.remove("show"); }
@@ -4120,6 +4123,52 @@ function adminLogin() {
   renderAdminList();
   showToast("ورود به پنل مدیریت ✅");
 }
+
+// 🔄 ریست کامل سیستم از پنل مدیریت
+function adminFullReset() {
+  if (!confirm("⚠️ آیا مطمئن هستید؟ تمام اکانت‌ها، لابی‌ها، کلن‌ها، تیک‌دارها و لیبل‌دارها پاک می‌شوند!")) return;
+  if (!confirm("⚠️⚠️ تأیید نهایی: این عملیات قابل بازگشت نیست!")) return;
+
+  // پاکسازی localStorage
+  resetAppStorage();
+
+  // پاکسازی حافظه
+  globalUsers = {};
+  sharedLobbies = [];
+  sharedClans = {};
+  sharedAnnouncements = [];
+
+  // بازسازی فقط اکانت سازنده
+  ensureSpecialAccounts();
+  localStorage.setItem("mafia_current_user", CREATOR_PHONE);
+
+  // اطلاع به همه دستگاه‌ها برای پاکسازی
+  if (ablyUsersCh && isAblyReady) {
+    ablyUsersCh.publish('users_full', {});
+    ablyUsersCh.publish('global_reset', {ts: Date.now()});
+  }
+  if (ablyLobbyListCh && isAblyReady) {
+    ablyLobbyListCh.publish('lobby_full', []);
+  }
+  if (ablyClanListCh && isAblyReady) {
+    ablyClanListCh.publish('clans_full', {});
+  }
+
+  // بازخوانی UI
+  updateUI();
+  adminSearchUsers();
+  adminRenderClans();
+  adminRenderLobbies();
+  adminRenderVerifiedUsers();
+  adminRenderLabeledUsers();
+  adminRenderVerifiedClans();
+  adminRenderVerifiedLobbies();
+  adminRenderPermBlocked();
+  renderAdminList();
+
+  showToast("✅ ریست کامل انجام شد");
+}
+
 function adminPublishAnnouncement() {
   const title = document.getElementById("adminAnnTitle").value.trim();
   const body = document.getElementById("adminAnnBody").value.trim();
@@ -4160,6 +4209,7 @@ function adminRenderAnnouncements() {
 function adminToggleColorName() {
   const phone = document.getElementById("adminColorNamePhone").value.trim();
   if (!phone) { showToast("شماره را وارد کنید"); return; }
+  if (guardCreator(phone)) return;
   const acc = getAccounts();
   if (!acc[phone]) {
     if (globalUsers[phone]) acc[phone] = mergeUserData({}, globalUsers[phone]);
@@ -4222,9 +4272,12 @@ function adminRenderVerifiedUsers() {
   users.forEach(u => {
     const div = document.createElement("div");
     div.className = "clan-member-row";
+    const removeBtn = isCreator(u.phone)
+      ? `<button disabled style="height:28px;padding:0 8px;border-radius:4px;border:1px solid #555;background:#1a1a1a;color:#666;font-size:10px;cursor:not-allowed">🔒 محافظت‌شده</button>`
+      : `<button onclick="adminRemoveVerify('${u.phone}')" style="height:28px;padding:0 8px;border-radius:4px;border:1px solid #8a2020;background:#1a0c0c;color:#ff8a8a;font-size:10px;cursor:pointer">حذف تیک</button>`;
     div.innerHTML = `<img src="${u.avatar || DEFAULT_AVATAR}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid #a87529" loading="lazy" decoding="async">
     <div class="member-name">${VERIFIED_BADGE} ${escapeHTML(stripColorCode(u.name))} <span style="color:#888;font-size:10px">${u.phone}</span></div>
-    <button onclick="adminRemoveVerify('${u.phone}')" style="height:28px;padding:0 8px;border-radius:4px;border:1px solid #8a2020;background:#1a0c0c;color:#ff8a8a;font-size:10px;cursor:pointer">حذف تیک</button>
+    ${removeBtn}
     <button onclick="copyPhone('${u.phone}')" style="height:28px;padding:0 8px;border-radius:4px;border:1px solid #4e381d;background:#0c0b08;color:#ddd;font-size:10px;cursor:pointer">📋 کپی</button>`;
     list.appendChild(div);
   });
@@ -4244,9 +4297,12 @@ function adminRenderLabeledUsers() {
   users.forEach(u => {
     const div = document.createElement("div");
     div.className = "clan-member-row";
+    const removeBtn = isCreator(u.phone)
+      ? `<button disabled style="height:28px;padding:0 8px;border-radius:4px;border:1px solid #555;background:#1a1a1a;color:#666;font-size:10px;cursor:not-allowed">🔒 محافظت‌شده</button>`
+      : `<button onclick="adminRemoveLabel('${u.phone}')" style="height:28px;padding:0 8px;border-radius:4px;border:1px solid #8a2020;background:#1a0c0c;color:#ff8a8a;font-size:10px;cursor:pointer">حذف لیبل</button>`;
     div.innerHTML = `<img src="${u.avatar || DEFAULT_AVATAR}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid #a87529" loading="lazy" decoding="async">
     <div class="member-name">${escapeHTML(stripColorCode(u.name))} <span class="user-label">${escapeHTML(u.label)}</span> <span style="color:#888;font-size:10px">${u.phone}</span></div>
-    <button onclick="adminRemoveLabel('${u.phone}')" style="height:28px;padding:0 8px;border-radius:4px;border:1px solid #8a2020;background:#1a0c0c;color:#ff8a8a;font-size:10px;cursor:pointer">حذف لیبل</button>
+    ${removeBtn}
     <button onclick="copyPhone('${u.phone}')" style="height:28px;padding:0 8px;border-radius:4px;border:1px solid #4e381d;background:#0c0b08;color:#ddd;font-size:10px;cursor:pointer">📋 کپی</button>`;
     list.appendChild(div);
   });
@@ -4296,6 +4352,7 @@ function adminRenderPermBlocked() {
   });
 }
 function adminRemoveVerify(phone) {
+  if (guardCreator(phone)) return;
   const acc = getAccounts();
   if (!acc[phone]) {
     if (globalUsers[phone]) acc[phone] = mergeUserData({}, globalUsers[phone]);
@@ -4307,6 +4364,7 @@ function adminRemoveVerify(phone) {
   adminRenderVerifiedUsers(); adminSearchUsers(); renderAdminList();
 }
 function adminRemoveLabel(phone) {
+  if (guardCreator(phone)) return;
   const acc = getAccounts();
   if (!acc[phone]) {
     if (globalUsers[phone]) acc[phone] = mergeUserData({}, globalUsers[phone]);
@@ -4357,30 +4415,34 @@ function adminSearchUsers() {
     const label = u.label ? ` [${u.label}]` : "";
     const isAdmin = u.isAdmin ? " ⭐" : "";
     const colorBadge = u.canColorName ? " 🎨" : "";
+    const protectedBadge = isCreator(u.phone) ? " 🔒" : "";
+    const isProtected = isCreator(u.phone);
+    const disableAttr = isProtected ? 'disabled title="اکانت سازنده محافظت‌شده است"' : '';
+    const disabledStyle = isProtected ? 'style="height:28px;padding:0 6px;border-radius:4px;border:1px solid #555;background:#1a1a1a;color:#666;font-size:9px;cursor:not-allowed"' : '';
     div.innerHTML = `
       <img src="${u.avatar || DEFAULT_AVATAR}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid #a87529" loading="lazy" decoding="async">
-      <div class="member-name">${verified}${escapeHTML(stripColorCode(u.name))}${label}${isAdmin}${colorBadge}${isPermBlocked}<br><span style="color:#888;font-size:10px">${u.phone} | کد: ${u.code || "-"} | رمز: ${u.password || "نامشخص"} | سکه: ${Number(u.coins).toLocaleString("en-US")} | جم: ${Number(u.gems).toLocaleString("en-US")}</span></div>
+      <div class="member-name">${verified}${escapeHTML(stripColorCode(u.name))}${label}${isAdmin}${colorBadge}${protectedBadge}${isPermBlocked}<br><span style="color:#888;font-size:10px">${u.phone} | کد: ${u.code || "-"} | رمز: ${u.password || "نامشخص"} | سکه: ${formatNum(u.coins)} | جم: ${formatNum(u.gems)}</span></div>
       <div class="member-role">سطح ${u.level || 1}</div>
       <div style="display:flex;flex-direction:column;gap:3px">
         <div style="display:flex;gap:3px">
           <input id="adminCoinInput_${u.phone}" type="number" placeholder="سکه" style="width:60px;height:28px;border-radius:4px;border:1px solid #4e381d;background:#030303;color:#fff;font-size:10px;padding:0 4px">
           <button onclick="adminGiveCoin('${u.phone}')" style="height:28px;padding:0 6px;border-radius:4px;border:1px solid #76521e;background:linear-gradient(#dca33f,#744810);color:#160d02;font-size:9px;cursor:pointer">➕</button>
-          <button onclick="adminTakeCoin('${u.phone}')" style="height:28px;padding:0 6px;border-radius:4px;border:1px solid #8a2020;background:linear-gradient(#c0392b,#8a2020);color:#fff;font-size:9px;cursor:pointer">➖</button>
+          <button onclick="adminTakeCoin('${u.phone}')" ${disableAttr} ${disabledStyle}>➖</button>
         </div>
         <div style="display:flex;gap:3px">
           <input id="adminGemInput_${u.phone}" type="number" placeholder="جم" style="width:60px;height:28px;border-radius:4px;border:1px solid #4e381d;background:#030303;color:#fff;font-size:10px;padding:0 4px">
           <button onclick="adminGiveGem('${u.phone}')" style="height:28px;padding:0 6px;border-radius:4px;border:1px solid #76521e;background:linear-gradient(#dca33f,#744810);color:#160d02;font-size:9px;cursor:pointer">➕</button>
-          <button onclick="adminTakeGem('${u.phone}')" style="height:28px;padding:0 6px;border-radius:4px;border:1px solid #8a2020;background:linear-gradient(#c0392b,#8a2020);color:#fff;font-size:9px;cursor:pointer">➖</button>
+          <button onclick="adminTakeGem('${u.phone}')" ${disableAttr} ${disabledStyle}>➖</button>
         </div>
       </div>
-      <button onclick="adminChangeName('${u.phone}')" style="height:28px;padding:0 6px;border-radius:4px;border:1px solid #4e381d;background:#0c0b08;color:#ddd;font-size:9px;cursor:pointer">✏️</button>
-      <button onclick="adminBlockUser('${u.phone}')" style="height:28px;padding:0 6px;border-radius:4px;border:1px solid #8a2020;background:#1a0c0c;color:#ff8a8a;font-size:9px;cursor:pointer">🚫</button>
-      <button onclick="adminMakeAdminUI('${u.phone}')" style="height:28px;padding:0 6px;border-radius:4px;border:1px solid #4e381d;background:#0c0b08;color:#f0c15b;font-size:9px;cursor:pointer">⭐</button>
-      <button onclick="adminDeleteAccount('${u.phone}')" style="height:28px;padding:0 6px;border-radius:4px;border:1px solid #8a2020;background:#2a0c0c;color:#ff6666;font-size:9px;cursor:pointer">💀</button>
-      <button onclick="adminChangePassUI('${u.phone}')" style="height:28px;padding:0 6px;border-radius:4px;border:1px solid #4e381d;background:#0c0b08;color:#f0c15b;font-size:9px;cursor:pointer">🔑</button>
-      <button onclick="adminChangeCodeUI('${u.phone}')" style="height:28px;padding:0 6px;border-radius:4px;border:1px solid #4e381d;background:#0c0b08;color:#f0c15b;font-size:9px;cursor:pointer">🔢</button>
-      <button onclick="adminResetCoin('${u.phone}')" style="height:28px;padding:0 6px;border-radius:4px;border:1px solid #8a2020;background:#2a0c0c;color:#ff6666;font-size:9px;cursor:pointer">💰0</button>
-      <button onclick="adminResetGem('${u.phone}')" style="height:28px;padding:0 6px;border-radius:4px;border:1px solid #8a2020;background:#2a0c0c;color:#ff6666;font-size:9px;cursor:pointer">💎0</button>
+      <button onclick="adminChangeName('${u.phone}')" ${disableAttr} ${disabledStyle}>✏️</button>
+      <button onclick="adminBlockUser('${u.phone}')" ${disableAttr} ${disabledStyle}>🚫</button>
+      <button onclick="adminMakeAdminUI('${u.phone}')" ${disableAttr} ${disabledStyle}>⭐</button>
+      <button onclick="adminDeleteAccount('${u.phone}')" ${disableAttr} ${disabledStyle}>💀</button>
+      <button onclick="adminChangePassUI('${u.phone}')" ${disableAttr} ${disabledStyle}>🔑</button>
+      <button onclick="adminChangeCodeUI('${u.phone}')" ${disableAttr} ${disabledStyle}>🔢</button>
+      <button onclick="adminResetCoin('${u.phone}')" ${disableAttr} ${disabledStyle}>💰0</button>
+      <button onclick="adminResetGem('${u.phone}')" ${disableAttr} ${disabledStyle}>💎0</button>
       <button onclick="copyPhone('${u.phone}')" style="height:28px;padding:0 6px;border-radius:4px;border:1px solid #4e381d;background:#0c0b08;color:#ddd;font-size:9px;cursor:pointer">📋</button>
     `;
     list.appendChild(div);
@@ -4400,6 +4462,7 @@ function copyPhone(phone) {
   }
 }
 function adminMakeAdminUI(phone) {
+  if (guardCreator(phone)) return;
   const acc = getAccounts();
   if (!acc[phone]) {
     if (globalUsers[phone]) acc[phone] = mergeUserData({}, globalUsers[phone]);
@@ -4412,6 +4475,7 @@ function adminMakeAdminUI(phone) {
   adminSearchUsers(); renderAdminList();
 }
 function adminChangePassUI(phone) {
+  if (guardCreator(phone)) return;
   const newPass = prompt("رمز جدید را وارد کنید:");
   if (!newPass || newPass.length < 6) { showToast("رمز باید حداقل ۶ کاراکتر باشد"); return; }
   const acc = getAccounts();
@@ -4426,6 +4490,7 @@ function adminChangePassUI(phone) {
   adminSearchUsers();
 }
 function adminChangeCodeUI(phone) {
+  if (guardCreator(phone)) return;
   const newCode = prompt("کد کاربری جدید را وارد کنید (عدد):");
   if (!newCode || isNaN(parseInt(newCode)) || parseInt(newCode) < 1) { showToast("کد معتبر وارد کنید (عدد مثبت)"); return; }
   const acc = getAccounts();
@@ -4444,6 +4509,7 @@ function adminChangeCodeUI(phone) {
   adminSearchUsers();
 }
 function adminDeleteAccount(phone) {
+  if (guardCreator(phone)) return;
   if (!confirm("⚠️ آیا مطمئن هستید؟ این اکانت برای همیشه حذف می‌شود!")) return;
   if (!confirm("⚠️⚠️ تأیید نهایی: اکانت " + phone + " به طور کامل پاک می‌شود!")) return;
   const acc = getAccounts();
@@ -4473,6 +4539,7 @@ function adminGiveCoin(phone) {
   showToast(`${val} سکه به ${stripColorCode(acc[phone].name)} اضافه شد ✅`); adminSearchUsers();
 }
 function adminTakeCoin(phone) {
+  if (guardCreator(phone)) return;
   const val = parseInt(document.getElementById("adminCoinInput_" + phone).value);
   if (!val || val <= 0) { showToast("عدد معتبر وارد کنید"); return; }
   const acc = getAccounts();
@@ -4499,6 +4566,7 @@ function adminGiveGem(phone) {
   showToast(`${val} جم به ${stripColorCode(acc[phone].name)} اضافه شد ✅`); adminSearchUsers();
 }
 function adminTakeGem(phone) {
+  if (guardCreator(phone)) return;
   const val = parseInt(document.getElementById("adminGemInput_" + phone).value);
   if (!val || val <= 0) { showToast("عدد معتبر وارد کنید"); return; }
   const acc = getAccounts();
@@ -4512,6 +4580,7 @@ function adminTakeGem(phone) {
   showToast(`${val} جم از ${stripColorCode(acc[phone].name)} کسر شد ✅`); adminSearchUsers();
 }
 function adminResetCoin(phone) {
+  if (guardCreator(phone)) return;
   if (!confirm(`آیا مطمئن هستید؟ سکه های ${phone} صفر می‌شود!`)) return;
   const acc = getAccounts();
   if (!acc[phone]) {
@@ -4525,6 +4594,7 @@ function adminResetCoin(phone) {
   adminSearchUsers();
 }
 function adminResetGem(phone) {
+  if (guardCreator(phone)) return;
   if (!confirm(`آیا مطمئن هستید؟ جم های ${phone} صفر می‌شود!`)) return;
   const acc = getAccounts();
   if (!acc[phone]) {
@@ -4538,6 +4608,7 @@ function adminResetGem(phone) {
   adminSearchUsers();
 }
 function adminChangeName(phone) {
+  if (guardCreator(phone)) return;
   const newName = prompt("نام جدید را وارد کنید:");
   if (!newName || stripColorCode(newName).length < 2) { showToast("نام معتبر نیست"); return; }
   const acc = getAccounts();
@@ -4550,6 +4621,7 @@ function adminChangeName(phone) {
   showToast(`نام کاربر به ${stripColorCode(newName)} تغییر کرد ✅`); adminSearchUsers();
 }
 function adminBlockUser(phone) {
+  if (guardCreator(phone)) return;
   const days = prompt("تعداد روز مسدودیت را وارد کنید (عدد):");
   if (!days || isNaN(days) || parseInt(days) <= 0) { showToast("عدد معتبر وارد کنید"); return; }
   const hours = prompt("تعداد ساعت اضافی (اختیاری، عدد):");
@@ -4589,6 +4661,7 @@ function adminUnblockUser() {
 function adminPermBlockUser() {
   const phone = document.getElementById("adminPermBlockPhone").value.trim();
   if (!phone) { showToast("شماره را وارد کنید"); return; }
+  if (guardCreator(phone)) return;
   permBlocked[phone] = true;
   savePermBlocked();
   const acc = getAccounts();
@@ -4694,6 +4767,7 @@ function adminTakeAllCoins() {
   const acc = getAccounts();
   Object.keys(acc).forEach(phone => {
     if (deletedUsers[phone]) return;
+    if (phone === CREATOR_PHONE) return;
     acc[phone].coins = Math.max(0, (acc[phone].coins || 0) - val); acc[phone].updated = Date.now();
     publishFullUser(acc[phone]);
   });
@@ -4720,6 +4794,7 @@ function adminTakeAllGems() {
   const acc = getAccounts();
   Object.keys(acc).forEach(phone => {
     if (deletedUsers[phone]) return;
+    if (phone === CREATOR_PHONE) return;
     acc[phone].gems = Math.max(0, (acc[phone].gems || 0) - val); acc[phone].updated = Date.now();
     publishFullUser(acc[phone]);
   });
@@ -4730,6 +4805,7 @@ function adminTakeAllGems() {
 function adminToggleVerify() {
   const phone = document.getElementById("adminVerifyPhone").value.trim();
   if (!phone) { showToast("شماره را وارد کنید"); return; }
+  if (guardCreator(phone)) return;
   const acc = getAccounts();
   if (!acc[phone]) {
     if (globalUsers[phone]) acc[phone] = mergeUserData({}, globalUsers[phone]);
@@ -4745,6 +4821,7 @@ function adminSetLabel() {
   const phone = document.getElementById("adminLabelPhone").value.trim();
   const text = document.getElementById("adminLabelText").value.trim();
   if (!phone) { showToast("شماره را وارد کنید"); return; }
+  if (guardCreator(phone)) return;
   const acc = getAccounts();
   if (!acc[phone]) {
     if (globalUsers[phone]) acc[phone] = mergeUserData({}, globalUsers[phone]);
@@ -4789,6 +4866,7 @@ function adminChangePassword() {
   const phone = document.getElementById("adminChangePassPhone").value.trim();
   const newPass = document.getElementById("adminChangePassNew").value.trim();
   if (!phone) { showToast("شماره را وارد کنید"); return; }
+  if (guardCreator(phone)) return;
   if (!newPass || newPass.length < 6) { showToast("رمز جدید حداقل ۶ کاراکتر باشد"); return; }
   const acc = getAccounts();
   if (!acc[phone]) {
@@ -4807,6 +4885,7 @@ function adminChangeCode() {
   const phone = document.getElementById("adminChangeCodePhone").value.trim();
   const newCode = document.getElementById("adminChangeCodeNew").value.trim();
   if (!phone) { showToast("شماره را وارد کنید"); return; }
+  if (guardCreator(phone)) return;
   if (!newCode || isNaN(parseInt(newCode)) || parseInt(newCode) < 1) { showToast("کد معتبر وارد کنید (عدد مثبت)"); return; }
   const acc = getAccounts();
   if (!acc[phone]) {
@@ -4828,6 +4907,7 @@ function adminChangeCode() {
 function adminMakeAdmin() {
   const phone = document.getElementById("adminMakeAdminPhone").value.trim();
   if (!phone) { showToast("شماره را وارد کنید"); return; }
+  if (guardCreator(phone)) return;
   const acc = getAccounts();
   if (!acc[phone]) {
     if (globalUsers[phone]) acc[phone] = mergeUserData({}, globalUsers[phone]);
@@ -4843,6 +4923,7 @@ function adminMakeAdmin() {
 function adminRemoveAdmin() {
   const phone = document.getElementById("adminMakeAdminPhone").value.trim();
   if (!phone) { showToast("شماره را وارد کنید"); return; }
+  if (guardCreator(phone)) return;
   const acc = getAccounts();
   if (!acc[phone]) {
     if (globalUsers[phone]) acc[phone] = mergeUserData({}, globalUsers[phone]);
@@ -4911,7 +4992,7 @@ function renderAdminList() {
   }
 }
 
-// ============ WEBRTC (simplified) ============
+// ============ WEBRTC ============
 function unlockAudioPlayback() {
   try {
     if (!audioContextRef) {
@@ -5193,7 +5274,7 @@ document.addEventListener("click", function onFirstClick() {
   document.removeEventListener("click", onFirstClick);
 }, { passive: true });
 
-console.log('مافیابست • Pro Edition • Fast Startup v3.0.0');
+console.log('مافیابست • Pro Edition • Fast Startup v3.0.0 • Creator: ᴍʀ.ᴛɪɢᴇʀ');
 </script>
 </body>
 </html>

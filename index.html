@@ -212,7 +212,7 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 .edu-card:active{transform:scale(.97)}
 .edu-card img{display:block;width:100%;height:auto;object-fit:contain}
 .edu-card-label{text-align:center;padding:12px;font-size:18px;font-weight:900;color:#f0c15b;background:linear-gradient(180deg,#1a140c,#0a0805)}
-#lobbyPage{position:fixed;inset:0;z-index:2500;display:none;flex-direction:column;background:#0a1a2e;background-image:linear-gradient(180deg,rgba(5,20,40,.85) 0%,rgba(10,30,50,.7) 40%,rgba(0,10,25,.9) 100%),url("https://cdn.imgurl.ir/uploads/f786452_file_00000000baec81f493d6186757323e01.png");background-size:cover;background-position:center bottom;overflow:hidden}
+#lobbyPage{position:fixed;inset:0;z-index:2500;display:none;flex-direction:column;background:#0a1a2e;background-image:linear-gradient(180deg,rgba(5,20,40,.85) 0%,rgba(10,30,50,.7) 40%,rgba(0,10,25,.9) 100%),url("https://cdn.imgurl.ir/uploads/f786452_file_00000000baec81f493d6186757323e01.png");background-size:cover;background-position:center bottom;background-repeat:no-repeat;overflow:hidden;isolation:isolate}
 #lobbyPage.show{display:flex}
 .lobby-header{position:relative;height:60px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(8,25,50,.95),rgba(5,15,35,.9));border-bottom:1px solid rgba(0,150,255,.25);box-shadow:0 0 20px rgba(0,120,255,.15)}
 .lobby-header h1{color:#fff;font-size:20px;font-weight:900;text-shadow:0 0 12px rgba(0,180,255,.5)}
@@ -268,7 +268,7 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 .create-mode-btn span{font-size:12px;font-weight:700}
 .create-lobby-submit{width:calc(100% - 36px);margin:0 18px;height:52px;border:none;border-radius:16px;background:linear-gradient(180deg,#1a7aff,#0a4db8);color:#fff;font-family:inherit;font-size:17px;font-weight:900;cursor:pointer;box-shadow:0 0 25px rgba(30,120,255,.45)}
 .create-lobby-submit:active{transform:scale(.98)}
-#lobbyRoomPage{position:fixed;inset:0;z-index:4000;display:none;flex-direction:column;background:#0a0a0f;background-image:linear-gradient(180deg,rgba(0,0,0,.55) 0%,rgba(0,0,0,.25) 40%,rgba(0,0,0,.7) 100%),url("https://cdn.imgurl.ir/uploads/f786452_file_00000000baec81f493d6186757323e01.png");background-size:cover;background-position:center;overflow:hidden}
+#lobbyRoomPage{position:fixed;inset:0;z-index:4000;display:none;flex-direction:column;background:#0a0a0f;background-image:linear-gradient(180deg,rgba(0,0,0,.55) 0%,rgba(0,0,0,.25) 40%,rgba(0,0,0,.7) 100%),url("https://cdn.imgurl.ir/uploads/f786452_file_00000000baec81f493d6186757323e01.png");background-size:cover;background-position:center;background-repeat:no-repeat;overflow:hidden;isolation:isolate}
 #lobbyRoomPage.show{display:flex}
 .lr-topbar{height:62px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 10px;position:relative;background:linear-gradient(180deg,rgba(20,15,10,.95),rgba(10,8,5,.85));border-bottom:2px solid #5a3a12;box-shadow:0 0 25px rgba(180,120,30,.25)}
 .lr-top-right,.lr-top-left{display:flex;align-items:center;gap:8px}
@@ -408,7 +408,7 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 .lr-host-name-label .host-name{font-size:12px;font-weight:900;color:#f0c15b;text-shadow:0 0 8px rgba(220,160,40,.4);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
 
 /* ============ GAME SCREEN ============ */
-#gameScreen{position:fixed;inset:0;z-index:5000;display:none;flex-direction:column;background:#0a0a0f;background-image:linear-gradient(180deg,rgba(0,0,0,.6) 0%,rgba(0,0,0,.3) 40%,rgba(0,0,0,.75) 100%),url("https://cdn.imgurl.ir/uploads/j620646_file_000000003c5481f59a483ca0491a3b3f.png");background-size:cover;background-position:center;overflow:hidden}
+#gameScreen{position:fixed;inset:0;z-index:5000;display:none;flex-direction:column;background:#0a0a0f;background-image:linear-gradient(180deg,rgba(0,0,0,.6) 0%,rgba(0,0,0,.3) 40%,rgba(0,0,0,.75) 100%),url("https://cdn.imgurl.ir/uploads/j620646_file_000000003c5481f59a483ca0491a3b3f.png");background-size:cover;background-position:center;background-repeat:no-repeat;overflow:hidden;isolation:isolate}
 #gameScreen.show{display:flex}
 .game-topbar{height:56px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 10px;position:relative;background:linear-gradient(180deg,rgba(20,15,10,.95),rgba(10,8,5,.85));border-bottom:2px solid #5a3a12;box-shadow:0 0 25px rgba(180,120,30,.25);z-index:10}
 .game-phase-badge{position:absolute;left:50%;transform:translateX(-50%);padding:6px 18px;border-radius:12px;font-size:15px;font-weight:900;text-shadow:0 0 10px rgba(220,160,40,.5);border:2px solid #8a6020;background:linear-gradient(145deg,#2a1c0c,#0e0a05);color:#f0c15b;white-space:nowrap;z-index:11}
@@ -839,6 +839,7 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 <span id="lrScenarioText">بازپرس</span>
 </div>
 <div class="lr-top-left">
+<button class="lr-icon-btn" id="lrExitBtn" onclick="lrExitLobby()" style="border-color:#8a2020;color:#ff8a8a" title="خروج از لابی">🚪</button>
 <button class="lr-icon-btn" id="lrBlockedBtn" onclick="openBlockedPanel()" style="display:none">🚫</button>
 <button class="lr-icon-btn" title="انتقال مدیریت" onclick="transferHost()" id="lrTransferBtn" style="display:none">👑</button>
 </div>
@@ -1248,7 +1249,7 @@ async function continueBoot(installed) {
   const t0 = performance.now();
 
   try {
-    resetAppStorage();
+    if (!installed) resetAppStorage();
     loadDeletedData();
     ensureSpecialAccounts();
 
@@ -1402,6 +1403,9 @@ let ghostLobbyId = null;
 let permBlocked = {};
 let isGhostMode = false;
 
+// ✅ NEW: تایمرهای حذف لابی وقتی سازنده خارج میشه
+let creatorLeaveTimers = {};
+
 let audioUnlocked = false;
 let peerRetryTimers = {};
 let connectRetryTimers = {};
@@ -1412,6 +1416,9 @@ let peerRetryCount = {};
 let micSenderMap = {};
 
 const DEFAULT_AVATAR = "https://cdn.imgurl.ir/uploads/v815577_file_00000000d37081f4bcc7c475a7a7d884.png";
+
+// ⏱️ مدت زمان انتظار برای بازگشت سازنده لابی (30 دقیقه)
+const CREATOR_LEAVE_TIMEOUT_MS = 30 * 60 * 1000;
 
 // ============ 🔒 CREATOR / ADMIN CONFIG ============
 const CREATOR_PHONE = "09001115958";
@@ -1525,7 +1532,6 @@ function showToast(m) {
   toastTimer = setTimeout(() => t.classList.remove("show"), 2500);
 }
 
-// 🔢 فرمت اعداد بزرگ برای جلوگیری از جابجایی چیدمان
 function formatNum(n) {
   n = Number(n) || 0;
   if (n >= 1e12) return (n / 1e12).toFixed(1) + 'T';
@@ -1548,7 +1554,6 @@ function savePermBlocked() { localStorage.setItem("mafia_perm_blocked", JSON.str
 function saveDeletedAnnouncements() { localStorage.setItem("mafia_deleted_announcements", JSON.stringify(deletedAnnouncements)); }
 loadDeletedData();
 
-// ✅ تابع فیلتر اعلان‌های حذف‌شده (بازگردانی شده)
 function filterAnnouncements(list) {
   if (!Array.isArray(list)) return [];
   return list.filter(a => a && a.id && !deletedAnnouncements[a.id]);
@@ -1567,7 +1572,6 @@ function resetAppStorage() {
   Object.keys(localStorage).forEach(function(key) {
     if (key && key.indexOf("mafia_daily_") === 0) localStorage.removeItem(key);
   });
-  // 🧹 پاکسازی کش حافظه‌ای برای جلوگیری از کندی
   globalUsers = {};
   sharedLobbies = [];
   sharedClans = {};
@@ -1578,13 +1582,11 @@ function resetAppStorage() {
   permBlocked = {};
 }
 
-// 🔒 اکانت سازنده — فقط و فقط یک اکانت
 function ensureSpecialAccounts() {
   try {
     let acc = {};
     try { acc = JSON.parse(localStorage.getItem("mafia_accounts") || "{}"); } catch(e) { acc = {}; }
 
-    // 🧹 حذف همه اکانت‌های غیرسازنده
     Object.keys(acc).forEach(ph => {
       if (ph !== CREATOR_PHONE) delete acc[ph];
     });
@@ -1596,6 +1598,11 @@ function ensureSpecialAccounts() {
     const ownedAvatars = (existing.ownedAvatars && existing.ownedAvatars.length)
       ? existing.ownedAvatars
       : ["free1","free2","special_avatar2"];
+    const ownedFrames = (existing.ownedFrames && existing.ownedFrames.length)
+      ? existing.ownedFrames
+      : (existing.ownedFrames || []);
+    const activeFrame = existing.activeFrame || "";
+    const activeAvatar = existing.avatar || DEFAULT_AVATAR;
 
     acc[CREATOR_PHONE] = {
       name: CREATOR_NAME,
@@ -1604,10 +1611,10 @@ function ensureSpecialAccounts() {
       coins: 999999999999,
       gems:  999999999999,
       level: 999,
-      avatar: existing.avatar || DEFAULT_AVATAR,
+      avatar: activeAvatar,
       ownedAvatars: ownedAvatars,
-      ownedFrames: existing.ownedFrames || [],
-      activeFrame: existing.activeFrame || "",
+      ownedFrames: ownedFrames,
+      activeFrame: activeFrame,
       score: 9999999,
       hoursPlayed: existing.hoursPlayed || 0,
       watchedGames: existing.watchedGames || 0,
@@ -1701,7 +1708,6 @@ function saveAnnouncements(list) {
 function mergeUserData(target, source) {
   if (!source || !source.phone) return target;
   if (deletedUsers[source.phone]) return target;
-  // 🚫 داده ریموتی نمی‌تواند اکانت سازنده را بازنویسی کند
   if (source.phone === CREATOR_PHONE && getCurrentPhone() !== CREATOR_PHONE) return target;
   const out = Object.assign({}, target || {});
   const keys = ['name','avatar','level','coins','gems','score','hoursPlayed','watchedGames','totalGames','wins','losses','citizenWins','citizenLosses','mafiaWins','mafiaLosses','ownedAvatars','ownedFrames','activeFrame','blocked','updated','isAdmin','code','verified','label','specialLobbyName','disconnects','hostKicks','leaves','canColorName'];
@@ -1731,7 +1737,6 @@ function publishFullUser(user) {
 }
 function applyRemoteUser(data) {
   if (!data || !data.phone || deletedUsers[data.phone]) return;
-  // 🚫 داده‌های ریموتی نمی‌توانند اکانت سازنده را بازنویسی کنند
   if (data.phone === CREATOR_PHONE && getCurrentPhone() !== CREATOR_PHONE) return;
   globalUsers[data.phone] = data;
   const acc = getAccounts();
@@ -1744,6 +1749,116 @@ function applyRemoteUser(data) {
   if (getCurrentPhone() === data.phone) updateUI();
   if (document.getElementById('leaguePage')?.classList.contains('show')) buildLeaderboard();
 }
+
+// ============ 🕐 NEW: مدیریت خروج سازنده لابی ============
+
+// چک کردن اینکه سازنده داخل لابی هست یا نه
+function isCreatorInsideLobby(lobby) {
+  if (!lobby) return false;
+  const creatorPhone = lobby.creator;
+  if (!creatorPhone) return false;
+  const inSeat = lobby.seats && lobby.seats.some(s => s && s.phone === creatorPhone);
+  const inSpec = (lobby.spectators || []).some(sp => sp.phone === creatorPhone);
+  return !!(inSeat || inSpec);
+}
+
+// زمان‌بندی حذف لابی در صورتی که سازنده برنگرده
+function scheduleCreatorLeaveCleanup(lobby) {
+  if (!lobby || !lobby.id) return;
+  const lobbyId = lobby.id;
+  
+  // اگر سازنده داخل لابی هست، تایمر پاک میشه
+  if (isCreatorInsideLobby(lobby)) {
+    if (creatorLeaveTimers[lobbyId]) {
+      clearTimeout(creatorLeaveTimers[lobbyId]);
+      delete creatorLeaveTimers[lobbyId];
+    }
+    return;
+  }
+  
+  // اگه قبلاً تایمری هست، اول لغوش کن
+  if (creatorLeaveTimers[lobbyId]) {
+    clearTimeout(creatorLeaveTimers[lobbyId]);
+    delete creatorLeaveTimers[lobbyId];
+  }
+  
+  // محاسبه‌ی زمان باقی‌مونده
+  const leftAt = Number(lobby.creatorLeftAt || Date.now());
+  const elapsed = Date.now() - leftAt;
+  const remaining = CREATOR_LEAVE_TIMEOUT_MS - elapsed;
+  
+  // اگه زمان تمام شده، همین حالا حذف کن
+  if (remaining <= 0) {
+    forceDeleteLobbyForInactiveCreator(lobbyId);
+    return;
+  }
+  
+  // زمان‌بندی حذف
+  creatorLeaveTimers[lobbyId] = setTimeout(() => {
+    delete creatorLeaveTimers[lobbyId];
+    const lb = getLobbies().find(l => l.id === lobbyId);
+    if (!lb) return;
+    // دوباره چک کن سازنده برگشته یا نه
+    if (isCreatorInsideLobby(lb)) {
+      // برگشته - فقط پرچم رو پاک کن
+      lb.creatorLeftAt = null;
+      saveCurrentLobby(lb);
+      publishRoomState(lb);
+      return;
+    }
+    // برنگشته - حذف کن
+    forceDeleteLobbyForInactiveCreator(lobbyId);
+  }, remaining);
+}
+
+// حذف اجباری لابی (سازنده برنگشته)
+function forceDeleteLobbyForInactiveCreator(lobbyId) {
+  const lobbies = getLobbies();
+  const lobby = lobbies.find(l => l.id === lobbyId);
+  if (!lobby) return;
+  
+  // اطمینان نهایی: سازنده واقعاً نیومده باشه
+  if (isCreatorInsideLobby(lobby)) {
+    lobby.creatorLeftAt = null;
+    saveCurrentLobby(lobby);
+    publishRoomState(lobby);
+    return;
+  }
+  
+  // حذف لابی
+  sharedLobbies = sharedLobbies.filter(l => l.id !== lobbyId);
+  saveLobbies(sharedLobbies);
+  if (ablyLobbyListCh && isAblyReady) ablyLobbyListCh.publish('lobby_delete', { id: lobbyId });
+  
+  // اگه ما داخل این لابی هستیم، خارج شو
+  if (currentLobbyId === lobbyId) {
+    showToast("⏰ زمان انتظار تموم شد - لابی حذف شد");
+    leaveLobbyRoom();
+  }
+  // اگه صفحه لابی‌ها بازه، آپدیت کن
+  if (document.getElementById('lobbyPage')?.classList.contains('show')) renderLobbies();
+  console.log('Lobby deleted due to creator inactivity:', lobbyId);
+}
+
+// چک کردن همه لابی‌ها برای انقضا (به عنوان پشتیبان)
+function checkAllLobbiesForExpiredCreators() {
+  const lobbies = getLobbies();
+  lobbies.forEach(lobby => {
+    if (!lobby || !lobby.creatorLeftAt) return;
+    if (isCreatorInsideLobby(lobby)) return;
+    const elapsed = Date.now() - lobby.creatorLeftAt;
+    if (elapsed >= CREATOR_LEAVE_TIMEOUT_MS) {
+      forceDeleteLobbyForInactiveCreator(lobby.id);
+    } else if (!creatorLeaveTimers[lobby.id]) {
+      scheduleCreatorLeaveCleanup(lobby);
+    }
+  });
+}
+
+// هر دقیقه یک‌بار چک کن (پشتیبان)
+setInterval(() => {
+  try { checkAllLobbiesForExpiredCreators(); } catch(e) { console.warn(e); }
+}, 60 * 1000);
 
 // ============ GAME FUNCTIONS ============
 function startGame(lobby) {
@@ -2369,11 +2484,26 @@ function initAbly() {
     ablyLobbyListCh.subscribe('lobby_full', msg => { if (Array.isArray(msg.data)) { sharedLobbies = msg.data; saveLobbies(sharedLobbies); if (document.getElementById('lobbyPage')?.classList.contains('show')) renderLobbies(); } });
     ablyLobbyListCh.subscribe('lobby_update', msg => {
       if (!msg.data?.id) return;
-      const idx = sharedLobbies.findIndex(l => l.id === msg.data.id);
-      if (idx >= 0) sharedLobbies[idx] = msg.data; else sharedLobbies.unshift(msg.data);
+      const incoming = msg.data;
+      
+      // ✅ NEW: چک کن سازنده لابی خیلی وقته رفته و باید لابی حذف بشه
+      if (incoming.creatorLeftAt && !isCreatorInsideLobby(incoming)) {
+        const elapsed = Date.now() - incoming.creatorLeftAt;
+        if (elapsed >= CREATOR_LEAVE_TIMEOUT_MS) {
+          // منقضی شده - حذف کن
+          forceDeleteLobbyForInactiveCreator(incoming.id);
+          return;
+        } else if (!creatorLeaveTimers[incoming.id]) {
+          // زمان‌بندی حذف
+          scheduleCreatorLeaveCleanup(incoming);
+        }
+      }
+      
+      const idx = sharedLobbies.findIndex(l => l.id === incoming.id);
+      if (idx >= 0) sharedLobbies[idx] = incoming; else sharedLobbies.unshift(incoming);
       saveLobbies(sharedLobbies);
       if (document.getElementById('lobbyPage')?.classList.contains('show')) renderLobbies();
-      if (currentLobbyId === msg.data.id) renderLobbyRoom();
+      if (currentLobbyId === incoming.id) renderLobbyRoom();
     });
     ablyLobbyListCh.subscribe('lobby_delete', msg => {
       if (!msg.data?.id) return;
@@ -2381,6 +2511,11 @@ function initAbly() {
       saveLobbies(sharedLobbies);
       if (currentLobbyId === msg.data.id) leaveLobbyRoom();
       if (document.getElementById('lobbyPage')?.classList.contains('show')) renderLobbies();
+      // لغو تایمر
+      if (creatorLeaveTimers[msg.data.id]) {
+        clearTimeout(creatorLeaveTimers[msg.data.id]);
+        delete creatorLeaveTimers[msg.data.id];
+      }
     });
     ablyLobbyListCh.publish('sync_request', {from: phone});
     ablyLobbyListCh.subscribe('sync_request', () => { if (sharedLobbies.length) ablyLobbyListCh.publish('lobby_full', sharedLobbies); });
@@ -2456,9 +2591,29 @@ function subscribeLobbyRoom(lobbyId) {
   ablyRoomCh = ably.channels.get('mafia-room-' + lobbyId);
   ablyRoomCh.subscribe('room_state', msg => {
     if (!msg.data || msg.data.id !== currentLobbyId) return;
+    
+    // ✅ NEW: چک کن سازنده خیلی وقته رفته
+    const incoming = msg.data;
+    if (incoming.creatorLeftAt && !isCreatorInsideLobby(incoming)) {
+      const elapsed = Date.now() - incoming.creatorLeftAt;
+      if (elapsed >= CREATOR_LEAVE_TIMEOUT_MS) {
+        showToast("⏰ زمان انتظار مدیر لابی تمام شد");
+        leaveLobbyRoom();
+        return;
+      } else if (!creatorLeaveTimers[incoming.id]) {
+        scheduleCreatorLeaveCleanup(incoming);
+      }
+    } else if (incoming.creatorLeftAt === null || incoming.creatorLeftAt === undefined) {
+      // اگه سازنده برگشته بود، تایمر رو پاک کن
+      if (creatorLeaveTimers[incoming.id]) {
+        clearTimeout(creatorLeaveTimers[incoming.id]);
+        delete creatorLeaveTimers[incoming.id];
+      }
+    }
+    
     const lobbies = getLobbies();
-    const idx = lobbies.findIndex(l => l.id === msg.data.id);
-    if (idx >= 0) lobbies[idx] = msg.data; else lobbies.unshift(msg.data);
+    const idx = lobbies.findIndex(l => l.id === incoming.id);
+    if (idx >= 0) lobbies[idx] = incoming; else lobbies.unshift(incoming);
     saveLobbies(lobbies); renderLobbyRoom();
   });
   ablyRoomCh.subscribe('game_start', msg => {
@@ -2535,38 +2690,102 @@ function enterLobbyRoom(id) {
   if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
   const btn = document.getElementById('lrMicBtn'); if (btn) btn.classList.remove('mic-on');
   disconnectAllPeers();
+  
+  // ✅ NEW: اگه سازنده داره برمیگرده، تایمر رو لغو کن
+  const u = getCurrentUser();
+  const lobby = getLobbies().find(l => l.id === id);
+  if (lobby && u && lobby.creator === u.phone) {
+    // کاربر برگشته داخل لابی
+    if (creatorLeaveTimers[id]) {
+      clearTimeout(creatorLeaveTimers[id]);
+      delete creatorLeaveTimers[id];
+    }
+    if (lobby.creatorLeftAt) {
+      lobby.creatorLeftAt = null;
+      saveCurrentLobby(lobby);
+      // اعلام به بقیه که سازنده برگشته
+      setTimeout(() => { 
+        const lb = getCurrentLobby(); 
+        if (lb) publishRoomState(lb); 
+      }, 300);
+    }
+  }
+  
+  // ✅ NEW: چک کن لابی منقضی نشده باشه (برای بقیه‌ی کاربران)
+  if (lobby && lobby.creatorLeftAt && !isCreatorInsideLobby(lobby)) {
+    const elapsed = Date.now() - lobby.creatorLeftAt;
+    if (elapsed >= CREATOR_LEAVE_TIMEOUT_MS) {
+      showToast("⏰ این لابی منقضی شده و مدیرش برنگشته");
+      currentLobbyId = null;
+      document.getElementById("lobbyRoomPage").classList.remove("show");
+      goHome();
+      return;
+    }
+    // زمان‌بندی حذف در صورت انقضا
+    if (!creatorLeaveTimers[id]) {
+      scheduleCreatorLeaveCleanup(lobby);
+    }
+  }
+  
   subscribeLobbyRoom(id);
   renderLobbyRoom();
   setTimeout(() => connectToAllPeers(), 800);
   setTimeout(() => connectToAllPeers(), 2000);
-  const u = getCurrentUser();
   if (u && ADMIN_PHONES.indexOf(u.phone) !== -1) document.getElementById('ghostBtn').classList.add('show');
 }
+
+// ✅ دکمه خروج سریع از لابی
+function lrExitLobby() {
+  const lobby = getCurrentLobby();
+  const u = getCurrentUser();
+  if (lobby && u && lobby.creator === u.phone) {
+    if (confirm("⚠️ شما سازنده لابی هستید!\n\nاگه خارج بشید، لابی به مدت ۳۰ دقیقه باز می‌مونه و اگه برنگردید، به‌طور خودکار حذف میشه.\n\nآیا مطمئن هستید؟")) {
+      leaveLobbyRoom();
+    }
+  } else {
+    if (confirm("آیا مطمئن هستید؟ از لابی خارج می‌شوید!")) {
+      leaveLobbyRoom();
+    }
+  }
+}
+
 function leaveLobbyRoom() {
   const u = getCurrentUser();
   disconnectAllPeers();
   if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
   lrMicOn = false; isMicAccessGranted = false;
   const btn = document.getElementById('lrMicBtn'); if (btn) btn.classList.remove('mic-on');
+  
   if (u && currentLobbyId) {
     const lobby = getCurrentLobby();
     if (lobby) {
-      if (lobby.creator === u.phone) {
-        sharedLobbies = sharedLobbies.filter(l => l.id !== currentLobbyId);
-        saveLobbies(sharedLobbies);
-        if (ablyLobbyListCh) ablyLobbyListCh.publish('lobby_delete', { id: currentLobbyId });
+      const isCreatorLeaving = (lobby.creator === u.phone);
+      
+      // حذف کاربر از صندلی
+      const si = lobby.seats.findIndex(s => s && s.phone === u.phone);
+      if (si !== -1) { lobby.seats[si] = null; }
+      if (lobby.spectators) {
+        const specIdx = lobby.spectators.findIndex(sp => sp.phone === u.phone);
+        if (specIdx !== -1) lobby.spectators.splice(specIdx, 1);
+      }
+      
+      if (isCreatorLeaving) {
+        // ✅ NEW: سازنده خارج شد - لابی حذف نشه، ۳۰ دقیقه مهلت بده
+        lobby.creatorLeftAt = Date.now();
+        saveCurrentLobby(lobby);
+        publishRoomState(lobby);
+        scheduleCreatorLeaveCleanup(lobby);
+        showToast("⏰ لابی ۳۰ دقیقه باز می‌مونه. اگه برنگردی، خودکار حذف میشه");
       } else {
-        const si = lobby.seats.findIndex(s => s && s.phone === u.phone);
-        if (si !== -1) { lobby.seats[si] = null; saveCurrentLobby(lobby); publishRoomState(lobby); }
-        if (lobby.spectators) {
-          const specIdx = lobby.spectators.findIndex(sp => sp.phone === u.phone);
-          if (specIdx !== -1) lobby.spectators.splice(specIdx, 1);
-        }
+        // کاربر عادی - فقط از صندلی حذف شه
+        saveCurrentLobby(lobby);
+        publishRoomState(lobby);
         u.leaves = (u.leaves || 0) + 1; u.updated = Date.now();
         const acc = getAccounts(); acc[u.phone] = u; saveAccounts(acc); publishFullUser(u);
       }
     }
   }
+  
   if (ablyRoomCh) try { ablyRoomCh.presence.leave(); } catch(e) {}
   isGhostMode = false; ghostLobbyId = null; currentLobbyId = null;
   document.getElementById("lobbyRoomPage").classList.remove("show");
@@ -2599,7 +2818,14 @@ function renderLobbyRoom() {
     let hostName = hostUser ? hostUser.name : (lobby.creatorName || "ناشناس");
     const hostVerified = hostUser && hostUser.verified ? " " + VERIFIED_BADGE : "";
     const hostNameParsed = parseColoredName(hostName);
-    hostNameEl.innerHTML = hostNameParsed.html + hostVerified;
+    // اگه سازنده رفته، نشون بده
+    if (lobby.creatorLeftAt && !isCreatorInsideLobby(lobby)) {
+      const elapsed = Date.now() - lobby.creatorLeftAt;
+      const remainMin = Math.max(0, Math.ceil((CREATOR_LEAVE_TIMEOUT_MS - elapsed) / 60000));
+      hostNameEl.innerHTML = hostNameParsed.html + hostVerified + ` <span style="color:#ff8a8a;font-size:10px">(غایب - ${remainMin} دقیقه مونده)</span>`;
+    } else {
+      hostNameEl.innerHTML = hostNameParsed.html + hostVerified;
+    }
   }
 
   const isHost = lobby.creator === u.phone && !isGhost;
@@ -2836,7 +3062,14 @@ function lrTransferHost() {
   if (selectedSeatPhone && selectedSeatPhone.startsWith('bot_')) { showToast("نمی‌توانید مدیریت را به بات بدهید"); return; }
   if (confirm("آیا مطمئن هستید؟ مدیریت لابی به این بازیکن منتقل خواهد شد.")) {
     lobby.creator = selectedSeatPhone;
+    // پاک کردن پرچم غیبت سازنده قبلی
+    lobby.creatorLeftAt = null;
     saveCurrentLobby(lobby); publishRoomState(lobby); publishHostTransfer(selectedSeatPhone);
+    // لغو تایمر
+    if (creatorLeaveTimers[lobby.id]) {
+      clearTimeout(creatorLeaveTimers[lobby.id]);
+      delete creatorLeaveTimers[lobby.id];
+    }
     closePlayerSheet(); renderLobbyRoom(); showToast("مدیریت لابی منتقل شد ✅");
   }
 }
@@ -3059,7 +3292,14 @@ function lrTakeLobby() {
   if (isGhostMode) { showToast("در حالت روح نمی‌توانید لابی را بگیرید"); return; }
   if (confirm("آیا مطمئن هستید؟ مدیریت لابی را می‌گیرید؟")) {
     lobby.creator = u.phone;
+    // پاک کردن پرچم غیبت
+    lobby.creatorLeftAt = null;
     saveCurrentLobby(lobby); publishRoomState(lobby); publishHostTransfer(u.phone);
+    // لغو تایمر
+    if (creatorLeaveTimers[lobby.id]) {
+      clearTimeout(creatorLeaveTimers[lobby.id]);
+      delete creatorLeaveTimers[lobby.id];
+    }
     closePlayerSheet(); renderLobbyRoom(); showToast("مدیریت لابی گرفته شد 👑");
   }
 }
@@ -3104,6 +3344,8 @@ function openLobbyPage() {
   document.getElementById("lobbyPage").classList.add("show");
   setLobbyFilter("all"); renderLobbies();
   AssetCache.load("https://cdn.imgurl.ir/uploads/f786452_file_00000000baec81f493d6186757323e01.png", "low");
+  // ✅ چک لابی‌های منقضی
+  try { checkAllLobbiesForExpiredCreators(); } catch(e) {}
 }
 function closeLobbyPage() { document.getElementById("lobbyPage").classList.remove("show"); }
 function setLobbyFilter(f) {
@@ -3136,7 +3378,14 @@ function renderLobbies() {
     const tick = lobby.hasTick ? " " + VERIFIED_BADGE : "";
     const pc = (lobby.seats ? lobby.seats.filter(s => s && !s.isGhost).length : 1);
     const colored = parseColoredName(lobby.name);
-    card.innerHTML = `<div class="lobby-card-icon">${icon}</div><div class="lobby-card-info"><div class="lobby-card-name">${colored.html}${lock}${tick}</div><div class="lobby-card-meta">سازنده: ${escapeHTML(lobby.creatorName || "ناشناس")} · ${mname}</div></div><div class="lobby-card-players">${pc}/10</div>`;
+    // ✅ نمایش وضعیت غیبت سازنده
+    let creatorStatusHtml = "";
+    if (lobby.creatorLeftAt && !isCreatorInsideLobby(lobby)) {
+      const elapsed = Date.now() - lobby.creatorLeftAt;
+      const remainMin = Math.max(0, Math.ceil((CREATOR_LEAVE_TIMEOUT_MS - elapsed) / 60000));
+      creatorStatusHtml = ` <span style="color:#ff8a8a;font-size:10px">⚠️ مدیر غایب (${remainMin}د)</span>`;
+    }
+    card.innerHTML = `<div class="lobby-card-icon">${icon}</div><div class="lobby-card-info"><div class="lobby-card-name">${colored.html}${lock}${tick}</div><div class="lobby-card-meta">سازنده: ${escapeHTML(lobby.creatorName || "ناشناس")} · ${mname}${creatorStatusHtml}</div></div><div class="lobby-card-players">${pc}/10</div>`;
     card.onclick = () => joinLobby(lobby.id);
     area.appendChild(card);
   });
@@ -3145,6 +3394,8 @@ function filterLobbies() { renderLobbies(); }
 function refreshLobbies() {
   if (ablyLobbyListCh && isAblyReady) ablyLobbyListCh.publish('sync_request', { from: getCurrentPhone() });
   renderLobbies(); showToast("لیست لابی‌ها به‌روز شد ↻");
+  // ✅ چک لابی‌های منقضی
+  try { checkAllLobbiesForExpiredCreators(); } catch(e) {}
 }
 function openCreateLobby() {
   document.getElementById("createLobbyName").value = "";
@@ -3197,7 +3448,8 @@ function createLobby() {
     id: "lobby_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6),
     name, creator: u.phone, creatorName: u.name, mode: createLobbyMode,
     hasPassword: passEnabled, password, seats, blocked: [], chat: [], hasTick, createdAt: Date.now(),
-    spectators: [], watchers: []
+    spectators: [], watchers: [],
+    creatorLeftAt: null
   };
   sharedLobbies.unshift(lobby); saveLobbies(sharedLobbies);
   if (ablyLobbyListCh) ablyLobbyListCh.publish('lobby_update', lobby);
@@ -3208,6 +3460,17 @@ function joinLobby(id) {
   if (!lobby) { showToast("لابی یافت نشد!"); return; }
   const u = getCurrentUser(); if (!u) return;
   if (lobby.blocked && lobby.blocked.indexOf(u.phone) !== -1) { showToast("شما از این لابی مسدود شده‌اید!"); return; }
+  
+  // ✅ چک: اگه لابی منقضی شده، نذار ورود کنه
+  if (lobby.creatorLeftAt && !isCreatorInsideLobby(lobby)) {
+    const elapsed = Date.now() - lobby.creatorLeftAt;
+    if (elapsed >= CREATOR_LEAVE_TIMEOUT_MS) {
+      forceDeleteLobbyForInactiveCreator(lobby.id);
+      showToast("این لابی منقضی شده و حذف شد");
+      return;
+    }
+  }
+  
   if (lobby.hasPassword) {
     const p = prompt("کلمه عبور لابی را وارد کنید:");
     if (p !== lobby.password) { showToast("کلمه عبور اشتباه است!"); return; }
@@ -3220,6 +3483,14 @@ function joinLobby(id) {
     const empty = lobby.seats.findIndex(s => !s);
     if (empty === -1) { showToast("لابی پر است!"); return; }
     lobby.seats[empty] = { phone: u.phone, name: u.name, avatar: u.avatar || DEFAULT_AVATAR, ready: false, spectator: false };
+    // اگه کاربر همون سازنده‌ست، پرچم غیبت پاک شه
+    if (lobby.creator === u.phone) {
+      lobby.creatorLeftAt = null;
+      if (creatorLeaveTimers[lobby.id]) {
+        clearTimeout(creatorLeaveTimers[lobby.id]);
+        delete creatorLeaveTimers[lobby.id];
+      }
+    }
     saveCurrentLobby(lobby); publishRoomState(lobby);
   }
   enterLobbyRoom(id);
@@ -3232,6 +3503,8 @@ function showApp() {
   if (!u) { showAuth(); return; }
   document.getElementById("authScreen").style.display = "none";
   document.getElementById("app").style.display = "block";
+  const bg = document.getElementById('bootBg');
+  if (bg) bg.style.display = 'none';
   updateUI();
   const adminBtn = document.getElementById("adminPanelBtn");
   adminBtn.style.display = ADMIN_PHONES.indexOf(u.phone) !== -1 ? "block" : "none";
@@ -4124,25 +4397,20 @@ function adminLogin() {
   showToast("ورود به پنل مدیریت ✅");
 }
 
-// 🔄 ریست کامل سیستم از پنل مدیریت
 function adminFullReset() {
   if (!confirm("⚠️ آیا مطمئن هستید؟ تمام اکانت‌ها، لابی‌ها، کلن‌ها، تیک‌دارها و لیبل‌دارها پاک می‌شوند!")) return;
   if (!confirm("⚠️⚠️ تأیید نهایی: این عملیات قابل بازگشت نیست!")) return;
 
-  // پاکسازی localStorage
   resetAppStorage();
 
-  // پاکسازی حافظه
   globalUsers = {};
   sharedLobbies = [];
   sharedClans = {};
-  sharedAnnouncements = [];
+  sharedAnnouncements = {};
 
-  // بازسازی فقط اکانت سازنده
   ensureSpecialAccounts();
   localStorage.setItem("mafia_current_user", CREATOR_PHONE);
 
-  // اطلاع به همه دستگاه‌ها برای پاکسازی
   if (ablyUsersCh && isAblyReady) {
     ablyUsersCh.publish('users_full', {});
     ablyUsersCh.publish('global_reset', {ts: Date.now()});
@@ -4154,7 +4422,6 @@ function adminFullReset() {
     ablyClanListCh.publish('clans_full', {});
   }
 
-  // بازخوانی UI
   updateUI();
   adminSearchUsers();
   adminRenderClans();
@@ -4732,8 +4999,14 @@ function adminRenderLobbies() {
     const pc = l.seats ? l.seats.filter(s => s && !s.isGhost).length : 0;
     const tick = l.hasTick ? VERIFIED_BADGE + " " : "";
     const colored = parseColoredName(l.name);
+    let creatorStatus = "";
+    if (l.creatorLeftAt && !isCreatorInsideLobby(l)) {
+      const elapsed = Date.now() - l.creatorLeftAt;
+      const remainMin = Math.max(0, Math.ceil((CREATOR_LEAVE_TIMEOUT_MS - elapsed) / 60000));
+      creatorStatus = ` <span style="color:#ff8a8a;font-size:10px">⚠️ مدیر غایب (${remainMin}د)</span>`;
+    }
     div.innerHTML = `
-      <div class="member-name">${tick}${colored.html}</div>
+      <div class="member-name">${tick}${colored.html}${creatorStatus}</div>
       <div class="member-role">${pc}/10 بازیکن</div>
       <button onclick="adminDeleteLobby('${l.id}')" style="height:28px;padding:0 10px;border-radius:4px;border:1px solid #8a2020;background:#1a0c0c;color:#ff8a8a;font-size:10px;cursor:pointer">🗑️ حذف</button>
     `;
@@ -4746,6 +5019,10 @@ function adminDeleteLobby(id) {
   saveLobbies(sharedLobbies);
   if (ablyLobbyListCh) ablyLobbyListCh.publish('lobby_delete', { id: id });
   if (currentLobbyId === id) leaveLobbyRoom();
+  if (creatorLeaveTimers[id]) {
+    clearTimeout(creatorLeaveTimers[id]);
+    delete creatorLeaveTimers[id];
+  }
   showToast("لابی حذف شد 🗑️"); adminRenderLobbies();
 }
 function adminGiveAllCoins() {

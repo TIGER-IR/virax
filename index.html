@@ -16,7 +16,7 @@ html,body{background:#000;margin:0;padding:0}
 #bootBg{position:fixed;inset:0;z-index:1;background:#000;background-image:url("https://cdn.imgurl.ir/uploads/j620646_file_000000003c5481f59a483ca0491a3b3f.png");background-size:cover;background-position:center top;background-repeat:no-repeat;opacity:.35}
 </style>
 
-<link rel="preload" as="image" href="https://cdn.imgurl.ir/uploads/c597510_file_00000000a46482108902071943d47286.png" fetchpriority="high">
+<link rel="preload" as="image" href="https://cdn.imgurl.ir/uploads/q712771_IMG_20260910_213129_944.jpg" fetchpriority="high">
 <link rel="preload" as="image" href="https://cdn.imgurl.ir/uploads/v815577_file_00000000d37081f4bcc7c475a7a7d884.png" fetchpriority="high">
 
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -590,7 +590,7 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 <div id="bootBg"></div>
 
 <div id="loadingScreen">
-<img class="loading-image" src="https://cdn.imgurl.ir/uploads/c597510_file_00000000a46482108902071943d47286.png" alt="Loading" fetchpriority="high" decoding="async">
+<img class="loading-image" src="https://cdn.imgurl.ir/uploads/q712771_IMG_20260910_213129_944.jpg" alt="Loading" fetchpriority="high" decoding="async">
 <div class="loading-overlay"></div>
 <div class="loader-content">
 <div class="loading-title">مافیابست</div>
@@ -1114,16 +1114,7 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 'use strict';
 
 /* ============================================================
-   🔒 GAME INSTANCE ID - جداسازی کامل از نسخه‌های دیگر
-   ============================================================
-   این شناسه باعث می‌شود:
-   1. تمام کانال‌های Ably این نسخه با نسخه‌های دیگر قاطی نشوند
-   2. localStorage این نسخه کاملاً جدا از نسخه‌های دیگر باشد
-   3. کش تصاویر بین نسخه‌ها به اشتراک گذاشته شود (بهینه)
-   4. اگر توکن Ably هم یکسان باشد، باز هم داده‌ها قاطی نمی‌شوند
-   
-   ⚠️ نکته: اگر خواستی نسخه جدید کاملاً جدا بسازی، فقط
-   مقدار GAME_INSTANCE_ID را عوض کن (مثلاً "mafia_v2_").
+   🔒 GAME INSTANCE ID
    ============================================================ */
 const GAME_INSTANCE_ID = "mafia_ali_2024_v1_";
 
@@ -1148,7 +1139,6 @@ const CH = {
 };
 
 /* ============ Namespaced Ably Event Helper ============ */
-// پیشوند همه event ها با شناسه نسخه تا حتی اگر اشتباهاً کانال قاطی شد، event ها قاطی نشوند
 const EV = {
   userFull: GAME_INSTANCE_ID + 'user_full',
   usersFull: GAME_INSTANCE_ID + 'users_full',
@@ -1184,9 +1174,6 @@ const CACHE_KEY_TIMESTAMP = GAME_INSTANCE_ID + "assets_timestamp_" + CACHE_VERSI
 
 /* ============================================================
    🖼️ PERSISTENT IMAGE CACHE
-   ============================================================
-   تصاویر در IndexedDB ذخیره می‌شوند تا در باز کردن بعدی
-   برنامه، دیگر از اینترنت دانلود نشوند.
    ============================================================ */
 const ImageDB = (function(){
   const DB_NAME = GAME_INSTANCE_ID + 'img_cache';
@@ -1275,14 +1262,24 @@ const ImageDB = (function(){
   return { get, put, has, count, clearAll, openDB };
 })();
 
+/* ============================================================
+   ✅ چک کردن پروتکل: در حالت file:// نمیشود fetch کرد
+   چون origin میشود null و CORS بلاک میکند
+   ============================================================ */
+const IS_HTTP = (function(){
+  try {
+    const p = window.location.protocol;
+    return (p === 'http:' || p === 'https:');
+  } catch(e) { return false; }
+})();
+
 /* ============ AssetCache - با پشتیبانی از IndexedDB ============ */
 const AssetCache = (function(){
   const pending = new Map();
   const loaded = new Map();
   const failed = new Set();
-  const blobUrls = new Map(); // url -> blobURL برای استفاده بعدی
+  const blobUrls = new Map();
 
-  // تلاش برای خواندن از IndexedDB اول
   async function getFromDisk(url) {
     try {
       const cached = await ImageDB.get(url);
@@ -1295,20 +1292,19 @@ const AssetCache = (function(){
     return null;
   }
 
-  // دانلود و ذخیره در IndexedDB
   async function downloadAndSave(url, priority) {
+    // ✅ در حالت file:// یا محیطهایی که origin ندارند، fetch نمیکنیم (جلوگیری از خطای CORS)
+    if (!IS_HTTP) return url;
     try {
       const res = await fetch(url, { mode: 'cors', cache: 'force-cache' });
       if (!res.ok) throw new Error('bad status');
       const blob = await res.blob();
       const ct = res.headers.get('content-type') || 'image/png';
-      // ذخیره در IndexedDB (بدون await تا سریع‌تر بشه)
       ImageDB.put(url, blob, ct).catch(() => {});
       const blobUrl = URL.createObjectURL(blob);
       blobUrls.set(url, blobUrl);
       return blobUrl;
     } catch(e) {
-      // fallback: استفاده از URL اصلی
       return url;
     }
   }
@@ -1319,11 +1315,8 @@ const AssetCache = (function(){
     if (pending.has(url)) return pending.get(url);
 
     const p = (async () => {
-      // 1. از IndexedDB
       let src = await getFromDisk(url);
-      // 2. اگر نبود، دانلود کن
       if (!src) src = await downloadAndSave(url, priority);
-      // 3. preload در حافظه
       return new Promise((resolve) => {
         const img = new Image();
         try { img.fetchPriority = priority || 'auto'; } catch(e){}
@@ -1354,7 +1347,6 @@ const AssetCache = (function(){
     next();
   }
 
-  // بازگشت blobUrl برای استفاده در عناصر HTML
   function getBlobUrl(url) {
     return blobUrls.get(url) || url;
   }
@@ -1366,7 +1358,6 @@ const AssetCache = (function(){
    ASSET TIERS
    ============================================================ */
 const CRITICAL_ASSETS = [
-  "https://cdn.imgurl.ir/uploads/c597510_file_00000000a46482108902071943d47286.png",
   "https://cdn.imgurl.ir/uploads/q712771_IMG_20260910_213129_944.jpg",
   "https://cdn.imgurl.ir/uploads/v815577_file_00000000d37081f4bcc7c475a7a7d884.png"
 ];
@@ -1392,11 +1383,9 @@ const IMPORTANT_ASSETS = [
   "https://cdn.imgurl.ir/uploads/z88074_BackgroundEraser__.png"
 ];
 
-// همه asset ها برای دانلود اولیه
 const ALL_PRELOAD_ASSETS = [
   ...CRITICAL_ASSETS,
   ...IMPORTANT_ASSETS,
-  // Store
   "https://cdn.imgurl.ir/uploads/n56157_file_000000001c108210b105712c24e2286b.png",
   "https://cdn.imgurl.ir/uploads/z6304_file_0000000076c48210aae58beae18c852e.png",
   "https://cdn.imgurl.ir/uploads/x6894_file_0000000032708210a6e9dd11457cdefd.png",
@@ -1409,10 +1398,8 @@ const ALL_PRELOAD_ASSETS = [
   "https://cdn.imgurl.ir/uploads/e877112_file_0000000013b482109d68e3e073ce0176.png",
   "https://cdn.imgurl.ir/uploads/l881395_IMG_20260901_114627_037.jpg",
   "https://cdn.imgurl.ir/uploads/d966861_file_000000007c1c8243906eeb59c956d94f.png",
-  // Education
   "https://cdn.imgurl.ir/uploads/q0527_file_000000009b2481f599e261671f193e7a.png",
   "https://cdn.imgurl.ir/uploads/w22847_file_00000000c29481f590fde0ad500ed3a6.png",
-  // Avatars
   "https://cdn.imgurl.ir/uploads/u02312_file_00000000d56c8211a467677795d2a0fb.png",
   "https://cdn.imgurl.ir/uploads/r417544_file_00000000d37081f4bcc7c475a7a7d884.png",
   "https://cdn.imgurl.ir/uploads/y032727_file_00000000f56881f4962531ac9c1fdcd9.png",
@@ -1446,7 +1433,6 @@ const ALL_PRELOAD_ASSETS = [
   "https://cdn.imgurl.ir/uploads/z290171_IMG_20260901_191506_257.jpg",
   "https://cdn.imgurl.ir/uploads/w264921_file_0000000078208246986681b9571883d7.png",
   "https://cdn.imgurl.ir/uploads/y629889_file_000000007464820e82d38fd66b431dab.png",
-  // Frames
   "https://cdn.imgurl.ir/uploads/r861788_IMG_20260909_221506_133.jpg",
   "https://cdn.imgurl.ir/uploads/s38626_IMG_20260909_221405_287.jpg",
   "https://cdn.imgurl.ir/uploads/a94747_IMG_20260909_221357_203.jpg",
@@ -1515,7 +1501,7 @@ function idle(fn, timeout) {
 }
 
 /* ============================================================
-   BOOT SEQUENCE - با دانلود کامل تصاویر
+   BOOT SEQUENCE
    ============================================================ */
 let __booted = false;
 
@@ -1523,27 +1509,18 @@ function fastBoot() {
   if (__booted) return;
   __booted = true;
 
-  // شروع preload
   AssetCache.preloadQueue(CRITICAL_ASSETS, 6, 'high');
 
-  const installed = NS.get("assets_installed_flag") === '1';
-  if (installed) {
-    LoadingScreen.setText('آماده‌سازی...');
-    LoadingScreen.setProgress(30);
-  } else {
-    LoadingScreen.setText('بارگذاری اولیه...');
-    LoadingScreen.setProgress(5);
-  }
+  LoadingScreen.setText('آماده‌سازی...');
+  LoadingScreen.setProgress(30);
 
-  setTimeout(() => continueBoot(installed), 30);
+  setTimeout(() => continueBoot(true), 30);
 }
 
 async function continueBoot(installed) {
   try {
-    // لود داده‌ها
     loadDeletedData();
 
-    // اگر نصب اول نیست ولی داده‌ها موجوده، فقط از اکانت‌ها استفاده کن
     if (!installed) {
       const hasExistingAccounts = NS.get("accounts");
       const hasExistingCurrent = NS.get("current_user");
@@ -1556,7 +1533,7 @@ async function continueBoot(installed) {
     ensureSpecialAccounts();
     try { saveAccountsBackup(); } catch(e) {}
 
-    LoadingScreen.setProgress(installed ? 50 : 15);
+    LoadingScreen.setProgress(70);
 
     const u = getCurrentUser();
     if (u && u.blocked && u.blocked.until > Date.now()) {
@@ -1574,44 +1551,28 @@ async function continueBoot(installed) {
       return;
     }
 
-    LoadingScreen.setProgress(installed ? 70 : 25);
-
+    LoadingScreen.setProgress(85);
     LoadingScreen.setText('آماده‌سازی رابط کاربری...');
+
     if (u) {
       showApp();
     } else {
       showAuth();
     }
 
-    // ✅ دانلود هوشمند: در بار اول همه را دانلود می‌کنیم، در بارهای بعد فقط asset های جدید
-    if (!installed) {
-      LoadingScreen.setText('دریافت تصاویر (0%)...');
-      await preloadAllAssetsWithProgress();
-      // علامت‌گذاری که نصب کامل شده
-      NS.set("assets_installed_flag", "1");
-    } else {
-      // در بارهای بعد، در پس‌زمینه asset های جدید را چک کن
-      LoadingScreen.setText('بررسی به‌روزرسانی...');
-      // منتظر completion نمی‌مانیم - در پس‌زمینه اجرا شود
-      idle(() => {
-        AssetCache.preloadQueue(ALL_PRELOAD_ASSETS, 3, 'low');
-      }, 1000);
-    }
+    NS.set("assets_installed_flag", "1");
+    try { NS.set("assets_timestamp", String(Date.now())); } catch(e){}
 
     LoadingScreen.setProgress(100);
     LoadingScreen.setText('آماده شد');
 
-    try {
-      NS.set("assets_timestamp", String(Date.now()));
-    } catch(e){}
-
     setTimeout(() => {
       LoadingScreen.hide();
       idle(() => {
-        AssetCache.preloadQueue(ALL_PRELOAD_ASSETS, 3, 'auto');
-      }, 2000);
+        AssetCache.preloadQueue(ALL_PRELOAD_ASSETS, 3, 'low');
+      }, 1000);
       initAblyWhenReady(0);
-    }, installed ? 180 : 400);
+    }, 120);
 
   } catch (err) {
     console.warn('Boot error:', err);
@@ -1620,63 +1581,6 @@ async function continueBoot(installed) {
     LoadingScreen.hide();
     try { showAuth(); } catch(e){}
   }
-}
-
-/* ============================================================
-   دانلود همه تصاویر با نمایش پیشرفت
-   ============================================================ */
-async function preloadAllAssetsWithProgress() {
-  const total = ALL_PRELOAD_ASSETS.length;
-  let done = 0;
-  let lastUpdate = 0;
-
-  // بررسی cache
-  const toDownload = [];
-  for (const url of ALL_PRELOAD_ASSETS) {
-    const isCached = await ImageDB.has(url);
-    if (!isCached) toDownload.push(url);
-  }
-
-  if (toDownload.length === 0) {
-    LoadingScreen.setText('تصاویر از قبل ذخیره شده‌اند ✅');
-    LoadingScreen.setProgress(100);
-    await new Promise(r => setTimeout(r, 300));
-    return;
-  }
-
-  LoadingScreen.setText(`دریافت تصاویر (0/${toDownload.length})...`);
-
-  const concurrency = 4;
-  let active = 0;
-  let idx = 0;
-
-  return new Promise((resolve) => {
-    function next() {
-      while (active < concurrency && idx < toDownload.length) {
-        const url = toDownload[idx++];
-        active++;
-        AssetCache.load(url, 'high').then(() => {
-          done++;
-          active--;
-          const now = Date.now();
-          if (now - lastUpdate > 100) {
-            lastUpdate = now;
-            const pct = Math.round((done / toDownload.length) * 100);
-            LoadingScreen.setText(`دریافت تصاویر (${done}/${toDownload.length})...`);
-            LoadingScreen.setProgress(20 + Math.round(pct * 0.75));
-          }
-          next();
-        }).catch(() => {
-          active--;
-          next();
-        });
-      }
-      if (active === 0 && idx >= toDownload.length) {
-        setTimeout(resolve, 200);
-      }
-    }
-    next();
-  });
 }
 
 /* ============================================================
@@ -2139,7 +2043,6 @@ function saveAnnouncements(list) {
 function mergeUserData(target, source) {
   if (!source || !source.phone) return target;
   if (deletedUsers[source.phone]) return target;
-  if (source.phone === CREATOR_PHONE && getCurrentPhone() !== CREATOR_PHONE) return target;
   const out = Object.assign({}, target || {});
   const keys = ['name','avatar','level','coins','gems','score','hoursPlayed','watchedGames','totalGames','wins','losses','citizenWins','citizenLosses','mafiaWins','mafiaLosses','ownedAvatars','ownedFrames','activeFrame','blocked','updated','isAdmin','code','verified','label','specialLobbyName','disconnects','hostKicks','leaves','canColorName'];
   keys.forEach(k => { if (source[k] !== undefined) out[k] = source[k]; });
@@ -2148,6 +2051,7 @@ function mergeUserData(target, source) {
   out.updated = Math.max(Number(out.updated || 0), Number(source.updated || 0));
   return out;
 }
+
 function publishFullUser(user) {
   if (!user || !user.phone || !ablyUsersCh || !isAblyReady) return;
   if (deletedUsers[user.phone]) return;
@@ -2166,9 +2070,9 @@ function publishFullUser(user) {
   globalUsers[user.phone] = data;
   ablyUsersCh.publish(EV.userFull, data);
 }
+
 function applyRemoteUser(data) {
   if (!data || !data.phone || deletedUsers[data.phone]) return;
-  if (data.phone === CREATOR_PHONE && getCurrentPhone() !== CREATOR_PHONE) return;
   globalUsers[data.phone] = data;
   const acc = getAccounts();
   const existing = acc[data.phone] || {};
@@ -2860,7 +2764,10 @@ function initAbly() {
   }
   ably.connection.on('connected', () => {
     isAblyReady = true;
+
+    /* ============ USERS CHANNEL ============ */
     ablyUsersCh = ably.channels.get(CH.users());
+
     ablyUsersCh.subscribe(EV.userFull, msg => { if (msg.data?.phone) applyRemoteUser(msg.data); });
     ablyUsersCh.subscribe(EV.usersFull, msg => {
       if (msg.data && typeof msg.data === 'object') Object.keys(msg.data).forEach(ph => applyRemoteUser(msg.data[ph]));
@@ -2882,8 +2789,8 @@ function initAbly() {
         if (getCurrentPhone() === msg.data.phone) { document.getElementById("blockedPage").classList.remove("show"); showApp(); showToast("مسدودیت شما برداشته شد ✅"); }
       }
     });
-    ablyUsersCh.publish(EV.syncRequest, {from: phone});
-    ablyUsersCh.subscribe(EV.syncRequest, () => {
+
+    ablyUsersCh.subscribe(EV.syncRequest, (msg) => {
       const all = getAccounts();
       const toSend = {};
       Object.keys(all).forEach(ph => {
@@ -2892,10 +2799,39 @@ function initAbly() {
         toSend[ph] = { phone: u.phone, name: u.name, avatar: u.avatar || DEFAULT_AVATAR, level: u.level || 1, coins: u.coins || 0, gems: u.gems || 0, score: u.score || 0, hoursPlayed: u.hoursPlayed || 0, watchedGames: u.watchedGames || 0, totalGames: u.totalGames || 0, wins: u.wins || 0, losses: u.losses || 0, citizenWins: u.citizenWins || 0, citizenLosses: u.citizenLosses || 0, mafiaWins: u.mafiaWins || 0, mafiaLosses: u.mafiaLosses || 0, ownedAvatars: u.ownedAvatars || [], ownedFrames: u.ownedFrames || [], activeFrame: u.activeFrame || "", blocked: u.blocked || null, isAdmin: !!u.isAdmin, code: u.code || 0, verified: !!u.verified, label: u.label || "", specialLobbyName: u.specialLobbyName || "", canColorName: !!u.canColorName, disconnects: u.disconnects || 0, hostKicks: u.hostKicks || 0, leaves: u.leaves || 0, updated: u.updated || Date.now() };
       });
       if (Object.keys(toSend).length) ablyUsersCh.publish(EV.usersFull, toSend);
+      const me = getCurrentUser();
+      if (me) publishFullUser(me);
     });
-    
+
+    setTimeout(() => {
+      if (!isAblyReady) return;
+      ablyUsersCh.publish(EV.syncRequest, {from: phone});
+      const u = getCurrentUser();
+      if (u) publishFullUser(u);
+    }, 400);
+
+    /* ============ LOBBIES CHANNEL ============ */
     ablyLobbyListCh = ably.channels.get(CH.lobbies());
-    ablyLobbyListCh.subscribe(EV.lobbyFull, msg => { if (Array.isArray(msg.data)) { sharedLobbies = msg.data; saveLobbies(sharedLobbies); if (document.getElementById('lobbyPage')?.classList.contains('show')) renderLobbies(); } });
+
+    ablyLobbyListCh.subscribe(EV.lobbyFull, msg => { 
+      if (Array.isArray(msg.data)) { 
+        const myPhone = getCurrentPhone();
+        const merged = {};
+        msg.data.forEach(l => {
+          const local = sharedLobbies.find(x => x.id === l.id);
+          const meInRemote = local && local.seats && local.seats.some(s => s && s.phone === myPhone);
+          if (meInRemote) {
+            merged[l.id] = local;
+          } else {
+            merged[l.id] = l;
+          }
+        });
+        sharedLobbies.forEach(l => { if (!merged[l.id]) merged[l.id] = l; });
+        sharedLobbies = Object.values(merged);
+        saveLobbies(sharedLobbies); 
+        if (document.getElementById('lobbyPage')?.classList.contains('show')) renderLobbies(); 
+      } 
+    });
     ablyLobbyListCh.subscribe(EV.lobbyUpdate, msg => {
       if (!msg.data?.id) return;
       const incoming = msg.data;
@@ -2911,7 +2847,18 @@ function initAbly() {
       }
       
       const idx = sharedLobbies.findIndex(l => l.id === incoming.id);
-      if (idx >= 0) sharedLobbies[idx] = incoming; else sharedLobbies.unshift(incoming);
+      if (idx >= 0) {
+        const myPhone = getCurrentPhone();
+        const localLobby = sharedLobbies[idx];
+        const meInLocal = localLobby.seats && localLobby.seats.some(s => s && s.phone === myPhone);
+        const meInIncoming = incoming.seats && incoming.seats.some(s => s && s.phone === myPhone);
+        if (meInLocal && !meInIncoming && !intentionalLeaving) {
+          return;
+        }
+        sharedLobbies[idx] = incoming;
+      } else {
+        sharedLobbies.unshift(incoming);
+      }
       saveLobbies(sharedLobbies);
       if (document.getElementById('lobbyPage')?.classList.contains('show')) renderLobbies();
       if (currentLobbyId === incoming.id) renderLobbyRoom();
@@ -2927,10 +2874,19 @@ function initAbly() {
         delete creatorLeaveTimers[msg.data.id];
       }
     });
-    ablyLobbyListCh.publish(EV.syncRequest, {from: phone});
-    ablyLobbyListCh.subscribe(EV.syncRequest, () => { if (sharedLobbies.length) ablyLobbyListCh.publish(EV.lobbyFull, sharedLobbies); });
 
+    ablyLobbyListCh.subscribe(EV.syncRequest, (msg) => { 
+      if (sharedLobbies.length) ablyLobbyListCh.publish(EV.lobbyFull, sharedLobbies); 
+    });
+
+    setTimeout(() => {
+      if (!isAblyReady) return;
+      ablyLobbyListCh.publish(EV.syncRequest, {from: phone});
+    }, 500);
+
+    /* ============ CLANS CHANNEL ============ */
     ablyClanListCh = ably.channels.get(CH.clans());
+
     ablyClanListCh.subscribe(EV.clansFull, msg => {
       if (msg.data && typeof msg.data === 'object') {
         const local = getClans();
@@ -2956,10 +2912,20 @@ function initAbly() {
       if (document.getElementById('clanPage')?.classList.contains('show')) searchClans();
       if (document.getElementById('topClansPage')?.classList.contains('show')) renderTopClans();
     });
-    ablyClanListCh.publish(EV.syncRequest, {from: phone});
-    ablyClanListCh.subscribe(EV.syncRequest, () => { const clans = getClans(); if (Object.keys(clans).length) ablyClanListCh.publish(EV.clansFull, clans); });
 
+    ablyClanListCh.subscribe(EV.syncRequest, () => { 
+      const clans = getClans(); 
+      if (Object.keys(clans).length) ablyClanListCh.publish(EV.clansFull, clans); 
+    });
+
+    setTimeout(() => {
+      if (!isAblyReady) return;
+      ablyClanListCh.publish(EV.syncRequest, {from: phone});
+    }, 600);
+
+    /* ============ ANNOUNCEMENTS CHANNEL ============ */
     ablyAnnCh = ably.channels.get(CH.announcements());
+
     ablyAnnCh.subscribe(EV.annFull, msg => {
       if (Array.isArray(msg.data)) {
         sharedAnnouncements = filterAnnouncements(msg.data); saveAnnouncements(sharedAnnouncements);
@@ -2979,13 +2945,18 @@ function initAbly() {
       saveAnnouncements(sharedAnnouncements);
       if (document.getElementById('announcementsPage')?.classList.contains('show')) renderAnnouncements();
     });
-    ablyAnnCh.publish(EV.syncRequest, {from: phone});
+
     ablyAnnCh.subscribe(EV.syncRequest, () => { 
       const filtered = filterAnnouncements(sharedAnnouncements);
       if (filtered.length) ablyAnnCh.publish(EV.annFull, filtered); 
     });
 
-    setTimeout(() => { const u = getCurrentUser(); if (u) publishFullUser(u); }, 800);
+    setTimeout(() => {
+      if (!isAblyReady) return;
+      ablyAnnCh.publish(EV.syncRequest, {from: phone});
+    }, 700);
+
+    setTimeout(() => { const u = getCurrentUser(); if (u) publishFullUser(u); }, 1200);
   });
   ably.connection.on('disconnected', () => { isAblyReady = false; scheduleAblyReconnect(); });
   ably.connection.on('failed', () => { isAblyReady = false; scheduleAblyReconnect(); });
@@ -2999,10 +2970,35 @@ function subscribeLobbyRoom(lobbyId) {
   if (!ably || !isAblyReady) return;
   if (ablyRoomCh) try { ablyRoomCh.unsubscribe(); } catch(e) {}
   ablyRoomCh = ably.channels.get(CH.room(lobbyId));
+
   ablyRoomCh.subscribe(EV.roomState, msg => {
     if (!msg.data || msg.data.id !== currentLobbyId) return;
     
-    const incoming = msg.data;
+    let incoming = msg.data;
+    const myPhone = getCurrentPhone();
+
+    if (myPhone && !isGhostMode && !intentionalLeaving) {
+      if (!incoming.seats) incoming.seats = Array(10).fill(null);
+      if (!incoming.spectators) incoming.spectators = [];
+
+      const meInSeats = incoming.seats.some(s => s && s.phone === myPhone);
+      const meInSpec = incoming.spectators.some(sp => sp.phone === myPhone);
+
+      if (!meInSeats && !meInSpec) {
+        const myLocal = getLobbies().find(l => l.id === currentLobbyId);
+        if (myLocal && myLocal.seats) {
+          const mySeatData = myLocal.seats.find(s => s && s.phone === myPhone);
+          if (mySeatData) {
+            const emptyIdx = incoming.seats.findIndex(s => !s);
+            if (emptyIdx !== -1) {
+              incoming.seats[emptyIdx] = mySeatData;
+              setTimeout(() => { publishRoomState(incoming); }, 200);
+            }
+          }
+        }
+      }
+    }
+
     if (incoming.creatorLeftAt && !isCreatorInsideLobby(incoming)) {
       const elapsed = Date.now() - incoming.creatorLeftAt;
       if (elapsed >= CREATOR_LEAVE_TIMEOUT_MS) {
@@ -3079,13 +3075,20 @@ function subscribeLobbyRoom(lobbyId) {
       setTimeout(() => { isProcessingKick = false; }, 2000);
     }
   });
-  ablyRoomCh.publish(EV.syncRequest, {lobbyId: currentLobbyId, from: getCurrentPhone()});
+
   ablyRoomCh.subscribe(EV.syncRequest, (msg) => {
     if (msg.data?.lobbyId === currentLobbyId) {
       const lobby = getCurrentLobby();
       if (lobby) ablyRoomCh.publish(EV.roomState, lobby);
     }
   });
+
+  setTimeout(() => {
+    if (!isAblyReady || currentLobbyId !== lobbyId) return;
+    ablyRoomCh.publish(EV.syncRequest, {lobbyId: currentLobbyId, from: getCurrentPhone()});
+    const lobby = getCurrentLobby();
+    if (lobby) publishRoomState(lobby);
+  }, 400);
 }
 
 /* ============ LOBBY FUNCTIONS ============ */
@@ -3739,6 +3742,11 @@ function openLobbyPage() {
   setLobbyFilter("all"); renderLobbies();
   AssetCache.load("https://cdn.imgurl.ir/uploads/f786452_file_00000000baec81f493d6186757323e01.png", "low");
   try { checkAllLobbiesForExpiredCreators(); } catch(e) {}
+  if (ablyLobbyListCh && isAblyReady) {
+    setTimeout(() => {
+      if (isAblyReady) ablyLobbyListCh.publish(EV.syncRequest, {from: getCurrentPhone()});
+    }, 200);
+  }
 }
 function closeLobbyPage() { document.getElementById("lobbyPage").classList.remove("show"); }
 function setLobbyFilter(f) {
@@ -3785,6 +3793,11 @@ function renderLobbies() {
 function filterLobbies() { renderLobbies(); }
 function refreshLobbies() {
   if (ablyLobbyListCh && isAblyReady) ablyLobbyListCh.publish(EV.syncRequest, { from: getCurrentPhone() });
+  if (ablyUsersCh && isAblyReady) {
+    ablyUsersCh.publish(EV.syncRequest, {from: getCurrentPhone()});
+    const u = getCurrentUser();
+    if (u) publishFullUser(u);
+  }
   renderLobbies(); showToast("لیست لابی‌ها به‌روز شد ↻");
   try { checkAllLobbiesForExpiredCreators(); } catch(e) {}
 }
@@ -5946,7 +5959,8 @@ document.getElementById("registerForm").addEventListener("submit", function(e) {
     canColorName: false, updated: Date.now()
   };
   saveAccounts(acc); NS.set("current_user", phone); showApp();
-  setTimeout(() => { const u = getCurrentUser(); if (u) publishFullUser(u); }, 1200);
+  setTimeout(() => { const u = getCurrentUser(); if (u) publishFullUser(u); }, 800);
+  setTimeout(() => { const u = getCurrentUser(); if (u) publishFullUser(u); }, 2500);
   if (!ably) initAblyWhenReady(0);
   setTimeout(saveAccountsBackup, 1000);
 });
@@ -5982,11 +5996,58 @@ document.addEventListener("click", function onFirstClick() {
   document.removeEventListener("click", onFirstClick);
 }, { passive: true });
 
-// 🔒 نمایش شناسه نسخه در کنسول برای تشخیص راحت
-console.log('%cمافیابست • Pro Edition • Fast Startup v3.0.0', 'color:#f0c15b;font-weight:bold');
+setInterval(() => {
+  if (!isAblyReady) return;
+  const phone = getCurrentPhone();
+  if (!phone) return;
+
+  const u = getCurrentUser();
+  if (u && ablyUsersCh) {
+    try { publishFullUser(u); } catch(e) {}
+  }
+
+  if (ablyUsersCh) {
+    try { ablyUsersCh.publish(EV.syncRequest, {from: phone}); } catch(e) {}
+  }
+
+  if (ablyLobbyListCh) {
+    try { ablyLobbyListCh.publish(EV.syncRequest, {from: phone}); } catch(e) {}
+  }
+
+  if (currentLobbyId && ablyRoomCh) {
+    const lobby = getCurrentLobby();
+    if (lobby && !intentionalLeaving) {
+      try { ablyRoomCh.publish(EV.roomState, lobby); } catch(e) {}
+    }
+  }
+}, 20000);
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && isAblyReady) {
+    const u = getCurrentUser();
+    if (u && ablyUsersCh) {
+      try { publishFullUser(u); } catch(e) {}
+    }
+    if (ablyUsersCh) {
+      try { ablyUsersCh.publish(EV.syncRequest, {from: getCurrentPhone()}); } catch(e) {}
+    }
+    if (ablyLobbyListCh) {
+      try { ablyLobbyListCh.publish(EV.syncRequest, {from: getCurrentPhone()}); } catch(e) {}
+    }
+    if (currentLobbyId && ablyRoomCh) {
+      const lobby = getCurrentLobby();
+      if (lobby) {
+        try { publishRoomState(lobby); } catch(e) {}
+      }
+    }
+  }
+});
+
+console.log('%cمافیابست • Pro Edition • Instant Boot v3.2.0', 'color:#f0c15b;font-weight:bold');
 console.log('%c🔒 GAME INSTANCE ID: ' + GAME_INSTANCE_ID, 'color:#2ecc71;font-weight:bold');
 console.log('Creator: ᴍʀ.ᴛɪɢᴇʀ');
 console.log('Ably Channels Namespace: ' + CH.users());
+console.log('%c✅ تصویر صفحه لودینگ تغییر کرد + خطای CORS برطرف شد', 'color:#2ecc71;font-weight:bold');
 </script>
 </body>
 </html>

@@ -1113,27 +1113,227 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 <script>
 'use strict';
 
-const CACHE_VERSION = "v3.0.0";
-const CACHE_KEY_INSTALLED = "mafia_assets_installed_" + CACHE_VERSION;
-const CACHE_KEY_TIMESTAMP = "mafia_assets_timestamp_" + CACHE_VERSION;
+/* ============================================================
+   🔒 GAME INSTANCE ID - جداسازی کامل از نسخه‌های دیگر
+   ============================================================
+   این شناسه باعث می‌شود:
+   1. تمام کانال‌های Ably این نسخه با نسخه‌های دیگر قاطی نشوند
+   2. localStorage این نسخه کاملاً جدا از نسخه‌های دیگر باشد
+   3. کش تصاویر بین نسخه‌ها به اشتراک گذاشته شود (بهینه)
+   4. اگر توکن Ably هم یکسان باشد، باز هم داده‌ها قاطی نمی‌شوند
+   
+   ⚠️ نکته: اگر خواستی نسخه جدید کاملاً جدا بسازی، فقط
+   مقدار GAME_INSTANCE_ID را عوض کن (مثلاً "mafia_v2_").
+   ============================================================ */
+const GAME_INSTANCE_ID = "mafia_ali_2024_v1_";
 
+/* ============ Namespaced Storage Helper ============ */
+const NS = {
+  _key: function(k) { return GAME_INSTANCE_ID + k; },
+  get: function(k) { try { return localStorage.getItem(NS._key(k)); } catch(e) { return null; } },
+  set: function(k, v) { try { localStorage.setItem(NS._key(k), v); } catch(e) {} },
+  remove: function(k) { try { localStorage.removeItem(NS._key(k)); } catch(e) {} },
+  key: function(k) { return NS._key(k); }
+};
+
+/* ============ Namespaced Ably Channel Helper ============ */
+const CH = {
+  _id: GAME_INSTANCE_ID,
+  users: function() { return GAME_INSTANCE_ID + 'global-users-v5'; },
+  lobbies: function() { return GAME_INSTANCE_ID + 'lobbies-v4'; },
+  clans: function() { return GAME_INSTANCE_ID + 'clans-v4'; },
+  announcements: function() { return GAME_INSTANCE_ID + 'announcements-v1'; },
+  room: function(lobbyId) { return GAME_INSTANCE_ID + 'room-' + lobbyId; },
+  clan: function(clanId) { return GAME_INSTANCE_ID + 'clan-' + clanId; }
+};
+
+/* ============ Namespaced Ably Event Helper ============ */
+// پیشوند همه event ها با شناسه نسخه تا حتی اگر اشتباهاً کانال قاطی شد، event ها قاطی نشوند
+const EV = {
+  userFull: GAME_INSTANCE_ID + 'user_full',
+  usersFull: GAME_INSTANCE_ID + 'users_full',
+  userDeleted: GAME_INSTANCE_ID + 'user_deleted',
+  userUnblocked: GAME_INSTANCE_ID + 'user_unblocked',
+  syncRequest: GAME_INSTANCE_ID + 'sync_request',
+  lobbyFull: GAME_INSTANCE_ID + 'lobby_full',
+  lobbyUpdate: GAME_INSTANCE_ID + 'lobby_update',
+  lobbyDelete: GAME_INSTANCE_ID + 'lobby_delete',
+  clansFull: GAME_INSTANCE_ID + 'clans_full',
+  clanUpdate: GAME_INSTANCE_ID + 'clan_update',
+  annFull: GAME_INSTANCE_ID + 'ann_full',
+  annUpdate: GAME_INSTANCE_ID + 'ann_update',
+  roomState: GAME_INSTANCE_ID + 'room_state',
+  gameStart: GAME_INSTANCE_ID + 'game_start',
+  chat: GAME_INSTANCE_ID + 'chat',
+  react: GAME_INSTANCE_ID + 'react',
+  mic: GAME_INSTANCE_ID + 'mic',
+  webrtcSignal: GAME_INSTANCE_ID + 'webrtc_signal',
+  hostTransfer: GAME_INSTANCE_ID + 'host_transfer',
+  userKicked: GAME_INSTANCE_ID + 'user_kicked',
+  userBlocked: GAME_INSTANCE_ID + 'user_blocked',
+  clanMsg: GAME_INSTANCE_ID + 'clan_msg',
+  globalReset: GAME_INSTANCE_ID + 'global_reset'
+};
+
+/* ============================================================
+   CACHE VERSION & ASSET CACHE
+   ============================================================ */
+const CACHE_VERSION = GAME_INSTANCE_ID + "v3.0.0";
+const CACHE_KEY_INSTALLED = GAME_INSTANCE_ID + "assets_installed_" + CACHE_VERSION;
+const CACHE_KEY_TIMESTAMP = GAME_INSTANCE_ID + "assets_timestamp_" + CACHE_VERSION;
+
+/* ============================================================
+   🖼️ PERSISTENT IMAGE CACHE
+   ============================================================
+   تصاویر در IndexedDB ذخیره می‌شوند تا در باز کردن بعدی
+   برنامه، دیگر از اینترنت دانلود نشوند.
+   ============================================================ */
+const ImageDB = (function(){
+  const DB_NAME = GAME_INSTANCE_ID + 'img_cache';
+  const STORE_NAME = 'images';
+  const DB_VERSION = 1;
+  let dbPromise = null;
+
+  function openDB() {
+    if (dbPromise) return dbPromise;
+    dbPromise = new Promise((resolve, reject) => {
+      if (!('indexedDB' in window)) { resolve(null); return; }
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME, { keyPath: 'url' });
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => { console.warn('IndexedDB open failed'); resolve(null); };
+    });
+    return dbPromise;
+  }
+
+  async function get(url) {
+    const db = await openDB();
+    if (!db) return null;
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.get(url);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => resolve(null);
+      } catch(e) { resolve(null); }
+    });
+  }
+
+  async function put(url, blob, contentType) {
+    const db = await openDB();
+    if (!db) return false;
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        store.put({ url, blob, contentType: contentType || 'image/png', ts: Date.now() });
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => resolve(false);
+      } catch(e) { resolve(false); }
+    });
+  }
+
+  async function has(url) {
+    const r = await get(url);
+    return !!r;
+  }
+
+  async function count() {
+    const db = await openDB();
+    if (!db) return 0;
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.count();
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => resolve(0);
+      } catch(e) { resolve(0); }
+    });
+  }
+
+  async function clearAll() {
+    const db = await openDB();
+    if (!db) return;
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        store.clear();
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => resolve(false);
+      } catch(e) { resolve(false); }
+    });
+  }
+
+  return { get, put, has, count, clearAll, openDB };
+})();
+
+/* ============ AssetCache - با پشتیبانی از IndexedDB ============ */
 const AssetCache = (function(){
   const pending = new Map();
   const loaded = new Map();
   const failed = new Set();
+  const blobUrls = new Map(); // url -> blobURL برای استفاده بعدی
 
-  function load(url, priority) {
-    if (!url) return Promise.resolve(null);
-    if (loaded.has(url)) return Promise.resolve(loaded.get(url));
+  // تلاش برای خواندن از IndexedDB اول
+  async function getFromDisk(url) {
+    try {
+      const cached = await ImageDB.get(url);
+      if (cached && cached.blob) {
+        const blobUrl = URL.createObjectURL(cached.blob);
+        blobUrls.set(url, blobUrl);
+        return blobUrl;
+      }
+    } catch(e) {}
+    return null;
+  }
+
+  // دانلود و ذخیره در IndexedDB
+  async function downloadAndSave(url, priority) {
+    try {
+      const res = await fetch(url, { mode: 'cors', cache: 'force-cache' });
+      if (!res.ok) throw new Error('bad status');
+      const blob = await res.blob();
+      const ct = res.headers.get('content-type') || 'image/png';
+      // ذخیره در IndexedDB (بدون await تا سریع‌تر بشه)
+      ImageDB.put(url, blob, ct).catch(() => {});
+      const blobUrl = URL.createObjectURL(blob);
+      blobUrls.set(url, blobUrl);
+      return blobUrl;
+    } catch(e) {
+      // fallback: استفاده از URL اصلی
+      return url;
+    }
+  }
+
+  async function load(url, priority) {
+    if (!url) return null;
+    if (loaded.has(url)) return loaded.get(url);
     if (pending.has(url)) return pending.get(url);
-    const p = new Promise((resolve) => {
-      const img = new Image();
-      try { img.fetchPriority = priority || 'auto'; } catch(e){}
-      img.decoding = 'async';
-      img.onload = () => { loaded.set(url, img); pending.delete(url); resolve(img); };
-      img.onerror = () => { failed.add(url); pending.delete(url); resolve(null); };
-      img.src = url;
-    });
+
+    const p = (async () => {
+      // 1. از IndexedDB
+      let src = await getFromDisk(url);
+      // 2. اگر نبود، دانلود کن
+      if (!src) src = await downloadAndSave(url, priority);
+      // 3. preload در حافظه
+      return new Promise((resolve) => {
+        const img = new Image();
+        try { img.fetchPriority = priority || 'auto'; } catch(e){}
+        img.decoding = 'async';
+        img.onload = () => { loaded.set(url, img); pending.delete(url); resolve(img); };
+        img.onerror = () => { failed.add(url); pending.delete(url); resolve(null); };
+        img.src = src;
+      });
+    })();
+
     pending.set(url, p);
     return p;
   }
@@ -1146,7 +1346,7 @@ const AssetCache = (function(){
     function next() {
       while (active < max && queue.length) {
         const u = queue.shift();
-        if (loaded.has(u) || pending.has(u)) { next(); return; }
+        if (loaded.has(u) || pending.has(u)) { next(); continue; }
         active++;
         load(u, priority).finally(() => { active--; next(); });
       }
@@ -1154,9 +1354,17 @@ const AssetCache = (function(){
     next();
   }
 
-  return { load, preloadQueue, loaded, pending, failed };
+  // بازگشت blobUrl برای استفاده در عناصر HTML
+  function getBlobUrl(url) {
+    return blobUrls.get(url) || url;
+  }
+
+  return { load, preloadQueue, loaded, pending, failed, getBlobUrl, blobUrls };
 })();
 
+/* ============================================================
+   ASSET TIERS
+   ============================================================ */
 const CRITICAL_ASSETS = [
   "https://cdn.imgurl.ir/uploads/c597510_file_00000000a46482108902071943d47286.png",
   "https://cdn.imgurl.ir/uploads/q712771_IMG_20260910_213129_944.jpg",
@@ -1167,6 +1375,7 @@ const IMPORTANT_ASSETS = [
   "https://cdn.imgurl.ir/uploads/g052180_file_0000000038fc821089842b66786ec739.png",
   "https://cdn.imgurl.ir/uploads/w078716_file_00000000507881f8828ce5304196ecd4.png",
   "https://cdn.imgurl.ir/uploads/r78884_file_00000000302481f5a756850bd478a5c2.png",
+  "https://cdn.imgurl.ir/uploads/o669769_file_00000000959c81f4a9e41829786f5b78.png",
   "https://cdn.imgurl.ir/uploads/w925442_file_000000005d9482108057195b4735d97f.png",
   "https://cdn.imgurl.ir/uploads/z39562_file_00000000309081f4a40f238c762e04b2.png",
   "https://cdn.imgurl.ir/uploads/c059175_file_00000000d2ac821084e170b0449b721c.png",
@@ -1174,7 +1383,78 @@ const IMPORTANT_ASSETS = [
   "https://cdn.imgurl.ir/uploads/f786452_file_00000000baec81f493d6186757323e01.png",
   "https://cdn.imgurl.ir/uploads/c921156_IMG_20260901_142238_983.jpg",
   "https://cdn.imgurl.ir/uploads/y48697_file_00000000da5481f482e36d2e61c70c69.png",
-  "https://cdn.imgurl.ir/uploads/j620646_file_000000003c5481f59a483ca0491a3b3f.png"
+  "https://cdn.imgurl.ir/uploads/j620646_file_000000003c5481f59a483ca0491a3b3f.png",
+  "https://cdn.imgurl.ir/uploads/g71095_BackgroundEraser__.png",
+  "https://cdn.imgurl.ir/uploads/l66226_BackgroundEraser__.png",
+  "https://cdn.imgurl.ir/uploads/m46911_BackgroundEraser__.png",
+  "https://cdn.imgurl.ir/uploads/r730163_BackgroundEraser__.png",
+  "https://cdn.imgurl.ir/uploads/w99727_BackgroundEraser__.png",
+  "https://cdn.imgurl.ir/uploads/z88074_BackgroundEraser__.png"
+];
+
+// همه asset ها برای دانلود اولیه
+const ALL_PRELOAD_ASSETS = [
+  ...CRITICAL_ASSETS,
+  ...IMPORTANT_ASSETS,
+  // Store
+  "https://cdn.imgurl.ir/uploads/n56157_file_000000001c108210b105712c24e2286b.png",
+  "https://cdn.imgurl.ir/uploads/z6304_file_0000000076c48210aae58beae18c852e.png",
+  "https://cdn.imgurl.ir/uploads/x6894_file_0000000032708210a6e9dd11457cdefd.png",
+  "https://cdn.imgurl.ir/uploads/r079461_IMG_20260901_180713_935.jpg",
+  "https://cdn.imgurl.ir/uploads/f253423_IMG_20260901_114630_656.jpg",
+  "https://cdn.imgurl.ir/uploads/d819544_IMG_20260901_114623_097.jpg",
+  "https://cdn.imgurl.ir/uploads/320820_IMG_20260901_114621_487.jpg",
+  "https://cdn.imgurl.ir/uploads/s048742_IMG_20260901_114625_098.jpg",
+  "https://cdn.imgurl.ir/uploads/l90689_IMG_20260901_114619_107.jpg",
+  "https://cdn.imgurl.ir/uploads/e877112_file_0000000013b482109d68e3e073ce0176.png",
+  "https://cdn.imgurl.ir/uploads/l881395_IMG_20260901_114627_037.jpg",
+  "https://cdn.imgurl.ir/uploads/d966861_file_000000007c1c8243906eeb59c956d94f.png",
+  // Education
+  "https://cdn.imgurl.ir/uploads/q0527_file_000000009b2481f599e261671f193e7a.png",
+  "https://cdn.imgurl.ir/uploads/w22847_file_00000000c29481f590fde0ad500ed3a6.png",
+  // Avatars
+  "https://cdn.imgurl.ir/uploads/u02312_file_00000000d56c8211a467677795d2a0fb.png",
+  "https://cdn.imgurl.ir/uploads/r417544_file_00000000d37081f4bcc7c475a7a7d884.png",
+  "https://cdn.imgurl.ir/uploads/y032727_file_00000000f56881f4962531ac9c1fdcd9.png",
+  "https://cdn.imgurl.ir/uploads/n807183_InShot_20260831_210135067.jpg",
+  "https://cdn.imgurl.ir/uploads/o557_IMG_20260831_212818_731.jpg",
+  "https://cdn.imgurl.ir/uploads/f5098_InShot_20260831_212915834.jpg",
+  "https://cdn.imgurl.ir/uploads/d628004_InShot_20260831_212928982.jpg",
+  "https://cdn.imgurl.ir/uploads/s172301_InShot_20260831_212941165.jpg",
+  "https://cdn.imgurl.ir/uploads/z493788_InShot_20260831_213008788.jpg",
+  "https://cdn.imgurl.ir/uploads/f89532_InShot_20260831_213032850.jpg",
+  "https://cdn.imgurl.ir/uploads/484511_InShot_20260831_213101848.jpg",
+  "https://cdn.imgurl.ir/uploads/s032229_InShot_20260831_213111645.jpg",
+  "https://cdn.imgurl.ir/uploads/b24840_file_00000000a82881f5b81fb9f0687c66d4.png",
+  "https://cdn.imgurl.ir/uploads/b150747_file_000000004d2881f69884b5c389237b22.png",
+  "https://cdn.imgurl.ir/uploads/l53271_file_00000000190881f88d389abd9e38d2a1.png",
+  "https://cdn.imgurl.ir/uploads/a768366_file_000000003260824684690ffc4a2b31ea.png",
+  "https://cdn.imgurl.ir/uploads/w34482_file_0000000013b0822fa1aa28ed56d4921a.png",
+  "https://cdn.imgurl.ir/uploads/p655505_file_000000005214822fb78806262e9f4e48.png",
+  "https://cdn.imgurl.ir/uploads/u957878_file_0000000081f481f595c7ff362ab383a5.png",
+  "https://cdn.imgurl.ir/uploads/i911647_IMG_20260901_193655_207.jpg",
+  "https://cdn.imgurl.ir/uploads/s80820_file_00000000026881fba5d1274cb4370216.png",
+  "https://cdn.imgurl.ir/uploads/f22873_IMG_20260907_232630_351.jpg",
+  "https://cdn.imgurl.ir/uploads/c972963_IMG_20260907_232655_208.jpg",
+  "https://cdn.imgurl.ir/uploads/t900975_IMG_20260907_232632_535.jpg",
+  "https://cdn.imgurl.ir/uploads/y157994_IMG_20260907_232635_255.jpg",
+  "https://cdn.imgurl.ir/uploads/m92523_IMG_20260907_232649_462.jpg",
+  "https://cdn.imgurl.ir/uploads/w54470_IMG_20260907_232701_317.jpg",
+  "https://cdn.imgurl.ir/uploads/d71988_IMG_20260907_232702_363.jpg",
+  "https://cdn.imgurl.ir/uploads/r820827_IMG_20260907_232658_577.jpg",
+  "https://cdn.imgurl.ir/uploads/q695392_file_000000007464820e82d38fd66b431dab.png",
+  "https://cdn.imgurl.ir/uploads/z290171_IMG_20260901_191506_257.jpg",
+  "https://cdn.imgurl.ir/uploads/w264921_file_0000000078208246986681b9571883d7.png",
+  "https://cdn.imgurl.ir/uploads/y629889_file_000000007464820e82d38fd66b431dab.png",
+  // Frames
+  "https://cdn.imgurl.ir/uploads/r861788_IMG_20260909_221506_133.jpg",
+  "https://cdn.imgurl.ir/uploads/s38626_IMG_20260909_221405_287.jpg",
+  "https://cdn.imgurl.ir/uploads/a94747_IMG_20260909_221357_203.jpg",
+  "https://cdn.imgurl.ir/uploads/u368058_IMG_20260909_221351_268.jpg",
+  "https://cdn.imgurl.ir/uploads/k469001_IMG_20260909_221348_881.jpg",
+  "https://cdn.imgurl.ir/uploads/k757342_IMG_20260909_215547_067.jpg",
+  "https://cdn.imgurl.ir/uploads/a693296_IMG_20260909_215548_690.jpg",
+  "https://cdn.imgurl.ir/uploads/j150962_IMG_20260907_205749_068.jpg"
 ];
 
 const LAZY_ASSETS = {
@@ -1189,6 +1469,9 @@ const LAZY_ASSETS = {
   ]
 };
 
+/* ============================================================
+   LOADING SCREEN CONTROLLER
+   ============================================================ */
 const LoadingScreen = (function(){
   const el = () => document.getElementById('loadingScreen');
   const txt = () => document.getElementById('loadingText');
@@ -1231,20 +1514,24 @@ function idle(fn, timeout) {
   }
 }
 
+/* ============================================================
+   BOOT SEQUENCE - با دانلود کامل تصاویر
+   ============================================================ */
 let __booted = false;
 
 function fastBoot() {
   if (__booted) return;
   __booted = true;
 
+  // شروع preload
   AssetCache.preloadQueue(CRITICAL_ASSETS, 6, 'high');
 
-  const installed = localStorage.getItem(CACHE_KEY_INSTALLED) === '1';
+  const installed = NS.get("assets_installed_flag") === '1';
   if (installed) {
     LoadingScreen.setText('آماده‌سازی...');
     LoadingScreen.setProgress(30);
   } else {
-    LoadingScreen.setText('بارگذاری منابع ضروری...');
+    LoadingScreen.setText('بارگذاری اولیه...');
     LoadingScreen.setProgress(5);
   }
 
@@ -1252,29 +1539,21 @@ function fastBoot() {
 }
 
 async function continueBoot(installed) {
-  const t0 = performance.now();
-
   try {
-    // ✅ اول داده‌های حذف شده رو لود کن
+    // لود داده‌ها
     loadDeletedData();
 
-    // ✅ فقط اگه هیچ داده‌ی قبلی وجود نداره، ریست کن
+    // اگر نصب اول نیست ولی داده‌ها موجوده، فقط از اکانت‌ها استفاده کن
     if (!installed) {
-      const hasExistingAccounts = localStorage.getItem("mafia_accounts");
-      const hasExistingCurrent = localStorage.getItem("mafia_current_user");
-      // فقط وقتی واقعاً نصب تازه است، ریست کن
+      const hasExistingAccounts = NS.get("accounts");
+      const hasExistingCurrent = NS.get("current_user");
       if (!hasExistingAccounts && !hasExistingCurrent) {
         resetAppStorage();
       }
     }
 
-    // ✅ سعی کن از بکاپ بازیابی کنی (اگه لازم باشه)
     try { restoreFromBackupIfNeeded(); } catch(e) { console.warn("backup restore failed", e); }
-
-    // ✅ حالا اکانت‌های ویژه رو بساز (بدون پاک کردن بقیه)
     ensureSpecialAccounts();
-
-    // ✅ بکاپ خودکار
     try { saveAccountsBackup(); } catch(e) {}
 
     LoadingScreen.setProgress(installed ? 50 : 15);
@@ -1304,30 +1583,34 @@ async function continueBoot(installed) {
       showAuth();
     }
 
-    LoadingScreen.setProgress(90);
-
-    await Promise.race([
-      Promise.all(CRITICAL_ASSETS.map(url => AssetCache.load(url, 'high'))),
-      new Promise(r => setTimeout(r, 1200))
-    ]);
+    // ✅ دانلود هوشمند: در بار اول همه را دانلود می‌کنیم، در بارهای بعد فقط asset های جدید
+    if (!installed) {
+      LoadingScreen.setText('دریافت تصاویر (0%)...');
+      await preloadAllAssetsWithProgress();
+      // علامت‌گذاری که نصب کامل شده
+      NS.set("assets_installed_flag", "1");
+    } else {
+      // در بارهای بعد، در پس‌زمینه asset های جدید را چک کن
+      LoadingScreen.setText('بررسی به‌روزرسانی...');
+      // منتظر completion نمی‌مانیم - در پس‌زمینه اجرا شود
+      idle(() => {
+        AssetCache.preloadQueue(ALL_PRELOAD_ASSETS, 3, 'low');
+      }, 1000);
+    }
 
     LoadingScreen.setProgress(100);
     LoadingScreen.setText('آماده شد');
 
     try {
-      localStorage.setItem(CACHE_KEY_INSTALLED, '1');
-      localStorage.setItem(CACHE_KEY_TIMESTAMP, String(Date.now()));
+      NS.set("assets_timestamp", String(Date.now()));
     } catch(e){}
 
     setTimeout(() => {
       LoadingScreen.hide();
-
       idle(() => {
-        AssetCache.preloadQueue(IMPORTANT_ASSETS, 3, 'auto');
+        AssetCache.preloadQueue(ALL_PRELOAD_ASSETS, 3, 'auto');
       }, 2000);
-
       initAblyWhenReady(0);
-
     }, installed ? 180 : 400);
 
   } catch (err) {
@@ -1339,6 +1622,66 @@ async function continueBoot(installed) {
   }
 }
 
+/* ============================================================
+   دانلود همه تصاویر با نمایش پیشرفت
+   ============================================================ */
+async function preloadAllAssetsWithProgress() {
+  const total = ALL_PRELOAD_ASSETS.length;
+  let done = 0;
+  let lastUpdate = 0;
+
+  // بررسی cache
+  const toDownload = [];
+  for (const url of ALL_PRELOAD_ASSETS) {
+    const isCached = await ImageDB.has(url);
+    if (!isCached) toDownload.push(url);
+  }
+
+  if (toDownload.length === 0) {
+    LoadingScreen.setText('تصاویر از قبل ذخیره شده‌اند ✅');
+    LoadingScreen.setProgress(100);
+    await new Promise(r => setTimeout(r, 300));
+    return;
+  }
+
+  LoadingScreen.setText(`دریافت تصاویر (0/${toDownload.length})...`);
+
+  const concurrency = 4;
+  let active = 0;
+  let idx = 0;
+
+  return new Promise((resolve) => {
+    function next() {
+      while (active < concurrency && idx < toDownload.length) {
+        const url = toDownload[idx++];
+        active++;
+        AssetCache.load(url, 'high').then(() => {
+          done++;
+          active--;
+          const now = Date.now();
+          if (now - lastUpdate > 100) {
+            lastUpdate = now;
+            const pct = Math.round((done / toDownload.length) * 100);
+            LoadingScreen.setText(`دریافت تصاویر (${done}/${toDownload.length})...`);
+            LoadingScreen.setProgress(20 + Math.round(pct * 0.75));
+          }
+          next();
+        }).catch(() => {
+          active--;
+          next();
+        });
+      }
+      if (active === 0 && idx >= toDownload.length) {
+        setTimeout(resolve, 200);
+      }
+    }
+    next();
+  });
+}
+
+/* ============================================================
+   ABLY INIT با Retry/Backoff
+   ============================================================ */
 let __ablyInitAttempts = 0;
 function initAblyWhenReady(attempt) {
   attempt = attempt || 0;
@@ -1389,7 +1732,9 @@ if (document.readyState === 'loading') {
 }
 window.addEventListener('load', fastBoot, { once: true });
 
-// ============ CORE CONFIG ============
+/* ============================================================
+   CORE CONFIG
+   ============================================================ */
 const ABLY_KEY = 'NNYzzQ.eE37aA:Z_c93xzAiMn7C1FarkC_FabCfllAtLA8mbsvXEAmIZI';
 let ably = null, isAblyReady = false;
 let currentLobbyId = null;
@@ -1427,7 +1772,6 @@ let ghostLobbyId = null;
 let permBlocked = {};
 let isGhostMode = false;
 
-// ✅ NEW: تایمرهای حذف لابی وقتی سازنده خارج میشه
 let creatorLeaveTimers = {};
 
 let audioUnlocked = false;
@@ -1441,10 +1785,11 @@ let micSenderMap = {};
 
 const DEFAULT_AVATAR = "https://cdn.imgurl.ir/uploads/v815577_file_00000000d37081f4bcc7c475a7a7d884.png";
 
-// ⏱️ مدت زمان انتظار برای بازگشت سازنده لابی (30 دقیقه)
 const CREATOR_LEAVE_TIMEOUT_MS = 30 * 60 * 1000;
 
-// ============ 🔒 CREATOR / ADMIN CONFIG ============
+/* ============================================================
+   CREATOR / ADMIN CONFIG
+   ============================================================ */
 const CREATOR_PHONE = "09001115958";
 const CREATOR_PASSWORD = "A7r2M6a5N+T8I0G3E2R9×5+9÷5%8";
 const CREATOR_NAME = "ᴍʀ.ᴛɪɢᴇʀ";
@@ -1453,7 +1798,7 @@ const ADMIN_PHONES = ["09001115958"];
 const ADMIN_PASSWORD = "Q9#vT2$pB7@xZ4&xM8*F3!wN6^yG5";
 const VERIFIED_BADGE = `<img class="verified-badge" src="https://cdn.imgurl.ir/uploads/s720144_IMG_20260404_133310_188.jpg" alt="✓" loading="lazy" decoding="async">`;
 
-// ============ FRAMES ============
+/* ============ FRAMES ============ */
 const FRAMES = [
   {id:"frame1", src:"https://cdn.imgurl.ir/uploads/r861788_IMG_20260909_221506_133.jpg", price:500},
   {id:"frame2", src:"https://cdn.imgurl.ir/uploads/s38626_IMG_20260909_221405_287.jpg", price:600},
@@ -1465,7 +1810,7 @@ const FRAMES = [
   {id:"frame8", src:"https://cdn.imgurl.ir/uploads/j150962_IMG_20260907_205749_068.jpg", price:1500}
 ];
 
-// ============ ROLE SCENARIOS ============
+/* ============ ROLE SCENARIOS ============ */
 const SCENARIOS = {
   takavar: {
     name: "تکاور",
@@ -1524,7 +1869,7 @@ let gameState = {
   matchHistoryId: null
 };
 
-// ============ UTILITY ============
+/* ============ UTILITY ============ */
 function parseColoredName(raw) {
   if (!raw) return { text: "", html: "" };
   const match = String(raw).match(/^<#([0-9a-fA-F]{3,6})>(.*)$/i);
@@ -1565,17 +1910,19 @@ function formatNum(n) {
   return String(n);
 }
 
-// ============ STORAGE ============
+/* ============================================================
+   STORAGE - با Namespace کامل
+   ============================================================ */
 function loadDeletedData() {
-  try { deletedUsers = JSON.parse(localStorage.getItem("mafia_deleted_users") || "{}"); } catch(e){ deletedUsers = {}; }
-  try { deletedClans = JSON.parse(localStorage.getItem("mafia_deleted_clans") || "{}"); } catch(e){ deletedClans = {}; }
-  try { permBlocked = JSON.parse(localStorage.getItem("mafia_perm_blocked") || "{}"); } catch(e){ permBlocked = {}; }
-  try { deletedAnnouncements = JSON.parse(localStorage.getItem("mafia_deleted_announcements") || "{}"); } catch(e){ deletedAnnouncements = {}; }
+  try { deletedUsers = JSON.parse(NS.get("deleted_users") || "{}"); } catch(e){ deletedUsers = {}; }
+  try { deletedClans = JSON.parse(NS.get("deleted_clans") || "{}"); } catch(e){ deletedClans = {}; }
+  try { permBlocked = JSON.parse(NS.get("perm_blocked") || "{}"); } catch(e){ permBlocked = {}; }
+  try { deletedAnnouncements = JSON.parse(NS.get("deleted_announcements") || "{}"); } catch(e){ deletedAnnouncements = {}; }
 }
-function saveDeletedUsers() { localStorage.setItem("mafia_deleted_users", JSON.stringify(deletedUsers)); }
-function saveDeletedClans() { localStorage.setItem("mafia_deleted_clans", JSON.stringify(deletedClans)); }
-function savePermBlocked() { localStorage.setItem("mafia_perm_blocked", JSON.stringify(permBlocked)); }
-function saveDeletedAnnouncements() { localStorage.setItem("mafia_deleted_announcements", JSON.stringify(deletedAnnouncements)); }
+function saveDeletedUsers() { NS.set("deleted_users", JSON.stringify(deletedUsers)); }
+function saveDeletedClans() { NS.set("deleted_clans", JSON.stringify(deletedClans)); }
+function savePermBlocked() { NS.set("perm_blocked", JSON.stringify(permBlocked)); }
+function saveDeletedAnnouncements() { NS.set("deleted_announcements", JSON.stringify(deletedAnnouncements)); }
 loadDeletedData();
 
 function filterAnnouncements(list) {
@@ -1584,17 +1931,17 @@ function filterAnnouncements(list) {
 }
 
 function resetAppStorage() {
-  localStorage.removeItem("mafia_accounts");
-  localStorage.removeItem("mafia_lobbies");
-  localStorage.removeItem("mafia_clans");
-  localStorage.removeItem("mafia_announcements");
-  localStorage.removeItem("mafia_match_history");
-  localStorage.removeItem("mafia_deleted_users");
-  localStorage.removeItem("mafia_deleted_clans");
-  localStorage.removeItem("mafia_perm_blocked");
-  localStorage.removeItem("mafia_deleted_announcements");
+  NS.remove("accounts");
+  NS.remove("lobbies");
+  NS.remove("clans");
+  NS.remove("announcements");
+  NS.remove("match_history");
+  NS.remove("deleted_users");
+  NS.remove("deleted_clans");
+  NS.remove("perm_blocked");
+  NS.remove("deleted_announcements");
   Object.keys(localStorage).forEach(function(key) {
-    if (key && key.indexOf("mafia_daily_") === 0) localStorage.removeItem(key);
+    if (key && key.indexOf(GAME_INSTANCE_ID + "daily_") === 0) NS.remove(key);
   });
   globalUsers = {};
   sharedLobbies = [];
@@ -1609,9 +1956,8 @@ function resetAppStorage() {
 function ensureSpecialAccounts() {
   try {
     let acc = {};
-    try { acc = JSON.parse(localStorage.getItem("mafia_accounts") || "{}"); } catch(e) { acc = {}; }
+    try { acc = JSON.parse(NS.get("accounts") || "{}"); } catch(e) { acc = {}; }
 
-    // ✅ فقط کاربرانی که صریحاً حذف شدن رو پاک کن (نه همه!)
     Object.keys(deletedUsers).forEach(ph => {
       if (acc[ph]) delete acc[ph];
     });
@@ -1660,7 +2006,7 @@ function ensureSpecialAccounts() {
       updated: Date.now(),
       blocked: null
     };
-    localStorage.setItem("mafia_accounts", JSON.stringify(acc));
+    NS.set("accounts", JSON.stringify(acc));
   } catch(e) {}
 }
 
@@ -1681,7 +2027,7 @@ function guardCreator(phone) {
 }
 
 function getAccounts() {
-  const s = localStorage.getItem("mafia_accounts");
+  const s = NS.get("accounts");
   if (!s) return {};
   try { 
     const acc = JSON.parse(s); 
@@ -1690,55 +2036,52 @@ function getAccounts() {
   } catch(e) { return {}; }
 }
 function saveAccounts(a) { 
-  localStorage.setItem("mafia_accounts", JSON.stringify(a)); 
-  // ✅ بکاپ خودکار
+  NS.set("accounts", JSON.stringify(a)); 
   try { saveAccountsBackup(); } catch(e) {}
 }
 
-// ============ 🛡️ BACKUP SYSTEM ============
-const BACKUP_KEY = "mafia_accounts_backup_v1";
-const BACKUP_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // ۷ روز
+/* ============ BACKUP SYSTEM ============ */
+const BACKUP_KEY = "accounts_backup_v1";
+const BACKUP_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 
 function saveAccountsBackup() {
   try {
-    const accStr = localStorage.getItem("mafia_accounts");
+    const accStr = NS.get("accounts");
     if (!accStr) return;
     const acc = JSON.parse(accStr);
     const count = Object.keys(acc).filter(ph => ph !== CREATOR_PHONE).length;
-    if (count === 0) return; // اگه فقط سازنده هست، بکاپ نگیر
+    if (count === 0) return;
 
     const backup = {
       timestamp: Date.now(),
       count: count,
       data: acc
     };
-    localStorage.setItem(BACKUP_KEY, JSON.stringify(backup));
+    NS.set(BACKUP_KEY, JSON.stringify(backup));
   } catch(e) { console.warn("Backup failed:", e); }
 }
 
 function restoreFromBackupIfNeeded() {
   try {
-    const backupStr = localStorage.getItem(BACKUP_KEY);
+    const backupStr = NS.get(BACKUP_KEY);
     if (!backupStr) return false;
 
     const backup = JSON.parse(backupStr);
     if (!backup || !backup.data) return false;
 
-    const current = JSON.parse(localStorage.getItem("mafia_accounts") || "{}");
+    const current = JSON.parse(NS.get("accounts") || "{}");
     const currentCount = Object.keys(current).filter(ph => ph !== CREATOR_PHONE).length;
     const backupCount = Object.keys(backup.data).filter(ph => ph !== CREATOR_PHONE).length;
 
-    // اگه اکانت‌های فعلی خالی هستن ولی بکاپ اکانت داره => بازیابی کن
     if (currentCount === 0 && backupCount > 0) {
       Object.keys(deletedUsers).forEach(ph => {
         if (backup.data[ph]) delete backup.data[ph];
       });
-      localStorage.setItem("mafia_accounts", JSON.stringify(backup.data));
+      NS.set("accounts", JSON.stringify(backup.data));
       console.log("✅ Accounts restored from backup:", backupCount);
       return true;
     }
 
-    // اگه بکاپ تازه‌تره و اکانت‌های بیشتری داره
     if (backupCount > currentCount && (Date.now() - backup.timestamp) < BACKUP_MAX_AGE) {
       Object.keys(current).forEach(ph => {
         if (ph === CREATOR_PHONE) backup.data[ph] = current[ph];
@@ -1746,7 +2089,7 @@ function restoreFromBackupIfNeeded() {
       Object.keys(deletedUsers).forEach(ph => {
         if (backup.data[ph]) delete backup.data[ph];
       });
-      localStorage.setItem("mafia_accounts", JSON.stringify(backup.data));
+      NS.set("accounts", JSON.stringify(backup.data));
       console.log("✅ Accounts merged from backup");
       return true;
     }
@@ -1754,21 +2097,20 @@ function restoreFromBackupIfNeeded() {
   } catch(e) { return false; }
 }
 
-// هر 20 ثانیه بکاپ بگیر
 setInterval(saveAccountsBackup, 20000);
 
-function getLobbies() { return sharedLobbies.length ? sharedLobbies : (JSON.parse(localStorage.getItem("mafia_lobbies") || "[]")); }
-function saveLobbies(l) { sharedLobbies = l; localStorage.setItem("mafia_lobbies", JSON.stringify(l)); }
+function getLobbies() { return sharedLobbies.length ? sharedLobbies : (JSON.parse(NS.get("lobbies") || "[]")); }
+function saveLobbies(l) { sharedLobbies = l; NS.set("lobbies", JSON.stringify(l)); }
 function getClans() {
   let c = {};
   if (Object.keys(sharedClans).length) c = Object.assign({}, sharedClans);
-  else { try { c = JSON.parse(localStorage.getItem("mafia_clans") || "{}"); } catch(e) { c = {}; } }
+  else { try { c = JSON.parse(NS.get("clans") || "{}"); } catch(e) { c = {}; } }
   Object.keys(deletedClans).forEach(id => { if (c[id]) delete c[id]; });
   return c;
 }
-function saveClans(c) { sharedClans = c; localStorage.setItem("mafia_clans", JSON.stringify(c)); }
+function saveClans(c) { sharedClans = c; NS.set("clans", JSON.stringify(c)); }
 function getCurrentUser() {
-  const p = localStorage.getItem("mafia_current_user");
+  const p = NS.get("current_user");
   if (!p || deletedUsers[p]) return null;
   if (permBlocked[p]) { showBlockedPage({reason:"مسدودیت دایمی دستگاه", until:Date.now()+365*24*60*60*1000}); return null; }
   const acc = getAccounts();
@@ -1777,7 +2119,7 @@ function getCurrentUser() {
   else if (u && u.blocked && u.blocked.until <= Date.now()) { u.blocked = null; acc[p] = u; saveAccounts(acc); }
   return u || null;
 }
-function getCurrentPhone() { return localStorage.getItem("mafia_current_user"); }
+function getCurrentPhone() { return NS.get("current_user"); }
 function getCurrentLobby() { if (!currentLobbyId) return null; return getLobbies().find(l => l.id === currentLobbyId) || null; }
 function saveCurrentLobby(lobby) {
   const lobbies = getLobbies();
@@ -1785,13 +2127,13 @@ function saveCurrentLobby(lobby) {
   if (idx !== -1) { lobbies[idx] = lobby; saveLobbies(lobbies); }
 }
 function getAnnouncements() { 
-  const list = sharedAnnouncements.length ? sharedAnnouncements : (JSON.parse(localStorage.getItem("mafia_announcements") || "[]")); 
+  const list = sharedAnnouncements.length ? sharedAnnouncements : (JSON.parse(NS.get("announcements") || "[]")); 
   return filterAnnouncements(list);
 }
 function saveAnnouncements(list) { 
   const filtered = filterAnnouncements(list);
   sharedAnnouncements = filtered; 
-  localStorage.setItem("mafia_announcements", JSON.stringify(filtered)); 
+  NS.set("announcements", JSON.stringify(filtered)); 
 }
 
 function mergeUserData(target, source) {
@@ -1822,7 +2164,7 @@ function publishFullUser(user) {
     disconnects: user.disconnects || 0, hostKicks: user.hostKicks || 0, leaves: user.leaves || 0, updated: Date.now()
   };
   globalUsers[user.phone] = data;
-  ablyUsersCh.publish('user_full', data);
+  ablyUsersCh.publish(EV.userFull, data);
 }
 function applyRemoteUser(data) {
   if (!data || !data.phone || deletedUsers[data.phone]) return;
@@ -1839,8 +2181,7 @@ function applyRemoteUser(data) {
   if (document.getElementById('leaguePage')?.classList.contains('show')) buildLeaderboard();
 }
 
-// ============ 🕐 NEW: مدیریت خروج سازنده لابی ============
-
+/* ============ مدیریت خروج سازنده لابی ============ */
 function isCreatorInsideLobby(lobby) {
   if (!lobby) return false;
   const creatorPhone = lobby.creator;
@@ -1904,14 +2245,13 @@ function forceDeleteLobbyForInactiveCreator(lobbyId) {
   
   sharedLobbies = sharedLobbies.filter(l => l.id !== lobbyId);
   saveLobbies(sharedLobbies);
-  if (ablyLobbyListCh && isAblyReady) ablyLobbyListCh.publish('lobby_delete', { id: lobbyId });
+  if (ablyLobbyListCh && isAblyReady) ablyLobbyListCh.publish(EV.lobbyDelete, { id: lobbyId });
   
   if (currentLobbyId === lobbyId) {
     showToast("⏰ زمان انتظار تموم شد - لابی حذف شد");
     leaveLobbyRoom();
   }
   if (document.getElementById('lobbyPage')?.classList.contains('show')) renderLobbies();
-  console.log('Lobby deleted due to creator inactivity:', lobbyId);
 }
 
 function checkAllLobbiesForExpiredCreators() {
@@ -1932,7 +2272,7 @@ setInterval(() => {
   try { checkAllLobbiesForExpiredCreators(); } catch(e) { console.warn(e); }
 }, 60 * 1000);
 
-// ============ GAME FUNCTIONS ============
+/* ============ GAME FUNCTIONS ============ */
 function startGame(lobby) {
   const seats = lobby.seats.filter(s => s && !s.isGhost);
   if (seats.length < 10) { showToast("برای شروع بازی باید ۱۰ بازیکن حضور داشته باشند!"); return; }
@@ -2333,7 +2673,7 @@ function saveMatchHistory(winner) {
   const me = gameState.players.find(p => p.phone === currentPhone);
   if (!me) return;
   
-  const history = JSON.parse(localStorage.getItem("mafia_match_history") || "[]");
+  const history = JSON.parse(NS.get("match_history") || "[]");
   history.unshift({
     id: "match_" + Date.now(),
     date: new Date().toLocaleDateString("fa-IR") + " " + new Date().toLocaleTimeString("fa-IR"),
@@ -2345,7 +2685,7 @@ function saveMatchHistory(winner) {
     duration: Math.floor((Date.now() - gameState.gameStartTime) / 60000) + " دقیقه"
   });
   if (history.length > 50) history.pop();
-  localStorage.setItem("mafia_match_history", JSON.stringify(history));
+  NS.set("match_history", JSON.stringify(history));
   
   const u = getCurrentUser();
   if (u) {
@@ -2386,7 +2726,7 @@ function gamePlayerClick(phone) {
   showToast(stripColorCode(player.name) + " - صندلی " + player.seat);
 }
 
-// ============ OBSERVER ============
+/* ============ OBSERVER ============ */
 function toggleObserverPanel() {
   const panel = document.getElementById("observerPanel");
   panel.classList.toggle("show");
@@ -2442,7 +2782,7 @@ function observerToggleMic() {
   toggleLrMic();
 }
 
-// ============ LIVE STREAM ============
+/* ============ LIVE STREAM ============ */
 function openLiveStream() {
   closeMenu(); closeInternalPages();
   renderLiveStream();
@@ -2482,7 +2822,7 @@ function watchLiveGame(id) {
   }
 }
 
-// ============ MATCH HISTORY ============
+/* ============ MATCH HISTORY ============ */
 function openMatchHistory() {
   closeMenu(); closeInternalPages();
   renderMatchHistory();
@@ -2490,7 +2830,7 @@ function openMatchHistory() {
 }
 function renderMatchHistory() {
   const list = document.getElementById("matchHistoryList");
-  const history = JSON.parse(localStorage.getItem("mafia_match_history") || "[]");
+  const history = JSON.parse(NS.get("match_history") || "[]");
   if (!history.length) {
     list.innerHTML = `<div class="empty-box"><div class="empty-icon">📜</div><h2>هنوز بازی‌ای انجام نداده‌اید</h2><p>تاریخچه بازی‌های شما اینجا نمایش داده می‌شود.</p></div>`;
     return;
@@ -2504,7 +2844,9 @@ function renderMatchHistory() {
   `).join("");
 }
 
-// ============ ABLY INIT ============
+/* ============================================================
+   ABLY INIT - با کانال‌های Namespaced
+   ============================================================ */
 function initAbly() {
   if (ably) return;
   const phone = getCurrentPhone() || ('guest_' + Date.now());
@@ -2518,12 +2860,12 @@ function initAbly() {
   }
   ably.connection.on('connected', () => {
     isAblyReady = true;
-    ablyUsersCh = ably.channels.get('mafia-global-users-v5');
-    ablyUsersCh.subscribe('user_full', msg => { if (msg.data?.phone) applyRemoteUser(msg.data); });
-    ablyUsersCh.subscribe('users_full', msg => {
+    ablyUsersCh = ably.channels.get(CH.users());
+    ablyUsersCh.subscribe(EV.userFull, msg => { if (msg.data?.phone) applyRemoteUser(msg.data); });
+    ablyUsersCh.subscribe(EV.usersFull, msg => {
       if (msg.data && typeof msg.data === 'object') Object.keys(msg.data).forEach(ph => applyRemoteUser(msg.data[ph]));
     });
-    ablyUsersCh.subscribe('user_deleted', msg => {
+    ablyUsersCh.subscribe(EV.userDeleted, msg => {
       if (msg.data?.phone) {
         deletedUsers[msg.data.phone] = true; saveDeletedUsers();
         delete globalUsers[msg.data.phone];
@@ -2532,7 +2874,7 @@ function initAbly() {
         if (getCurrentPhone() === msg.data.phone) logout();
       }
     });
-    ablyUsersCh.subscribe('user_unblocked', msg => {
+    ablyUsersCh.subscribe(EV.userUnblocked, msg => {
       if (msg.data?.phone) {
         const acc = getAccounts();
         if (acc[msg.data.phone]) { acc[msg.data.phone].blocked = null; acc[msg.data.phone].updated = Date.now(); saveAccounts(acc); }
@@ -2540,8 +2882,8 @@ function initAbly() {
         if (getCurrentPhone() === msg.data.phone) { document.getElementById("blockedPage").classList.remove("show"); showApp(); showToast("مسدودیت شما برداشته شد ✅"); }
       }
     });
-    ablyUsersCh.publish('sync_request', {from: phone});
-    ablyUsersCh.subscribe('sync_request', () => {
+    ablyUsersCh.publish(EV.syncRequest, {from: phone});
+    ablyUsersCh.subscribe(EV.syncRequest, () => {
       const all = getAccounts();
       const toSend = {};
       Object.keys(all).forEach(ph => {
@@ -2549,12 +2891,12 @@ function initAbly() {
         const u = all[ph];
         toSend[ph] = { phone: u.phone, name: u.name, avatar: u.avatar || DEFAULT_AVATAR, level: u.level || 1, coins: u.coins || 0, gems: u.gems || 0, score: u.score || 0, hoursPlayed: u.hoursPlayed || 0, watchedGames: u.watchedGames || 0, totalGames: u.totalGames || 0, wins: u.wins || 0, losses: u.losses || 0, citizenWins: u.citizenWins || 0, citizenLosses: u.citizenLosses || 0, mafiaWins: u.mafiaWins || 0, mafiaLosses: u.mafiaLosses || 0, ownedAvatars: u.ownedAvatars || [], ownedFrames: u.ownedFrames || [], activeFrame: u.activeFrame || "", blocked: u.blocked || null, isAdmin: !!u.isAdmin, code: u.code || 0, verified: !!u.verified, label: u.label || "", specialLobbyName: u.specialLobbyName || "", canColorName: !!u.canColorName, disconnects: u.disconnects || 0, hostKicks: u.hostKicks || 0, leaves: u.leaves || 0, updated: u.updated || Date.now() };
       });
-      if (Object.keys(toSend).length) ablyUsersCh.publish('users_full', toSend);
+      if (Object.keys(toSend).length) ablyUsersCh.publish(EV.usersFull, toSend);
     });
     
-    ablyLobbyListCh = ably.channels.get('mafia-lobbies-v4');
-    ablyLobbyListCh.subscribe('lobby_full', msg => { if (Array.isArray(msg.data)) { sharedLobbies = msg.data; saveLobbies(sharedLobbies); if (document.getElementById('lobbyPage')?.classList.contains('show')) renderLobbies(); } });
-    ablyLobbyListCh.subscribe('lobby_update', msg => {
+    ablyLobbyListCh = ably.channels.get(CH.lobbies());
+    ablyLobbyListCh.subscribe(EV.lobbyFull, msg => { if (Array.isArray(msg.data)) { sharedLobbies = msg.data; saveLobbies(sharedLobbies); if (document.getElementById('lobbyPage')?.classList.contains('show')) renderLobbies(); } });
+    ablyLobbyListCh.subscribe(EV.lobbyUpdate, msg => {
       if (!msg.data?.id) return;
       const incoming = msg.data;
       
@@ -2574,7 +2916,7 @@ function initAbly() {
       if (document.getElementById('lobbyPage')?.classList.contains('show')) renderLobbies();
       if (currentLobbyId === incoming.id) renderLobbyRoom();
     });
-    ablyLobbyListCh.subscribe('lobby_delete', msg => {
+    ablyLobbyListCh.subscribe(EV.lobbyDelete, msg => {
       if (!msg.data?.id) return;
       sharedLobbies = sharedLobbies.filter(l => l.id !== msg.data.id);
       saveLobbies(sharedLobbies);
@@ -2585,11 +2927,11 @@ function initAbly() {
         delete creatorLeaveTimers[msg.data.id];
       }
     });
-    ablyLobbyListCh.publish('sync_request', {from: phone});
-    ablyLobbyListCh.subscribe('sync_request', () => { if (sharedLobbies.length) ablyLobbyListCh.publish('lobby_full', sharedLobbies); });
+    ablyLobbyListCh.publish(EV.syncRequest, {from: phone});
+    ablyLobbyListCh.subscribe(EV.syncRequest, () => { if (sharedLobbies.length) ablyLobbyListCh.publish(EV.lobbyFull, sharedLobbies); });
 
-    ablyClanListCh = ably.channels.get('mafia-clans-v4');
-    ablyClanListCh.subscribe('clans_full', msg => {
+    ablyClanListCh = ably.channels.get(CH.clans());
+    ablyClanListCh.subscribe(EV.clansFull, msg => {
       if (msg.data && typeof msg.data === 'object') {
         const local = getClans();
         sharedClans = Object.assign({}, local, msg.data);
@@ -2600,7 +2942,7 @@ function initAbly() {
         if (document.getElementById('topClansPage')?.classList.contains('show')) renderTopClans();
       }
     });
-    ablyClanListCh.subscribe('clan_update', msg => {
+    ablyClanListCh.subscribe(EV.clanUpdate, msg => {
       if (!msg.data?.id) return;
       if (msg.data.deleted || deletedClans[msg.data.id]) {
         deletedClans[msg.data.id] = true; saveDeletedClans();
@@ -2614,17 +2956,17 @@ function initAbly() {
       if (document.getElementById('clanPage')?.classList.contains('show')) searchClans();
       if (document.getElementById('topClansPage')?.classList.contains('show')) renderTopClans();
     });
-    ablyClanListCh.publish('sync_request', {from: phone});
-    ablyClanListCh.subscribe('sync_request', () => { const clans = getClans(); if (Object.keys(clans).length) ablyClanListCh.publish('clans_full', clans); });
+    ablyClanListCh.publish(EV.syncRequest, {from: phone});
+    ablyClanListCh.subscribe(EV.syncRequest, () => { const clans = getClans(); if (Object.keys(clans).length) ablyClanListCh.publish(EV.clansFull, clans); });
 
-    ablyAnnCh = ably.channels.get('mafia-announcements-v1');
-    ablyAnnCh.subscribe('ann_full', msg => {
+    ablyAnnCh = ably.channels.get(CH.announcements());
+    ablyAnnCh.subscribe(EV.annFull, msg => {
       if (Array.isArray(msg.data)) {
         sharedAnnouncements = filterAnnouncements(msg.data); saveAnnouncements(sharedAnnouncements);
         if (document.getElementById('announcementsPage')?.classList.contains('show')) renderAnnouncements();
       }
     });
-    ablyAnnCh.subscribe('ann_update', msg => {
+    ablyAnnCh.subscribe(EV.annUpdate, msg => {
       if (!msg.data) return;
       if (msg.data.deleted || deletedAnnouncements[msg.data.id]) {
         if (msg.data.id) { deletedAnnouncements[msg.data.id] = true; saveDeletedAnnouncements(); }
@@ -2637,10 +2979,10 @@ function initAbly() {
       saveAnnouncements(sharedAnnouncements);
       if (document.getElementById('announcementsPage')?.classList.contains('show')) renderAnnouncements();
     });
-    ablyAnnCh.publish('sync_request', {from: phone});
-    ablyAnnCh.subscribe('sync_request', () => { 
+    ablyAnnCh.publish(EV.syncRequest, {from: phone});
+    ablyAnnCh.subscribe(EV.syncRequest, () => { 
       const filtered = filterAnnouncements(sharedAnnouncements);
-      if (filtered.length) ablyAnnCh.publish('ann_full', filtered); 
+      if (filtered.length) ablyAnnCh.publish(EV.annFull, filtered); 
     });
 
     setTimeout(() => { const u = getCurrentUser(); if (u) publishFullUser(u); }, 800);
@@ -2656,8 +2998,8 @@ function publishMyProfile() { const u = getCurrentUser(); if (u) publishFullUser
 function subscribeLobbyRoom(lobbyId) {
   if (!ably || !isAblyReady) return;
   if (ablyRoomCh) try { ablyRoomCh.unsubscribe(); } catch(e) {}
-  ablyRoomCh = ably.channels.get('mafia-room-' + lobbyId);
-  ablyRoomCh.subscribe('room_state', msg => {
+  ablyRoomCh = ably.channels.get(CH.room(lobbyId));
+  ablyRoomCh.subscribe(EV.roomState, msg => {
     if (!msg.data || msg.data.id !== currentLobbyId) return;
     
     const incoming = msg.data;
@@ -2682,40 +3024,40 @@ function subscribeLobbyRoom(lobbyId) {
     if (idx >= 0) lobbies[idx] = incoming; else lobbies.unshift(incoming);
     saveLobbies(lobbies); renderLobbyRoom();
   });
-  ablyRoomCh.subscribe('game_start', msg => {
+  ablyRoomCh.subscribe(EV.gameStart, msg => {
     if (!msg.data || msg.data.lobbyId !== currentLobbyId) return;
     const lobby = getCurrentLobby();
     if (lobby) startGame(lobby);
   });
-  ablyRoomCh.subscribe('chat', msg => {
+  ablyRoomCh.subscribe(EV.chat, msg => {
     if (!msg.data || msg.data.lobbyId !== currentLobbyId) return;
     const lobby = getCurrentLobby(); if (!lobby) return;
     if (!lobby.chat) lobby.chat = [];
     const exists = lobby.chat.some(m => m.time === msg.data.msg.time && m.sender === msg.data.msg.sender && m.text === msg.data.msg.text);
     if (!exists) { lobby.chat.push(msg.data.msg); saveCurrentLobby(lobby); renderLrChat(); }
   });
-  ablyRoomCh.subscribe('react', msg => {
+  ablyRoomCh.subscribe(EV.react, msg => {
     if (!msg.data || msg.data.lobbyId !== currentLobbyId) return;
     showReactionOnSeat(msg.data.phone, msg.data.reaction);
   });
-  ablyRoomCh.subscribe('mic', msg => {
+  ablyRoomCh.subscribe(EV.mic, msg => {
     if (!msg.data || msg.data.lobbyId !== currentLobbyId) return;
     if (!globalUsers[msg.data.phone]) globalUsers[msg.data.phone] = {};
     globalUsers[msg.data.phone].micOn = msg.data.on;
     renderLobbyRoom();
   });
-  ablyRoomCh.subscribe('webrtc_signal', msg => {
+  ablyRoomCh.subscribe(EV.webrtcSignal, msg => {
     if (!msg.data || msg.data.lobbyId !== currentLobbyId) return;
     if (msg.data.to === getCurrentPhone()) handleWebRtcSignal(msg.data.from, msg.data.signal);
   });
-  ablyRoomCh.subscribe('host_transfer', msg => {
+  ablyRoomCh.subscribe(EV.hostTransfer, msg => {
     if (!msg.data || msg.data.lobbyId !== currentLobbyId) return;
     const lobby = getCurrentLobby(); if (!lobby) return;
     lobby.creator = msg.data.newHost;
     saveCurrentLobby(lobby); renderLobbyRoom();
     if (msg.data.newHost === getCurrentPhone()) showToast("شما مدیر لابی شدید 👑");
   });
-  ablyRoomCh.subscribe('user_kicked', msg => {
+  ablyRoomCh.subscribe(EV.userKicked, msg => {
     if (!msg.data || msg.data.lobbyId !== currentLobbyId) return;
     if (msg.data.phone === getCurrentPhone()) {
       if (isProcessingKick) return;
@@ -2726,7 +3068,7 @@ function subscribeLobbyRoom(lobbyId) {
       setTimeout(() => { isProcessingKick = false; }, 2000);
     }
   });
-  ablyRoomCh.subscribe('user_blocked', msg => {
+  ablyRoomCh.subscribe(EV.userBlocked, msg => {
     if (!msg.data || msg.data.lobbyId !== currentLobbyId) return;
     if (msg.data.phone === getCurrentPhone()) {
       if (isProcessingKick) return;
@@ -2737,16 +3079,16 @@ function subscribeLobbyRoom(lobbyId) {
       setTimeout(() => { isProcessingKick = false; }, 2000);
     }
   });
-  ablyRoomCh.publish('sync_request', {lobbyId: currentLobbyId, from: getCurrentPhone()});
-  ablyRoomCh.subscribe('sync_request', (msg) => {
+  ablyRoomCh.publish(EV.syncRequest, {lobbyId: currentLobbyId, from: getCurrentPhone()});
+  ablyRoomCh.subscribe(EV.syncRequest, (msg) => {
     if (msg.data?.lobbyId === currentLobbyId) {
       const lobby = getCurrentLobby();
-      if (lobby) ablyRoomCh.publish('room_state', lobby);
+      if (lobby) ablyRoomCh.publish(EV.roomState, lobby);
     }
   });
 }
 
-// ============ LOBBY FUNCTIONS ============
+/* ============ LOBBY FUNCTIONS ============ */
 function enterLobbyRoom(id) {
   currentLobbyId = id;
   closeLobbyPage(); closeCreateLobby();
@@ -3442,7 +3784,7 @@ function renderLobbies() {
 }
 function filterLobbies() { renderLobbies(); }
 function refreshLobbies() {
-  if (ablyLobbyListCh && isAblyReady) ablyLobbyListCh.publish('sync_request', { from: getCurrentPhone() });
+  if (ablyLobbyListCh && isAblyReady) ablyLobbyListCh.publish(EV.syncRequest, { from: getCurrentPhone() });
   renderLobbies(); showToast("لیست لابی‌ها به‌روز شد ↻");
   try { checkAllLobbiesForExpiredCreators(); } catch(e) {}
 }
@@ -3501,7 +3843,7 @@ function createLobby() {
     creatorLeftAt: null
   };
   sharedLobbies.unshift(lobby); saveLobbies(sharedLobbies);
-  if (ablyLobbyListCh) ablyLobbyListCh.publish('lobby_update', lobby);
+  if (ablyLobbyListCh) ablyLobbyListCh.publish(EV.lobbyUpdate, lobby);
   closeCreateLobby(); enterLobbyRoom(lobby.id);
 }
 function joinLobby(id) {
@@ -3543,7 +3885,7 @@ function joinLobby(id) {
   enterLobbyRoom(id);
 }
 
-// ============ UI HELPERS ============
+/* ============ UI HELPERS ============ */
 function showAuth() { document.getElementById("authScreen").style.display = "flex"; document.getElementById("app").style.display = "none"; }
 function showApp() {
   const u = getCurrentUser();
@@ -4166,7 +4508,7 @@ function leaveClan() {
       deletedClans[currentClanId] = true;
       saveDeletedClans();
       saveClans(clans);
-      if (ablyClanListCh) ablyClanListCh.publish('clan_update', {id: currentClanId, deleted: true});
+      if (ablyClanListCh) ablyClanListCh.publish(EV.clanUpdate, {id: currentClanId, deleted: true});
       leaveClanDetail(); showToast("کلن منحل شد 💥"); return;
     }
   } else {
@@ -4321,8 +4663,8 @@ function openStore() {
 function closeStore() { document.getElementById("storePage").classList.remove("show"); }
 function claimDailyReward() {
   const u = getCurrentUser(); if (!u) return;
-  const key = "mafia_daily_" + u.phone;
-  const last = localStorage.getItem(key);
+  const key = "daily_" + u.phone;
+  const last = NS.get(key);
   const now = Date.now();
   const oneDay = 24 * 60 * 60 * 1000;
   if (last && (now - Number(last)) < oneDay) {
@@ -4333,7 +4675,7 @@ function claimDailyReward() {
   }
   u.coins = Number(u.coins) + 30; u.updated = Date.now();
   const acc = getAccounts(); acc[u.phone] = u; saveAccounts(acc); publishFullUser(u);
-  localStorage.setItem(key, String(now)); updateUI(); showToast("۳۰ سکه روزانه دریافت شد! 🎉");
+  NS.set(key, String(now)); updateUI(); showToast("۳۰ سکه روزانه دریافت شد! 🎉");
 }
 function openRules() { closeMenu(); closeInternalPages(); document.getElementById("rulesPage").classList.add("show"); }
 function openSettings() { closeMenu(); closeInternalPages(); document.getElementById("settingsPage").classList.add("show"); }
@@ -4376,7 +4718,7 @@ function changeName() {
   const n = document.getElementById("newName").value.trim();
   const plainName = stripColorCode(n);
   if (plainName.length < 2) { showToast("نام جدید معتبر نیست."); return; }
-  const phone = localStorage.getItem("mafia_current_user");
+  const phone = NS.get("current_user");
   const acc = getAccounts();
   const u = acc[phone]; if (!u) return;
   const hasColor = /^<#[0-9a-fA-F]{3,6}>/i.test(n);
@@ -4404,7 +4746,7 @@ function logout() {
   if (ably) { try { ably.close(); } catch(e) {} }
   ably = null; isAblyReady = false;
   isGhostMode = false; ghostLobbyId = null;
-  localStorage.removeItem("mafia_current_user");
+  NS.remove("current_user");
   document.getElementById("blockedPage").classList.remove("show");
   showAuth(); switchAuth("login");
 }
@@ -4423,7 +4765,7 @@ function showBlockedPage(blocked) {
   document.getElementById("authScreen").style.display = "none";
 }
 
-// ============ ADMIN PANEL ============
+/* ============ ADMIN PANEL ============ */
 function openAdminPanel() {
   closeMenu(); closeInternalPages();
   document.getElementById("adminLoginSection").style.display = "block";
@@ -4445,27 +4787,24 @@ function adminLogin() {
 }
 
 function adminFullReset() {
-  // ✅ هشدار اول
   if (!confirm("⚠️ آیا مطمئن هستید؟ تمام اکانت‌ها، لابی‌ها، کلن‌ها، تیک‌دارها و لیبل‌دارها پاک می‌شوند!")) return;
 
-  // ✅ بکاپ خودکار قبل از ریست
-  const accStr = localStorage.getItem("mafia_accounts");
+  const accStr = NS.get("accounts");
   if (accStr) {
     try {
       const userCount = Object.keys(JSON.parse(accStr)).filter(p => p !== CREATOR_PHONE).length;
       const adminBackup = {
         timestamp: Date.now(),
         data: accStr,
-        lobbies: localStorage.getItem("mafia_lobbies"),
-        clans: localStorage.getItem("mafia_clans"),
+        lobbies: NS.get("lobbies"),
+        clans: NS.get("clans"),
         userCount: userCount
       };
-      localStorage.setItem("mafia_admin_reset_backup", JSON.stringify(adminBackup));
+      NS.set("admin_reset_backup", JSON.stringify(adminBackup));
       console.log("📦 Backup saved before reset:", userCount, "users");
     } catch(e) { console.warn("Admin backup failed:", e); }
   }
 
-  // ✅ تأیید نهایی با کد
   const confirmCode = prompt("برای تأیید نهایی، کد زیر را تایپ کنید:\n\n«RESET»");
   if (confirmCode !== "RESET") {
     showToast("❌ ریست لغو شد");
@@ -4480,17 +4819,17 @@ function adminFullReset() {
   sharedAnnouncements = {};
 
   ensureSpecialAccounts();
-  localStorage.setItem("mafia_current_user", CREATOR_PHONE);
+  NS.set("current_user", CREATOR_PHONE);
 
   if (ablyUsersCh && isAblyReady) {
-    ablyUsersCh.publish('users_full', {});
-    ablyUsersCh.publish('global_reset', {ts: Date.now()});
+    ablyUsersCh.publish(EV.usersFull, {});
+    ablyUsersCh.publish(EV.globalReset, {ts: Date.now()});
   }
   if (ablyLobbyListCh && isAblyReady) {
-    ablyLobbyListCh.publish('lobby_full', []);
+    ablyLobbyListCh.publish(EV.lobbyFull, []);
   }
   if (ablyClanListCh && isAblyReady) {
-    ablyClanListCh.publish('clans_full', {});
+    ablyClanListCh.publish(EV.clansFull, {});
   }
 
   updateUI();
@@ -4509,16 +4848,16 @@ function adminFullReset() {
 
 function adminRestoreFromBackup() {
   try {
-    const backupStr = localStorage.getItem("mafia_admin_reset_backup");
+    const backupStr = NS.get("admin_reset_backup");
     if (!backupStr) { showToast("❌ بکاپی موجود نیست"); return; }
     const backup = JSON.parse(backupStr);
     const backupDate = new Date(backup.timestamp).toLocaleString("fa-IR");
 
     if (!confirm(`بکاپ مربوط به:\n${backupDate}\nبا ${backup.userCount} کاربر\n\nآیا بازیابی شود؟`)) return;
 
-    if (backup.data) localStorage.setItem("mafia_accounts", backup.data);
-    if (backup.lobbies) localStorage.setItem("mafia_lobbies", backup.lobbies);
-    if (backup.clans) localStorage.setItem("mafia_clans", backup.clans);
+    if (backup.data) NS.set("accounts", backup.data);
+    if (backup.lobbies) NS.set("lobbies", backup.lobbies);
+    if (backup.clans) NS.set("clans", backup.clans);
 
     showToast("✅ بازیابی انجام شد! اپ رو دوباره باز کن");
     setTimeout(() => location.reload(), 1500);
@@ -4538,7 +4877,7 @@ function adminPublishAnnouncement() {
   sharedAnnouncements = filterAnnouncements(sharedAnnouncements);
   sharedAnnouncements.unshift(ann);
   saveAnnouncements(sharedAnnouncements);
-  if (ablyAnnCh && isAblyReady) ablyAnnCh.publish('ann_update', ann);
+  if (ablyAnnCh && isAblyReady) ablyAnnCh.publish(EV.annUpdate, ann);
   document.getElementById("adminAnnTitle").value = ""; document.getElementById("adminAnnBody").value = "";
   adminRenderAnnouncements(); showToast("اعلامیه منتشر شد 📢");
 }
@@ -4548,7 +4887,7 @@ function adminDeleteAnnouncement(id) {
   saveDeletedAnnouncements();
   sharedAnnouncements = sharedAnnouncements.filter(a => a.id !== id);
   saveAnnouncements(sharedAnnouncements);
-  if (ablyAnnCh && isAblyReady) ablyAnnCh.publish('ann_update', {id, deleted: true});
+  if (ablyAnnCh && isAblyReady) ablyAnnCh.publish(EV.annUpdate, {id, deleted: true});
   adminRenderAnnouncements(); showToast("اعلامیه برای همیشه حذف شد");
 }
 function adminRenderAnnouncements() {
@@ -4747,7 +5086,7 @@ function adminRemoveLobbyTick(id) {
   if (idx === -1) { showToast("لابی یافت نشد"); return; }
   lobbies[idx].hasTick = false;
   saveLobbies(lobbies);
-  if (ablyLobbyListCh) ablyLobbyListCh.publish('lobby_update', lobbies[idx]);
+  if (ablyLobbyListCh) ablyLobbyListCh.publish(EV.lobbyUpdate, lobbies[idx]);
   showToast("تیک لابی حذف شد");
   adminRenderVerifiedLobbies(); adminRenderLobbies();
 }
@@ -4877,7 +5216,7 @@ function adminDeleteAccount(phone) {
   delete globalUsers[phone];
   deletedUsers[phone] = true;
   saveDeletedUsers();
-  if (ablyUsersCh && isAblyReady) ablyUsersCh.publish('user_deleted', {phone});
+  if (ablyUsersCh && isAblyReady) ablyUsersCh.publish(EV.userDeleted, {phone});
   if (getCurrentPhone() === phone) logout();
   showToast(`اکانت ${name} (${phone}) برای همیشه حذف شد 💀`);
   adminSearchUsers(); renderAdminList();
@@ -5010,7 +5349,7 @@ function adminUnblockUser() {
   acc[phone].blocked = null;
   acc[phone].updated = Date.now();
   saveAccounts(acc); publishFullUser(acc[phone]);
-  if (ablyUsersCh && isAblyReady) ablyUsersCh.publish('user_unblocked', {phone});
+  if (ablyUsersCh && isAblyReady) ablyUsersCh.publish(EV.userUnblocked, {phone});
   if (globalUsers[phone]) globalUsers[phone].blocked = null;
   document.getElementById("adminUnblockPhone").value = "";
   showToast(`مسدودیت کاربر ${stripColorCode(acc[phone].name)} برداشته شد ✅`);
@@ -5075,7 +5414,7 @@ function adminDeleteClan(id) {
   deletedClans[id] = true;
   saveDeletedClans();
   saveClans(clans);
-  if (ablyClanListCh) ablyClanListCh.publish('clan_update', {id: id, deleted: true});
+  if (ablyClanListCh) ablyClanListCh.publish(EV.clanUpdate, {id: id, deleted: true});
   showToast("کلن ترکونده شد 💥"); adminRenderClans();
   if (document.getElementById('clanPage')?.classList.contains('show')) searchClans();
 }
@@ -5108,7 +5447,7 @@ function adminDeleteLobby(id) {
   if (!confirm("آیا مطمئن هستید؟ این لابی حذف می‌شود!")) return;
   sharedLobbies = sharedLobbies.filter(l => l.id !== id);
   saveLobbies(sharedLobbies);
-  if (ablyLobbyListCh) ablyLobbyListCh.publish('lobby_delete', { id: id });
+  if (ablyLobbyListCh) ablyLobbyListCh.publish(EV.lobbyDelete, { id: id });
   if (currentLobbyId === id) leaveLobbyRoom();
   if (creatorLeaveTimers[id]) {
     clearTimeout(creatorLeaveTimers[id]);
@@ -5360,7 +5699,7 @@ function renderAdminList() {
   }
 }
 
-// ============ WEBRTC ============
+/* ============ WEBRTC ============ */
 function unlockAudioPlayback() {
   try {
     if (!audioContextRef) {
@@ -5537,19 +5876,19 @@ async function disableMicrophone() {
   showToast('میکروفون غیرفعال شد');
 }
 
-function publishRoomState(lobby) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish('room_state', lobby); if (ablyLobbyListCh && isAblyReady) ablyLobbyListCh.publish('lobby_update', lobby); }
-function publishLrChatMsg(msg) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish('chat', {lobbyId: currentLobbyId, msg}); }
-function publishReaction(phone, reaction) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish('react', {lobbyId: currentLobbyId, phone, reaction}); }
-function publishMic(phone, on) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish('mic', {lobbyId: currentLobbyId, phone, on}); }
-function publishWebRtcSignal(to, signal) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish('webrtc_signal', { lobbyId: currentLobbyId, from: getCurrentPhone(), to, signal }); }
-function publishHostTransfer(newHost) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish('host_transfer', { lobbyId: currentLobbyId, newHost }); }
-function publishUserKicked(phone) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish('user_kicked', { lobbyId: currentLobbyId, phone }); }
-function publishUserBlocked(phone) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish('user_blocked', { lobbyId: currentLobbyId, phone }); }
+function publishRoomState(lobby) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish(EV.roomState, lobby); if (ablyLobbyListCh && isAblyReady) ablyLobbyListCh.publish(EV.lobbyUpdate, lobby); }
+function publishLrChatMsg(msg) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish(EV.chat, {lobbyId: currentLobbyId, msg}); }
+function publishReaction(phone, reaction) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish(EV.react, {lobbyId: currentLobbyId, phone, reaction}); }
+function publishMic(phone, on) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish(EV.mic, {lobbyId: currentLobbyId, phone, on}); }
+function publishWebRtcSignal(to, signal) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish(EV.webrtcSignal, { lobbyId: currentLobbyId, from: getCurrentPhone(), to, signal }); }
+function publishHostTransfer(newHost) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish(EV.hostTransfer, { lobbyId: currentLobbyId, newHost }); }
+function publishUserKicked(phone) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish(EV.userKicked, { lobbyId: currentLobbyId, phone }); }
+function publishUserBlocked(phone) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish(EV.userBlocked, { lobbyId: currentLobbyId, phone }); }
 function subscribeClan(clanId) {
   if (!ably || !isAblyReady) return;
   if (ablyClanCh) try { ablyClanCh.unsubscribe(); } catch(e) {}
-  ablyClanCh = ably.channels.get('mafia-clan-' + clanId);
-  ablyClanCh.subscribe('clan_msg', msg => {
+  ablyClanCh = ably.channels.get(CH.clan(clanId));
+  ablyClanCh.subscribe(EV.clanMsg, msg => {
     if (!msg.data || msg.data.clanId !== currentClanId) return;
     const c = sharedClans[currentClanId]; if (!c) return;
     if (!c.messages) c.messages = [];
@@ -5557,16 +5896,16 @@ function subscribeClan(clanId) {
       c.messages.push(msg.data.msg); sharedClans[currentClanId] = c; saveClans(sharedClans); renderClanChat();
     }
   });
-  ablyClanCh.subscribe('clan_update', msg => {
+  ablyClanCh.subscribe(EV.clanUpdate, msg => {
     if (!msg.data || msg.data.id !== currentClanId) return;
     sharedClans[msg.data.id] = msg.data; saveClans(sharedClans);
     if (document.getElementById('clanDetailContent')?.classList.contains('show')) renderClanDetail();
   });
 }
-function publishClanMsg(clanId, msg) { if (ablyClanCh && isAblyReady) ablyClanCh.publish('clan_msg', {clanId, msg}); }
-function publishClanUpdate(clan) { if (ablyClanListCh && isAblyReady) ablyClanListCh.publish('clan_update', clan); if (ablyClanCh && isAblyReady) ablyClanCh.publish('clan_update', clan); }
+function publishClanMsg(clanId, msg) { if (ablyClanCh && isAblyReady) ablyClanCh.publish(EV.clanMsg, {clanId, msg}); }
+function publishClanUpdate(clan) { if (ablyClanListCh && isAblyReady) ablyClanListCh.publish(EV.clanUpdate, clan); if (ablyClanCh && isAblyReady) ablyClanCh.publish(EV.clanUpdate, clan); }
 
-// ============ EVENT LISTENERS ============
+/* ============ EVENT LISTENERS ============ */
 document.getElementById("loginForm").addEventListener("submit", function(e) {
   e.preventDefault(); clearError(); loadDeletedData(); ensureSpecialAccounts();
   const phone = document.getElementById("loginPhone").value.trim();
@@ -5579,7 +5918,7 @@ document.getElementById("loginForm").addEventListener("submit", function(e) {
   if (user.password !== pass) { showError("شماره یا رمز ورود اشتباه است."); return; }
   if (user.blocked && user.blocked.until > Date.now()) { showBlockedPage(user.blocked); return; }
   if (user.blocked && user.blocked.until <= Date.now()) { user.blocked = null; acc[phone] = user; saveAccounts(acc); }
-  localStorage.setItem("mafia_current_user", phone); showApp();
+  NS.set("current_user", phone); showApp();
   if (!ably) initAblyWhenReady(0);
 });
 
@@ -5606,10 +5945,9 @@ document.getElementById("registerForm").addEventListener("submit", function(e) {
     disconnects: 0, hostKicks: 0, leaves: 0, code: newCode, verified: false, label: "", specialLobbyName: "",
     canColorName: false, updated: Date.now()
   };
-  saveAccounts(acc); localStorage.setItem("mafia_current_user", phone); showApp();
+  saveAccounts(acc); NS.set("current_user", phone); showApp();
   setTimeout(() => { const u = getCurrentUser(); if (u) publishFullUser(u); }, 1200);
   if (!ably) initAblyWhenReady(0);
-  // ✅ بکاپ فوری بعد از ثبت نام
   setTimeout(saveAccountsBackup, 1000);
 });
 
@@ -5644,7 +5982,11 @@ document.addEventListener("click", function onFirstClick() {
   document.removeEventListener("click", onFirstClick);
 }, { passive: true });
 
-console.log('مافیابست • Pro Edition • Fast Startup v3.0.0 • Creator: ᴍʀ.ᴛɪɢᴇʀ');
+// 🔒 نمایش شناسه نسخه در کنسول برای تشخیص راحت
+console.log('%cمافیابست • Pro Edition • Fast Startup v3.0.0', 'color:#f0c15b;font-weight:bold');
+console.log('%c🔒 GAME INSTANCE ID: ' + GAME_INSTANCE_ID, 'color:#2ecc71;font-weight:bold');
+console.log('Creator: ᴍʀ.ᴛɪɢᴇʀ');
+console.log('Ably Channels Namespace: ' + CH.users());
 </script>
 </body>
 </html>

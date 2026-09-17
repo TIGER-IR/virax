@@ -1375,6 +1375,58 @@ const EV = {
 };
 
 /* ============================================================
+   🆕 PENDING PUBLISH QUEUE (fix for lost publishes before Ably ready)
+   ============================================================ */
+let __pendingUserPublishes = {};
+let __pendingLobbyPublishes = {};
+let __pendingClanPublishes = {};
+let __pendingAnnPublishes = [];
+let __pubFlushScheduled = false;
+
+function __schedulePubFlush() {
+  if (__pubFlushScheduled) return;
+  __pubFlushScheduled = true;
+  setTimeout(() => { __pubFlushScheduled = false; __flushAllPendingPublishes(); }, 1500);
+}
+
+function __flushAllPendingPublishes() {
+  // Users
+  if (isAblyReady && ablyUsersCh) {
+    const keys = Object.keys(__pendingUserPublishes);
+    keys.forEach(ph => {
+      const d = __pendingUserPublishes[ph];
+      delete __pendingUserPublishes[ph];
+      try { ablyUsersCh.publish(EV.userFull, d); } catch(e) { __pendingUserPublishes[ph] = d; }
+    });
+  }
+  // Lobbies
+  if (isAblyReady && ablyLobbyListCh) {
+    const keys = Object.keys(__pendingLobbyPublishes);
+    keys.forEach(id => {
+      const d = __pendingLobbyPublishes[id];
+      delete __pendingLobbyPublishes[id];
+      try { ablyLobbyListCh.publish(EV.lobbyUpdate, d); } catch(e) { __pendingLobbyPublishes[id] = d; }
+    });
+  }
+  // Clans
+  if (isAblyReady && ablyClanListCh) {
+    const keys = Object.keys(__pendingClanPublishes);
+    keys.forEach(id => {
+      const d = __pendingClanPublishes[id];
+      delete __pendingClanPublishes[id];
+      try { ablyClanListCh.publish(EV.clanUpdate, d); } catch(e) { __pendingClanPublishes[id] = d; }
+    });
+  }
+  // Announcements
+  if (isAblyReady && ablyAnnCh && __pendingAnnPublishes.length) {
+    __pendingAnnPublishes.forEach(ann => {
+      try { ablyAnnCh.publish(EV.annUpdate, ann); } catch(e) {}
+    });
+    __pendingAnnPublishes = [];
+  }
+}
+
+/* ============================================================
    IMAGE CACHE
    ============================================================ */
 const ImageDB = (function(){
@@ -1638,7 +1690,7 @@ function initAblyWhenReady(attempt) {
 }
 
 function scheduleAblyRetry(attempt) {
-  if (attempt >= 20) { console.warn('Ably retry limit reached'); return; }
+  if (attempt >= 30) { console.warn('Ably retry limit reached'); return; }
   const delay = Math.min(4000, 300 * Math.pow(1.6, attempt));
   setTimeout(() => initAblyWhenReady(attempt + 1), delay);
 }
@@ -1655,6 +1707,19 @@ function scheduleAblyReconnect() {
       } catch(e) {}
     }
   }, 3000);
+}
+
+/* 🆕 Reconnect Ably with the correct clientId (after guest connection) */
+function reconnectAblyWithCurrentUser() {
+  if (!ably) return;
+  const newPhone = getCurrentPhone();
+  if (!newPhone) return;
+  if (myClientId === newPhone) return;
+  try { ably.close(); } catch(e) {}
+  ably = null; isAblyReady = false;
+  ablyUsersCh = null; ablyLobbyListCh = null; ablyClanListCh = null;
+  ablyAnnCh = null; ablyActivityCh = null; ablyRoomCh = null; ablyClanCh = null;
+  setTimeout(() => initAblyWhenReady(0), 100);
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fastBoot, { once: true });
@@ -2033,8 +2098,9 @@ function mergeUserData(target, source) {
   return out;
 }
 
+/* 🆕 Robust publishFullUser with queueing */
 function publishFullUser(user) {
-  if (!user || !user.phone || !ablyUsersCh || !isAblyReady) return;
+  if (!user || !user.phone) return;
   if (deletedUsers[user.phone]) return;
   const data = {
     phone: user.phone, name: user.name, avatar: user.avatar || DEFAULT_AVATAR,
@@ -2049,7 +2115,13 @@ function publishFullUser(user) {
     disconnects: user.disconnects || 0, hostKicks: user.hostKicks || 0, leaves: user.leaves || 0, updated: Date.now()
   };
   globalUsers[user.phone] = data;
-  ablyUsersCh.publish(EV.userFull, data);
+  if (!ablyUsersCh || !isAblyReady) {
+    __pendingUserPublishes[user.phone] = data;
+    __schedulePubFlush();
+    return;
+  }
+  try { ablyUsersCh.publish(EV.userFull, data); }
+  catch(e) { __pendingUserPublishes[user.phone] = data; __schedulePubFlush(); }
 }
 
 function applyRemoteUser(data) {
@@ -2658,7 +2730,7 @@ function initAbly() {
 
     setTimeout(() => {
       if (!isAblyReady) return;
-      ablyUsersCh.publish(EV.syncRequest, {from: phone});
+      ablyUsersCh.publish(EV.syncRequest, {from: getCurrentPhone() || myClientId});
       const u = getCurrentUser();
       if (u) publishFullUser(u);
     }, 400);
@@ -2710,7 +2782,7 @@ function initAbly() {
     });
     ablyLobbyListCh.subscribe(EV.syncRequest, () => { if (sharedLobbies.length) ablyLobbyListCh.publish(EV.lobbyFull, sharedLobbies); });
 
-    setTimeout(() => { if (!isAblyReady) return; ablyLobbyListCh.publish(EV.syncRequest, {from: phone}); }, 500);
+    setTimeout(() => { if (!isAblyReady) return; ablyLobbyListCh.publish(EV.syncRequest, {from: getCurrentPhone() || myClientId}); }, 500);
 
     ablyClanListCh = ably.channels.get(CH.clans());
     ablyClanListCh.subscribe(EV.clansFull, msg => {
@@ -2737,7 +2809,7 @@ function initAbly() {
       if (document.getElementById('topClansPage')?.classList.contains('show')) renderTopClans();
     });
     ablyClanListCh.subscribe(EV.syncRequest, () => { const clans = getClans(); if (Object.keys(clans).length) ablyClanListCh.publish(EV.clansFull, clans); });
-    setTimeout(() => { if (!isAblyReady) return; ablyClanListCh.publish(EV.syncRequest, {from: phone}); }, 600);
+    setTimeout(() => { if (!isAblyReady) return; ablyClanListCh.publish(EV.syncRequest, {from: getCurrentPhone() || myClientId}); }, 600);
 
     ablyAnnCh = ably.channels.get(CH.announcements());
     ablyAnnCh.subscribe(EV.annFull, msg => {
@@ -2760,7 +2832,7 @@ function initAbly() {
       if (document.getElementById('announcementsPage')?.classList.contains('show')) renderAnnouncements();
     });
     ablyAnnCh.subscribe(EV.syncRequest, () => { const filtered = filterAnnouncements(sharedAnnouncements); if (filtered.length) ablyAnnCh.publish(EV.annFull, filtered); });
-    setTimeout(() => { if (!isAblyReady) return; ablyAnnCh.publish(EV.syncRequest, {from: phone}); }, 700);
+    setTimeout(() => { if (!isAblyReady) return; ablyAnnCh.publish(EV.syncRequest, {from: getCurrentPhone() || myClientId}); }, 700);
 
     ablyActivityCh = ably.channels.get(CH.users() + '-activity');
     ablyActivityCh.subscribe(EV.activityLog, msg => {
@@ -2775,7 +2847,23 @@ function initAbly() {
       } catch(e) {}
     });
 
-    setTimeout(() => { const u = getCurrentUser(); if (u) publishFullUser(u); }, 1200);
+    // 🆕 Flush any publishes that were queued while Ably was connecting
+    setTimeout(() => {
+      if (!isAblyReady) return;
+      // Ensure the current user's profile is broadcast
+      const u = getCurrentUser();
+      if (u) publishFullUser(u);
+      // Flush pending queue
+      __flushAllPendingPublishes();
+    }, 1200);
+
+    // 🆕 Also flush after another delay for safety
+    setTimeout(() => {
+      if (!isAblyReady) return;
+      const u = getCurrentUser();
+      if (u) publishFullUser(u);
+      __flushAllPendingPublishes();
+    }, 4000);
   });
   ably.connection.on('disconnected', () => { isAblyReady = false; scheduleAblyReconnect(); });
   ably.connection.on('failed', () => { isAblyReady = false; scheduleAblyReconnect(); });
@@ -3003,7 +3091,7 @@ function initLobbyRoomUI() {
 }
 
 /* ============================================================
-   🆕 NEW FEATURE: SELECT PLAYER AS HOST (HOST 1 or HOST 2)
+   SELECT PLAYER AS HOST (HOST 1 or HOST 2)
    ============================================================ */
 function lrSelectAsHost(slot) {
   const lobby = getCurrentLobby();
@@ -3017,14 +3105,12 @@ function lrSelectAsHost(slot) {
   if (!phone) return;
   if (phone.startsWith('bot_')) { showToast("بات نمی‌تواند گرداننده شود"); return; }
   
-  // Check if both host slots are filled
   if (lobby.hostPhone1 && lobby.hostPhone2) {
     showToast("⛔ دیگر نمی‌توانید گرداننده انتخاب کنید. فقط اجازه انتخاب ۲ گرداننده را دارید");
     closePlayerSheet();
     return;
   }
   
-  // Check if player is already a host
   if (lobby.hostPhone1 === phone || lobby.hostPhone2 === phone) {
     showToast("این کاربر قبلاً گرداننده است");
     closePlayerSheet();
@@ -3061,7 +3147,6 @@ function lrSelectAsHost(slot) {
   renderLobbyRoom();
 }
 
-/* Remove a host from host chair (host can remove themselves or creator can remove) */
 function lrRemoveHost(slot) {
   const lobby = getCurrentLobby();
   const u = getCurrentUser();
@@ -3248,7 +3333,6 @@ function renderLobbyRoom() {
   const blockedCount = document.getElementById('lrBlockedCount');
   if (blockedCount) blockedCount.textContent = (lobby.blocked || []).length;
 
-  // HOST CHAIR 1 (top)
   const hostSlotTop = document.getElementById('hostSlotTop');
   if (hostSlotTop) {
     const avatarWrap = hostSlotTop.querySelector('.seat-avatar-wrap');
@@ -3285,7 +3369,6 @@ function renderLobbyRoom() {
     }
   }
 
-  // HOST CHAIR 2 (bottom)
   const hostSlotBottom = document.getElementById('hostSlotBottom');
   if (hostSlotBottom) {
     const avatarWrap = hostSlotBottom.querySelector('.seat-avatar-wrap');
@@ -3322,7 +3405,6 @@ function renderLobbyRoom() {
     }
   }
 
-  // PLAYER SEATS
   for (let i = 0; i < 10; i++) {
     const slotId = 'chairSlot' + (i + 1);
     const slot = document.getElementById(slotId);
@@ -3367,7 +3449,6 @@ function renderLobbyRoom() {
   }
 }
 
-/* Host Sheet (when clicking on host chair) */
 function openHostSheet(phone, slot) {
   const lobby = getCurrentLobby();
   const u = getCurrentUser();
@@ -3379,12 +3460,10 @@ function openHostSheet(phone, slot) {
   const isHost = lobby.creator === u.phone;
   const isAdmin = ADMIN_PHONES.indexOf(u.phone) !== -1;
   const isSelf = phone === u.phone;
-  // Hide all
   ['lrSheetMakeHost1','lrSheetMakeHost2','lrSheetTransfer','lrSheetKick','lrSheetBlock','lrSheetRemoveBot','lrSheetTakeLobby','lrSheetAdminBlock'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
-  // Show "remove from host" button
   const box = document.querySelector('#lrPlayerSheet .lr2-sheet-box');
   let removeBtn = document.getElementById('lrSheetRemoveHost');
   if (!removeBtn) {
@@ -3429,7 +3508,6 @@ function addBotsToLobby() {
 function showReactionOnSeat(phone, reaction) {
   const lobby = getCurrentLobby();
   if (!lobby) return;
-  // Check hosts
   if (phone === lobby.hostPhone1) {
     const hostSlotTop = document.getElementById('hostSlotTop');
     if (hostSlotTop) {
@@ -3612,7 +3690,6 @@ function lrUnblock(ph) {
   saveCurrentLobby(lobby); publishRoomState(lobby); openBlockedPanel(); showToast("مسدودیت برداشته شد ✅");
 }
 
-/* Open player sheet (from player seat) */
 function openPlayerSheet(phone) {
   selectedSeatPhone = phone;
   const lobby = getCurrentLobby();
@@ -3629,13 +3706,11 @@ function openPlayerSheet(phone) {
   const targetIsCreator = !isBot && isCreator(phone);
   const isSpec = (lobby.spectators || []).some(sp => sp.phone === phone);
   
-  // Hide all first
   ['lrSheetMakeHost1','lrSheetMakeHost2','lrSheetTransfer','lrSheetKick','lrSheetBlock','lrSheetRemoveBot','lrSheetTakeLobby','lrSheetAdminBlock','lrSheetRemoveHost'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
   
-  // Show host-selection buttons
   const canBeHost = !isBot && !isSelf && !isSpec && (isHost || isAdmin);
   const host1Free = !lobby.hostPhone1;
   const host2Free = !lobby.hostPhone2;
@@ -3648,7 +3723,6 @@ function openPlayerSheet(phone) {
   if (canBeHost && host2Free && !bothFree) {
     document.getElementById("lrSheetMakeHost2").style.display = "block";
   }
-  // If both free, show only host1 option; after selecting one, show host2 option
   
   document.getElementById("lrSheetTransfer").style.display = (isHost && !isSelf && !isBot && !targetIsCreator) ? "block" : "none";
   document.getElementById("lrSheetKick").style.display = (isHost && !isSelf && !isBot && !targetIsAdmin && !targetIsCreator) ? "block" : "none";
@@ -3902,7 +3976,6 @@ function createLobby() {
     if (password.length < 3) { showToast("کلمه عبور حداقل ۳ کاراکتر باشد."); return; }
   }
   const seats = Array(10).fill(null);
-  // Creator sits on player seat 1
   seats[0] = { phone: u.phone, name: u.name, avatar: u.avatar || DEFAULT_AVATAR, ready: false, spectator: false };
   let hasTick = false;
   if (u.specialLobbyName && u.specialLobbyName === stripColorCode(name)) hasTick = true;
@@ -3915,7 +3988,11 @@ function createLobby() {
     gameStarted: false
   };
   sharedLobbies.unshift(lobby); saveLobbies(sharedLobbies);
-  if (ablyLobbyListCh) ablyLobbyListCh.publish(EV.lobbyUpdate, lobby);
+  if (ablyLobbyListCh && isAblyReady) {
+    try { ablyLobbyListCh.publish(EV.lobbyUpdate, lobby); } catch(e) { __pendingLobbyPublishes[lobby.id] = lobby; __schedulePubFlush(); }
+  } else {
+    __pendingLobbyPublishes[lobby.id] = lobby; __schedulePubFlush();
+  }
   logActivity('lobby', 'ایجاد لابی', 'لابی: ' + stripColorCode(name) + ' | سناریو: ' + createLobbyMode);
   closeCreateLobby(); enterLobbyRoom(lobby.id);
 }
@@ -4547,7 +4624,7 @@ function leaveClan() {
       deletedClans[currentClanId] = true;
       saveDeletedClans();
       saveClans(clans);
-      if (ablyClanListCh) ablyClanListCh.publish(EV.clanUpdate, {id: currentClanId, deleted: true});
+      if (ablyClanListCh && isAblyReady) ablyClanListCh.publish(EV.clanUpdate, {id: currentClanId, deleted: true});
       logActivity('clan', 'انحلال کلن', 'کلن: ' + stripColorCode(c.name));
       leaveClanDetail(); showToast("کلن منحل شد 💥"); return;
     }
@@ -5025,7 +5102,11 @@ function adminPublishAnnouncement() {
   sharedAnnouncements = filterAnnouncements(sharedAnnouncements);
   sharedAnnouncements.unshift(ann);
   saveAnnouncements(sharedAnnouncements);
-  if (ablyAnnCh && isAblyReady) ablyAnnCh.publish(EV.annUpdate, ann);
+  if (ablyAnnCh && isAblyReady) {
+    try { ablyAnnCh.publish(EV.annUpdate, ann); } catch(e) { __pendingAnnPublishes.push(ann); __schedulePubFlush(); }
+  } else {
+    __pendingAnnPublishes.push(ann); __schedulePubFlush();
+  }
   document.getElementById("adminAnnTitle").value = ""; document.getElementById("adminAnnBody").value = "";
   logActivity('admin', 'انتشار اعلان', 'عنوان: ' + title);
   adminRenderAnnouncements(); showToast("اعلامیه منتشر شد 📢");
@@ -5789,7 +5870,16 @@ async function disableMicrophone() {
   showToast('میکروفون غیرفعال شد');
 }
 
-function publishRoomState(lobby) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish(EV.roomState, lobby); if (ablyLobbyListCh && isAblyReady) ablyLobbyListCh.publish(EV.lobbyUpdate, lobby); }
+/* 🆕 Robust publishRoomState with queueing */
+function publishRoomState(lobby) {
+  if (!lobby || !lobby.id) return;
+  if (ablyRoomCh && isAblyReady) { try { ablyRoomCh.publish(EV.roomState, lobby); } catch(e) {} }
+  if (ablyLobbyListCh && isAblyReady) {
+    try { ablyLobbyListCh.publish(EV.lobbyUpdate, lobby); } catch(e) { __pendingLobbyPublishes[lobby.id] = lobby; __schedulePubFlush(); }
+  } else if (ablyLobbyListCh) {
+    __pendingLobbyPublishes[lobby.id] = lobby; __schedulePubFlush();
+  }
+}
 function publishLrChatMsg(msg) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish(EV.chat, {lobbyId: currentLobbyId, msg}); }
 function publishReaction(phone, reaction) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish(EV.react, {lobbyId: currentLobbyId, phone, reaction}); }
 function publishMic(phone, on) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish(EV.mic, {lobbyId: currentLobbyId, phone, on}); }
@@ -5816,7 +5906,12 @@ function subscribeClan(clanId) {
   });
 }
 function publishClanMsg(clanId, msg) { if (ablyClanCh && isAblyReady) ablyClanCh.publish(EV.clanMsg, {clanId, msg}); }
-function publishClanUpdate(clan) { if (ablyClanListCh && isAblyReady) ablyClanListCh.publish(EV.clanUpdate, clan); if (ablyClanCh && isAblyReady) ablyClanCh.publish(EV.clanUpdate, clan); }
+function publishClanUpdate(clan) {
+  if (!clan || !clan.id) return;
+  if (ablyClanListCh && isAblyReady) { try { ablyClanListCh.publish(EV.clanUpdate, clan); } catch(e) { __pendingClanPublishes[clan.id] = clan; __schedulePubFlush(); } }
+  else { __pendingClanPublishes[clan.id] = clan; __schedulePubFlush(); }
+  if (ablyClanCh && isAblyReady) { try { ablyClanCh.publish(EV.clanUpdate, clan); } catch(e) {} }
+}
 
 /* ============================================================
    EVENT LISTENERS
@@ -5835,7 +5930,14 @@ document.getElementById("loginForm").addEventListener("submit", function(e) {
   if (user.blocked && user.blocked.until <= Date.now()) { user.blocked = null; acc[phone] = user; saveAccounts(acc); }
   NS.set("current_user", phone); showApp();
   logActivity('auth', 'ورود به حساب', 'کاربر: ' + stripColorCode(user.name));
+  // 🆕 Publish immediately (will queue if Ably not ready)
+  publishFullUser(user);
+  // 🆕 Reconnect Ably if the client was a guest
+  reconnectAblyWithCurrentUser();
   if (!ably) initAblyWhenReady(0);
+  // 🆕 Retry publishing after delays to ensure sync
+  setTimeout(() => { const u = getCurrentUser(); if (u) publishFullUser(u); }, 1500);
+  setTimeout(() => { const u = getCurrentUser(); if (u) publishFullUser(u); }, 4000);
 });
 
 document.getElementById("registerForm").addEventListener("submit", function(e) {
@@ -5862,9 +5964,16 @@ document.getElementById("registerForm").addEventListener("submit", function(e) {
   };
   saveAccounts(acc); NS.set("current_user", phone); showApp();
   logActivity('auth', 'ثبت نام', 'نام: ' + name + ' | شماره: ' + phone + ' | کد: ' + newCode);
-  setTimeout(() => { const u = getCurrentUser(); if (u) publishFullUser(u); }, 800);
-  setTimeout(() => { const u = getCurrentUser(); if (u) publishFullUser(u); }, 2500);
+  // 🆕 Publish IMMEDIATELY (was only after 800ms before — if Ably wasn't ready, data was lost)
+  const newUser = getCurrentUser();
+  if (newUser) publishFullUser(newUser);
+  // 🆕 Reconnect Ably so the clientId matches the new phone number
+  reconnectAblyWithCurrentUser();
   if (!ably) initAblyWhenReady(0);
+  // 🆕 Retry publishing after delays for robustness
+  setTimeout(() => { const u = getCurrentUser(); if (u) publishFullUser(u); }, 800);
+  setTimeout(() => { const u = getCurrentUser(); if (u) publishFullUser(u); }, 2000);
+  setTimeout(() => { const u = getCurrentUser(); if (u) publishFullUser(u); }, 5000);
   setTimeout(saveAccountsBackup, 1000);
 });
 
@@ -5900,8 +6009,9 @@ document.addEventListener("click", function onFirstClick() {
   document.removeEventListener("click", onFirstClick);
 }, { passive: true });
 
+/* 🆕 More aggressive periodic sync (every 10s instead of 20s) */
 setInterval(() => {
-  if (!isAblyReady) return;
+  if (!isAblyReady) { __schedulePubFlush(); return; }
   const phone = getCurrentPhone();
   if (!phone) return;
   const u = getCurrentUser();
@@ -5912,7 +6022,8 @@ setInterval(() => {
     const lobby = getCurrentLobby();
     if (lobby && !intentionalLeaving) { try { ablyRoomCh.publish(EV.roomState, lobby); } catch(e) {} }
   }
-}, 20000);
+  __flushAllPendingPublishes();
+}, 10000);
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && isAblyReady) {
@@ -5924,11 +6035,16 @@ document.addEventListener('visibilitychange', () => {
       const lobby = getCurrentLobby();
       if (lobby) { try { publishRoomState(lobby); } catch(e) {} }
     }
+    __flushAllPendingPublishes();
   }
 });
 
-console.log('%cمافیابست • Pro Edition v4.0.0 (Complete)', 'color:#f0c15b;font-weight:bold');
-console.log('%c✅ همه قابلیت‌ها بازیابی شد + امکان انتخاب گرداننده ۱ و ۲', 'color:#2ecc71;font-weight:bold');
+/* 🆕 Flush pending publishes on any user interaction (helps when Ably just reconnected) */
+document.addEventListener('click', () => { if (isAblyReady) __flushAllPendingPublishes(); }, { passive: true });
+document.addEventListener('touchstart', () => { if (isAblyReady) __flushAllPendingPublishes(); }, { passive: true });
+
+console.log('%cمافیابست • Pro Edition v4.0.0 (Complete + Sync Fix)', 'color:#f0c15b;font-weight:bold');
+console.log('%c✅ سرور حالا اطلاعات کاربران جدید رو کامل ذخیره و منتشر می‌کنه', 'color:#2ecc71;font-weight:bold');
 console.log('Creator: ᴍʀ.ᴛɪɢᴇʀ | Support: @MafiaBest_Support');
 </script>
 </body>

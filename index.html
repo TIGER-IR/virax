@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://cdn.imgurl.ir" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.ably.com">
 <link rel="dns-prefetch" href="https://unpkg.com">
+<link rel="dns-prefetch" href="https://api.backendless.com">
 <style>
 html,body{background:#000;margin:0;padding:0}
 #bootBg{position:fixed;inset:0;z-index:1;background:#000;background-image:url("https://cdn.imgurl.ir/uploads/j620646_file_000000003c5481f59a483ca0491a3b3f.png");background-size:cover;background-position:center top;background-repeat:no-repeat;opacity:.35}
@@ -18,6 +19,7 @@ html,body{background:#000;margin:0;padding:0}
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.ably.com/lib/ably.min-1.js" defer></script>
 <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js" defer></script>
+<script src="https://api.backendless.com/sdk/js/latest/backendless.min.js" defer></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}
 html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vazirmatn",Tahoma,sans-serif;overflow-x:hidden}
@@ -716,13 +718,13 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 </div>
 <div id="authError" class="error"></div>
 <form id="loginForm">
-<div class="form-group"><label>شماره موبایل</label><div class="input-wrap"><span>📱</span><input id="loginPhone" type="tel" inputmode="numeric" maxlength="11" placeholder="09123456789" required></div></div>
+<div class="form-group"><label>ایمیل</label><div class="input-wrap"><span>📧</span><input id="loginEmail" type="email" placeholder="example@gmail.com" required></div></div>
 <div class="form-group"><label>رمز ورود</label><div class="input-wrap"><span>🔐</span><input id="loginPassword" type="password" placeholder="رمز ورود" required></div></div>
 <button class="auth-submit" type="submit">ورود به حساب</button>
 </form>
 <form id="registerForm" style="display:none">
 <div class="form-group"><label>نام نمایشی</label><div class="input-wrap"><span>👤</span><input id="registerName" type="text" maxlength="20" placeholder="نام نمایشی" required></div></div>
-<div class="form-group"><label>شماره موبایل</label><div class="input-wrap"><span>📱</span><input id="registerPhone" type="tel" inputmode="numeric" maxlength="11" placeholder="09123456789" required></div></div>
+<div class="form-group"><label>ایمیل</label><div class="input-wrap"><span>📧</span><input id="registerEmail" type="email" placeholder="example@gmail.com" required></div></div>
 <div class="form-group"><label>رمز ورود</label><div class="input-wrap"><span>🔐</span><input id="registerPassword" type="password" minlength="6" placeholder="حداقل 6 کاراکتر" required></div></div>
 <button class="auth-submit" type="submit">ساخت حساب</button>
 </form>
@@ -883,8 +885,8 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 <div id="sendCoinsModal" class="modal">
 <div class="modal-box">
 <h3>💰 ارسال سکه</h3>
-<p style="color:#999;font-size:11px;margin-bottom:14px;line-height:1.7">شماره موبایل گیرنده را وارد کنید. هر انتقال در پنل سازنده ثبت می‌شود.</p>
-<input id="sendCoinPhone" type="tel" inputmode="numeric" maxlength="11" placeholder="شماره موبایل گیرنده">
+<p style="color:#999;font-size:11px;margin-bottom:14px;line-height:1.7">ایمیل گیرنده را وارد کنید. هر انتقال در پنل سازنده ثبت می‌شود.</p>
+<input id="sendCoinEmail" type="email" placeholder="ایمیل گیرنده">
 <input id="sendCoinAmount" type="number" placeholder="تعداد سکه" min="1">
 <div style="color:#999;font-size:11px;margin-bottom:14px">موجودی فعلی: <b style="color:#f2bd54" id="sendCoinBalance">0</b> سکه</div>
 <div class="modal-actions">
@@ -1325,8 +1327,12 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 'use strict';
 
 /* ============================================================
-   🔒 GAME INSTANCE ID + NAMESPACE
+   🔒 BACKENDLESS + GAME INSTANCE
    ============================================================ */
+const BACKENDLESS_APP_ID = "C50651A5-1DFC-4BA1-AA34-B4444E9AC5A5";
+const BACKENDLESS_API_KEY = "9303E7E8-BAF9-4023-A34B-E4E024192785";
+const BACKENDLESS_SERVER_URL = "https://api.backendless.com";
+
 const GAME_INSTANCE_ID = "mafia_ali_2024_v1_";
 
 const NS = {
@@ -1374,9 +1380,6 @@ const EV = {
   activityLog: GAME_INSTANCE_ID + 'activity_log'
 };
 
-/* ============================================================
-   🆕 PENDING PUBLISH QUEUE (fix for lost publishes before Ably ready)
-   ============================================================ */
 let __pendingUserPublishes = {};
 let __pendingLobbyPublishes = {};
 let __pendingClanPublishes = {};
@@ -1390,7 +1393,6 @@ function __schedulePubFlush() {
 }
 
 function __flushAllPendingPublishes() {
-  // Users
   if (isAblyReady && ablyUsersCh) {
     const keys = Object.keys(__pendingUserPublishes);
     keys.forEach(ph => {
@@ -1399,7 +1401,6 @@ function __flushAllPendingPublishes() {
       try { ablyUsersCh.publish(EV.userFull, d); } catch(e) { __pendingUserPublishes[ph] = d; }
     });
   }
-  // Lobbies
   if (isAblyReady && ablyLobbyListCh) {
     const keys = Object.keys(__pendingLobbyPublishes);
     keys.forEach(id => {
@@ -1408,7 +1409,6 @@ function __flushAllPendingPublishes() {
       try { ablyLobbyListCh.publish(EV.lobbyUpdate, d); } catch(e) { __pendingLobbyPublishes[id] = d; }
     });
   }
-  // Clans
   if (isAblyReady && ablyClanListCh) {
     const keys = Object.keys(__pendingClanPublishes);
     keys.forEach(id => {
@@ -1417,18 +1417,18 @@ function __flushAllPendingPublishes() {
       try { ablyClanListCh.publish(EV.clanUpdate, d); } catch(e) { __pendingClanPublishes[id] = d; }
     });
   }
-  // Announcements
   if (isAblyReady && ablyAnnCh && __pendingAnnPublishes.length) {
-    __pendingAnnPublishes.forEach(ann => {
-      try { ablyAnnCh.publish(EV.annUpdate, ann); } catch(e) {}
-    });
+    __pendingAnnPublishes.forEach(ann => { try { ablyAnnCh.publish(EV.annUpdate, ann); } catch(e) {} });
     __pendingAnnPublishes = [];
   }
 }
 
 /* ============================================================
-   IMAGE CACHE
+   IMAGE CACHE + LOADING (IMPROVED - Cache API + IndexedDB fallback)
    ============================================================ */
+const CACHE_VERSION = "game-assets-v1";
+const CACHE_NAME = CACHE_VERSION + "-runtime";
+
 const ImageDB = (function(){
   const DB_NAME = GAME_INSTANCE_ID + 'img_cache';
   const STORE_NAME = 'images';
@@ -1438,13 +1438,15 @@ const ImageDB = (function(){
     if (dbPromise) return dbPromise;
     dbPromise = new Promise((resolve) => {
       if (!('indexedDB' in window)) { resolve(null); return; }
-      const req = indexedDB.open(DB_NAME, DB_VERSION);
-      req.onupgradeneeded = (e) => {
-        const db = e.target.result;
-        if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME, { keyPath: 'url' });
-      };
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => { resolve(null); };
+      try {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME, { keyPath: 'url' });
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => { resolve(null); };
+      } catch(e) { resolve(null); }
     });
     return dbPromise;
   }
@@ -1474,42 +1476,103 @@ const ImageDB = (function(){
       } catch(e) { resolve(false); }
     });
   }
-  return { get, put, openDB };
+  async function clear() {
+    const db = await openDB();
+    if (!db) return false;
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).clear();
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => resolve(false);
+      } catch(e) { resolve(false); }
+    });
+  }
+  return { get, put, clear, openDB };
 })();
 
 const IS_HTTP = (function(){ try { const p = window.location.protocol; return (p === 'http:' || p === 'https:'); } catch(e) { return false; } })();
+const HAS_CACHE_API = (typeof caches !== 'undefined' && typeof caches.open === 'function');
 
 const AssetCache = (function(){
   const pending = new Map();
   const loaded = new Map();
   const failed = new Set();
   const blobUrls = new Map();
+
+  async function getFromCacheAPI(url) {
+    if (!HAS_CACHE_API) return null;
+    try {
+      const cache = await caches.open(CACHE_NAME);
+      const response = await cache.match(url);
+      if (response && response.ok) {
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        blobUrls.set(url, blobUrl);
+        return blobUrl;
+      }
+    } catch(e) {
+      console.warn('[AssetCache] Cache API read failed:', e);
+    }
+    return null;
+  }
+
+  async function putInCacheAPI(url, blob, contentType) {
+    if (!HAS_CACHE_API) return false;
+    try {
+      const cache = await caches.open(CACHE_NAME);
+      const response = new Response(blob, {
+        headers: {
+          'Content-Type': contentType || 'image/png',
+          'Cache-Control': 'public, max-age=31536000'
+        }
+      });
+      await cache.put(url, response);
+      return true;
+    } catch(e) {
+      console.warn('[AssetCache] Cache API write failed:', e);
+      return false;
+    }
+  }
+
   async function getFromDisk(url) {
     try {
       const cached = await ImageDB.get(url);
-      if (cached && cached.blob) { const blobUrl = URL.createObjectURL(cached.blob); blobUrls.set(url, blobUrl); return blobUrl; }
+      if (cached && cached.blob) {
+        const blobUrl = URL.createObjectURL(cached.blob);
+        blobUrls.set(url, blobUrl);
+        return blobUrl;
+      }
     } catch(e) {}
     return null;
   }
+
   async function downloadAndSave(url) {
     if (!IS_HTTP) return url;
     try {
-      const res = await fetch(url, { mode: 'cors', cache: 'force-cache' });
-      if (!res.ok) throw new Error('bad status');
+      const res = await fetch(url, { mode: 'cors', cache: 'default' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
       const blob = await res.blob();
       const ct = res.headers.get('content-type') || 'image/png';
-      ImageDB.put(url, blob, ct).catch(() => {});
+      const okCache = await putInCacheAPI(url, blob, ct);
+      if (!okCache) {
+        ImageDB.put(url, blob, ct).catch(() => {});
+      }
       const blobUrl = URL.createObjectURL(blob);
       blobUrls.set(url, blobUrl);
       return blobUrl;
-    } catch(e) { return url; }
+    } catch(e) {
+      return url;
+    }
   }
+
   async function load(url, priority) {
     if (!url) return null;
     if (loaded.has(url)) return loaded.get(url);
     if (pending.has(url)) return pending.get(url);
     const p = (async () => {
-      let src = await getFromDisk(url);
+      let src = await getFromCacheAPI(url);
+      if (!src) src = await getFromDisk(url);
       if (!src) src = await downloadAndSave(url);
       return new Promise((resolve) => {
         const img = new Image();
@@ -1523,6 +1586,7 @@ const AssetCache = (function(){
     pending.set(url, p);
     return p;
   }
+
   function preloadQueue(urls, concurrency, priority, onProgress) {
     if (!urls || !urls.length) { if (onProgress) onProgress(1, 1); return Promise.resolve(); }
     const queue = urls.slice();
@@ -1543,7 +1607,20 @@ const AssetCache = (function(){
       next();
     });
   }
-  return { load, preloadQueue, loaded, pending, failed, blobUrls };
+
+  async function clearAll() {
+    blobUrls.forEach((blobUrl) => { try { URL.revokeObjectURL(blobUrl); } catch(e) {} });
+    blobUrls.clear(); loaded.clear(); pending.clear(); failed.clear();
+    try {
+      if (HAS_CACHE_API) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.filter(n => n.startsWith('game-assets-')).map(n => caches.delete(n)));
+      }
+      await ImageDB.clear();
+    } catch(e) {}
+  }
+
+  return { load, preloadQueue, clearAll, loaded, pending, failed, blobUrls, CACHE_NAME };
 })();
 
 const CRITICAL_ASSETS = [
@@ -1607,7 +1684,8 @@ const LoadingScreen = (function(){
     if (l) { l.classList.add('hide'); setTimeout(() => { l.style.display = 'none'; }, 600); }
     setTimeout(() => {
       const bg = document.getElementById('bootBg');
-      if (bg && document.getElementById('app').style.display !== 'none') bg.style.display = 'none';
+      const appEl = document.getElementById('app');
+      if (bg && appEl && appEl.style.display !== 'none') bg.style.display = 'none';
     }, 800);
   }
   return { setText, setProgress, hide };
@@ -1619,17 +1697,41 @@ function idle(fn, timeout) {
 }
 
 let __booted = false;
+let __bootTimeoutHandle = null;
+
 function fastBoot() {
   if (__booted) return;
   __booted = true;
-  AssetCache.preloadQueue(CRITICAL_ASSETS, 6, 'high');
-  LoadingScreen.setText('آماده‌سازی...');
-  LoadingScreen.setProgress(30);
-  setTimeout(() => continueBoot(true), 30);
+
+  // Safety net: اگر به هر دلیلی مراحل boot بیش از 6 ثانیه طول کشید،
+  // صفحه لودینگ بسته شود تا کاربر گیر نکند
+  __bootTimeoutHandle = setTimeout(() => {
+    console.warn('[Boot] Safety timeout triggered');
+    LoadingScreen.hide();
+    try {
+      const u = getCurrentUser();
+      if (u) showApp(); else showAuth();
+    } catch(e) {
+      try { showAuth(); } catch(e2) {}
+    }
+  }, 6000);
+
+  try {
+    LoadingScreen.setText('آماده‌سازی...');
+    LoadingScreen.setProgress(30);
+    // Preload غیرمسدودکننده - هرگز منتظر آن نمی‌مانیم
+    AssetCache.preloadQueue(CRITICAL_ASSETS, 6, 'high').catch(() => {});
+    // به سرعت به مرحله بعد برو
+    setTimeout(() => continueBoot(true), 20);
+  } catch(e) {
+    console.warn('[Boot] fastBoot error:', e);
+    continueBoot(true);
+  }
 }
 
 async function continueBoot(installed) {
   try {
+    initBackendless();
     loadDeletedData();
     if (!installed) {
       const hasExistingAccounts = NS.get("accounts");
@@ -1645,13 +1747,15 @@ async function continueBoot(installed) {
       showBlockedPage(u.blocked);
       document.getElementById("app").style.display = "none";
       document.getElementById("authScreen").style.display = "none";
+      if (__bootTimeoutHandle) { clearTimeout(__bootTimeoutHandle); __bootTimeoutHandle = null; }
       LoadingScreen.hide();
       return;
     }
-    if (getCurrentPhone() && permBlocked[getCurrentPhone()]) {
+    if (getCurrentEmail() && permBlocked[getCurrentEmail()]) {
       showBlockedPage({reason:"مسدودیت دایمی دستگاه", until:Date.now()+365*24*60*60*1000});
       document.getElementById("app").style.display = "none";
       document.getElementById("authScreen").style.display = "none";
+      if (__bootTimeoutHandle) { clearTimeout(__bootTimeoutHandle); __bootTimeoutHandle = null; }
       LoadingScreen.hide();
       return;
     }
@@ -1662,72 +1766,38 @@ async function continueBoot(installed) {
     try { NS.set("assets_timestamp", String(Date.now())); } catch(e){}
     LoadingScreen.setProgress(100);
     LoadingScreen.setText('آماده شد');
+    if (__bootTimeoutHandle) { clearTimeout(__bootTimeoutHandle); __bootTimeoutHandle = null; }
     setTimeout(() => {
       LoadingScreen.hide();
-      idle(() => { AssetCache.preloadQueue(ALL_PRELOAD_ASSETS, 3, 'low'); }, 1000);
+      idle(() => { AssetCache.preloadQueue(ALL_PRELOAD_ASSETS, 3, 'low').catch(() => {}); }, 1000);
       initAblyWhenReady(0);
     }, 120);
   } catch (err) {
     console.warn('Boot error:', err);
     LoadingScreen.setText('خطا در راه‌اندازی');
     LoadingScreen.setProgress(100);
+    if (__bootTimeoutHandle) { clearTimeout(__bootTimeoutHandle); __bootTimeoutHandle = null; }
     LoadingScreen.hide();
     try { showAuth(); } catch(e){}
   }
 }
 
-let __ablyInitAttempts = 0;
-function initAblyWhenReady(attempt) {
-  attempt = attempt || 0;
-  __ablyInitAttempts = attempt;
-  if (ably && isAblyReady) return;
-  const hasAbly = (typeof Ably !== 'undefined') && (typeof window.Ably !== 'undefined');
-  if (hasAbly) {
-    try { initAbly(); } catch(e) { scheduleAblyRetry(attempt); }
-    return;
-  }
-  scheduleAblyRetry(attempt);
+/* ============================================================
+   BACKENDLESS INIT
+   ============================================================ */
+let backendlessReady = false;
+function initBackendless() {
+  try {
+    if (typeof Backendless === 'undefined') { console.warn('Backendless not loaded'); return; }
+    Backendless.initApp(BACKENDLESS_APP_ID, BACKENDLESS_API_KEY);
+    Backendless.serverURL = BACKENDLESS_SERVER_URL;
+    backendlessReady = true;
+    console.log('Backendless initialized');
+  } catch(e) { console.warn('Backendless init error:', e); }
 }
-
-function scheduleAblyRetry(attempt) {
-  if (attempt >= 30) { console.warn('Ably retry limit reached'); return; }
-  const delay = Math.min(4000, 300 * Math.pow(1.6, attempt));
-  setTimeout(() => initAblyWhenReady(attempt + 1), delay);
-}
-
-let __ablyReconnectTimer = null;
-function scheduleAblyReconnect() {
-  if (__ablyReconnectTimer) return;
-  __ablyReconnectTimer = setTimeout(() => {
-    __ablyReconnectTimer = null;
-    if (!isAblyReady) {
-      try {
-        if (ably) { try { ably.close(); } catch(e){} ably = null; }
-        initAblyWhenReady(0);
-      } catch(e) {}
-    }
-  }, 3000);
-}
-
-/* 🆕 Reconnect Ably with the correct clientId (after guest connection) */
-function reconnectAblyWithCurrentUser() {
-  if (!ably) return;
-  const newPhone = getCurrentPhone();
-  if (!newPhone) return;
-  if (myClientId === newPhone) return;
-  try { ably.close(); } catch(e) {}
-  ably = null; isAblyReady = false;
-  ablyUsersCh = null; ablyLobbyListCh = null; ablyClanListCh = null;
-  ablyAnnCh = null; ablyActivityCh = null; ablyRoomCh = null; ablyClanCh = null;
-  setTimeout(() => initAblyWhenReady(0), 100);
-}
-
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fastBoot, { once: true });
-else fastBoot();
-window.addEventListener('load', fastBoot, { once: true });
 
 /* ============================================================
-   CORE CONFIG
+   ABLY
    ============================================================ */
 const ABLY_KEY = 'NNYzzQ.eE37aA:Z_c93xzAiMn7C1FarkC_FabCfllAtLA8mbsvXEAmIZI';
 let ably = null, isAblyReady = false;
@@ -1774,11 +1844,11 @@ let micSenderMap = {};
 const DEFAULT_AVATAR = "https://cdn.imgurl.ir/uploads/v815577_file_00000000d37081f4bcc7c475a7a7d884.png";
 const CREATOR_LEAVE_TIMEOUT_MS = 30 * 60 * 1000;
 
-const CREATOR_PHONE = "09001115958";
-const CREATOR_PASSWORD = "A7r2M6a5N+T8I0G3E2R9×5+9÷5%8";
+const CREATOR_EMAIL = "tiger.mafia.best@gmail.com";
+const CREATOR_PASSWORD = "W9$tQ2!vX7@rT4#pL8&zR1";
 const CREATOR_NAME = "ᴍʀ.ᴛɪɢᴇʀ";
 const CREATOR_LABEL = "سازنده";
-const ADMIN_PHONES = ["09001115958"];
+const ADMIN_EMAILS = ["tiger.mafia.best@gmail.com"];
 const ADMIN_PASSWORD = "Q9#vT2$pB7@xZ4&xM8*F3!wN6^yG5";
 const VERIFIED_BADGE = `<img class="verified-badge" src="https://cdn.imgurl.ir/uploads/s720144_IMG_20260404_133310_188.jpg" alt="✓" loading="lazy" decoding="async">`;
 
@@ -1834,14 +1904,15 @@ let gameState = {
   gameStartTime: null, clanScoreGiven: false, log: []
 };
 
+/* ============================================================
+   ACTIVITY LOG
+   ============================================================ */
 function logActivity(category, action, details) {
   try {
     const entry = {
       id: "log_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
-      category: category,
-      action: action,
-      details: details || "",
-      actor: getCurrentPhone() || "system",
+      category, action, details: details || "",
+      actor: getCurrentEmail() || "system",
       actorName: (getCurrentUser() && getCurrentUser().name) || "سیستم",
       ts: Date.now(),
       date: new Date().toLocaleDateString("fa-IR"),
@@ -1897,6 +1968,9 @@ function renderActivityLog() {
   `).join("");
 }
 
+/* ============================================================
+   HELPERS
+   ============================================================ */
 function parseColoredName(raw) {
   if (!raw) return { text: "", html: "" };
   const match = String(raw).match(/^<#([0-9a-fA-F]{3,6})>(.*)$/i);
@@ -1935,7 +2009,18 @@ function formatNum(n) {
   if (n >= 1e3)  return (n / 1e3).toFixed(1)  + 'K';
   return String(n);
 }
+function normalizeEmail(email) {
+  if (!email) return "";
+  return String(email).trim().toLowerCase().replace(/-/g, '').replace(/\s/g, '');
+}
+function isValidEmail(email) {
+  const e = normalizeEmail(email);
+  return /^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$/i.test(e);
+}
 
+/* ============================================================
+   DELETED DATA + PERM BLOCKED
+   ============================================================ */
 function loadDeletedData() {
   try { deletedUsers = JSON.parse(NS.get("deleted_users") || "{}"); } catch(e){ deletedUsers = {}; }
   try { deletedClans = JSON.parse(NS.get("deleted_clans") || "{}"); } catch(e){ deletedClans = {}; }
@@ -1968,12 +2053,13 @@ function ensureSpecialAccounts() {
   try {
     let acc = {};
     try { acc = JSON.parse(NS.get("accounts") || "{}"); } catch(e) { acc = {}; }
-    Object.keys(deletedUsers).forEach(ph => { if (acc[ph]) delete acc[ph]; });
-    const existing = acc[CREATOR_PHONE] || {};
+    Object.keys(deletedUsers).forEach(em => { if (acc[em]) delete acc[em]; });
+    const existing = acc[CREATOR_EMAIL] || {};
     const ownedAvatars = (existing.ownedAvatars && existing.ownedAvatars.length) ? existing.ownedAvatars : ["free1","free2","special_avatar2"];
     const ownedFrames = (existing.ownedFrames && existing.ownedFrames.length) ? existing.ownedFrames : (existing.ownedFrames || []);
-    acc[CREATOR_PHONE] = {
-      name: CREATOR_NAME, phone: CREATOR_PHONE, password: CREATOR_PASSWORD,
+    acc[CREATOR_EMAIL] = {
+      name: CREATOR_NAME, email: CREATOR_EMAIL, phone: CREATOR_EMAIL,
+      password: CREATOR_PASSWORD,
       coins: 999999999999, gems: 0, level: 999, avatar: existing.avatar || DEFAULT_AVATAR,
       ownedAvatars: ownedAvatars, ownedFrames: ownedFrames, activeFrame: existing.activeFrame || "",
       score: 9999999, hoursPlayed: existing.hoursPlayed || 0, watchedGames: existing.watchedGames || 0,
@@ -1988,13 +2074,13 @@ function ensureSpecialAccounts() {
   } catch(e) {}
 }
 
-function isCreator(phone) {
-  if (!phone) return false;
-  if (phone === CREATOR_PHONE) return true;
-  try { const acc = getAccounts(); return !!(acc[phone] && acc[phone].isCreator); } catch(e) { return false; }
+function isCreator(email) {
+  if (!email) return false;
+  if (email === CREATOR_EMAIL) return true;
+  try { const acc = getAccounts(); return !!(acc[email] && acc[email].isCreator); } catch(e) { return false; }
 }
-function guardCreator(phone) {
-  if (isCreator(phone)) { showToast("⛔ نمی‌توانید با سازنده اصلی کاری کنید!"); return true; }
+function guardCreator(email) {
+  if (isCreator(email)) { showToast("⛔ نمی‌توانید با سازنده اصلی کاری کنید!"); return true; }
   return false;
 }
 
@@ -2003,7 +2089,7 @@ function getAccounts() {
   if (!s) return {};
   try { 
     const acc = JSON.parse(s); 
-    Object.keys(deletedUsers).forEach(ph => { if (acc[ph]) delete acc[ph]; }); 
+    Object.keys(deletedUsers).forEach(em => { if (acc[em]) delete acc[em]; }); 
     return acc; 
   } catch(e) { return {}; }
 }
@@ -2017,7 +2103,7 @@ function saveAccountsBackup() {
     const accStr = NS.get("accounts");
     if (!accStr) return;
     const acc = JSON.parse(accStr);
-    const count = Object.keys(acc).filter(ph => ph !== CREATOR_PHONE).length;
+    const count = Object.keys(acc).filter(em => em !== CREATOR_EMAIL).length;
     if (count === 0) return;
     NS.set(BACKUP_KEY, JSON.stringify({ timestamp: Date.now(), count: count, data: acc }));
   } catch(e) {}
@@ -2030,16 +2116,16 @@ function restoreFromBackupIfNeeded() {
     const backup = JSON.parse(backupStr);
     if (!backup || !backup.data) return false;
     const current = JSON.parse(NS.get("accounts") || "{}");
-    const currentCount = Object.keys(current).filter(ph => ph !== CREATOR_PHONE).length;
-    const backupCount = Object.keys(backup.data).filter(ph => ph !== CREATOR_PHONE).length;
+    const currentCount = Object.keys(current).filter(em => em !== CREATOR_EMAIL).length;
+    const backupCount = Object.keys(backup.data).filter(em => em !== CREATOR_EMAIL).length;
     if (currentCount === 0 && backupCount > 0) {
-      Object.keys(deletedUsers).forEach(ph => { if (backup.data[ph]) delete backup.data[ph]; });
+      Object.keys(deletedUsers).forEach(em => { if (backup.data[em]) delete backup.data[em]; });
       NS.set("accounts", JSON.stringify(backup.data));
       return true;
     }
     if (backupCount > currentCount && (Date.now() - backup.timestamp) < BACKUP_MAX_AGE) {
-      Object.keys(current).forEach(ph => { if (ph === CREATOR_PHONE) backup.data[ph] = current[ph]; });
-      Object.keys(deletedUsers).forEach(ph => { if (backup.data[ph]) delete backup.data[ph]; });
+      Object.keys(current).forEach(em => { if (em === CREATOR_EMAIL) backup.data[em] = current[em]; });
+      Object.keys(deletedUsers).forEach(em => { if (backup.data[em]) delete backup.data[em]; });
       NS.set("accounts", JSON.stringify(backup.data));
       return true;
     }
@@ -2060,16 +2146,17 @@ function getClans() {
 }
 function saveClans(c) { sharedClans = c; NS.set("clans", JSON.stringify(c)); }
 function getCurrentUser() {
-  const p = NS.get("current_user");
-  if (!p || deletedUsers[p]) return null;
-  if (permBlocked[p]) { showBlockedPage({reason:"مسدودیت دایمی دستگاه", until:Date.now()+365*24*60*60*1000}); return null; }
+  const email = NS.get("current_user");
+  if (!email || deletedUsers[email]) return null;
+  if (permBlocked[email]) { showBlockedPage({reason:"مسدودیت دایمی دستگاه", until:Date.now()+365*24*60*60*1000}); return null; }
   const acc = getAccounts();
-  const u = acc[p];
+  const u = acc[email];
   if (u && u.blocked && u.blocked.until > Date.now()) { showBlockedPage(u.blocked); return null; }
-  else if (u && u.blocked && u.blocked.until <= Date.now()) { u.blocked = null; acc[p] = u; saveAccounts(acc); }
+  else if (u && u.blocked && u.blocked.until <= Date.now()) { u.blocked = null; acc[email] = u; saveAccounts(acc); }
   return u || null;
 }
-function getCurrentPhone() { return NS.get("current_user"); }
+function getCurrentEmail() { return NS.get("current_user"); }
+function getCurrentPhone() { return getCurrentEmail(); }
 function getCurrentLobby() { if (!currentLobbyId) return null; return getLobbies().find(l => l.id === currentLobbyId) || null; }
 function saveCurrentLobby(lobby) {
   const lobbies = getLobbies();
@@ -2087,23 +2174,24 @@ function saveAnnouncements(list) {
 }
 
 function mergeUserData(target, source) {
-  if (!source || !source.phone) return target;
-  if (deletedUsers[source.phone]) return target;
+  if (!source || !(source.email || source.phone)) return target;
+  if (deletedUsers[source.email] || deletedUsers[source.phone]) return target;
   const out = Object.assign({}, target || {});
   const keys = ['name','avatar','level','coins','score','hoursPlayed','watchedGames','totalGames','wins','losses','citizenWins','citizenLosses','mafiaWins','mafiaLosses','ownedAvatars','ownedFrames','activeFrame','blocked','updated','isAdmin','code','verified','label','specialLobbyName','disconnects','hostKicks','leaves','canColorName'];
   keys.forEach(k => { if (source[k] !== undefined) out[k] = source[k]; });
   if (source.password) out.password = source.password;
-  out.phone = source.phone;
+  out.email = source.email || source.phone;
+  out.phone = out.email;
   out.updated = Math.max(Number(out.updated || 0), Number(source.updated || 0));
   return out;
 }
 
-/* 🆕 Robust publishFullUser with queueing */
 function publishFullUser(user) {
-  if (!user || !user.phone) return;
-  if (deletedUsers[user.phone]) return;
+  if (!user || !(user.email || user.phone)) return;
+  const em = user.email || user.phone;
+  if (deletedUsers[em]) return;
   const data = {
-    phone: user.phone, name: user.name, avatar: user.avatar || DEFAULT_AVATAR,
+    email: em, phone: em, name: user.name, avatar: user.avatar || DEFAULT_AVATAR,
     level: user.level || 1, coins: user.coins || 0, score: user.score || 0,
     hoursPlayed: user.hoursPlayed || 0, watchedGames: user.watchedGames || 0, totalGames: user.totalGames || 0,
     wins: user.wins || 0, losses: user.losses || 0, citizenWins: user.citizenWins || 0, citizenLosses: user.citizenLosses || 0,
@@ -2114,38 +2202,43 @@ function publishFullUser(user) {
     canColorName: !!user.canColorName, micOn: !!user.micOn,
     disconnects: user.disconnects || 0, hostKicks: user.hostKicks || 0, leaves: user.leaves || 0, updated: Date.now()
   };
-  globalUsers[user.phone] = data;
+  globalUsers[em] = data;
   if (!ablyUsersCh || !isAblyReady) {
-    __pendingUserPublishes[user.phone] = data;
+    __pendingUserPublishes[em] = data;
     __schedulePubFlush();
     return;
   }
   try { ablyUsersCh.publish(EV.userFull, data); }
-  catch(e) { __pendingUserPublishes[user.phone] = data; __schedulePubFlush(); }
+  catch(e) { __pendingUserPublishes[em] = data; __schedulePubFlush(); }
 }
 
 function applyRemoteUser(data) {
-  if (!data || !data.phone || deletedUsers[data.phone]) return;
-  globalUsers[data.phone] = data;
+  if (!data || !(data.email || data.phone)) return;
+  const em = data.email || data.phone;
+  if (deletedUsers[em]) return;
+  globalUsers[em] = data;
   const acc = getAccounts();
-  const existing = acc[data.phone] || {};
+  const existing = acc[em] || {};
   if (!existing.updated || Number(data.updated || 0) >= Number(existing.updated || 0)) {
-    acc[data.phone] = mergeUserData(existing, data);
-    if (existing.password) acc[data.phone].password = existing.password;
+    acc[em] = mergeUserData(existing, data);
+    if (existing.password) acc[em].password = existing.password;
     saveAccounts(acc);
   }
-  if (getCurrentPhone() === data.phone) updateUI();
+  if (getCurrentEmail() === em) updateUI();
   if (document.getElementById('leaguePage')?.classList.contains('show')) buildLeaderboard();
 }
 
+/* ============================================================
+   CREATOR LEAVE TIMER
+   ============================================================ */
 function isCreatorInsideLobby(lobby) {
   if (!lobby) return false;
-  const creatorPhone = lobby.creator;
-  if (!creatorPhone) return false;
-  const inSeat = lobby.seats && lobby.seats.some(s => s && s.phone === creatorPhone);
-  const inHost1 = lobby.hostPhone1 === creatorPhone;
-  const inHost2 = lobby.hostPhone2 === creatorPhone;
-  const inSpec = (lobby.spectators || []).some(sp => sp.phone === creatorPhone);
+  const creatorEmail = lobby.creator;
+  if (!creatorEmail) return false;
+  const inSeat = lobby.seats && lobby.seats.some(s => s && s.phone === creatorEmail);
+  const inHost1 = lobby.hostPhone1 === creatorEmail;
+  const inHost2 = lobby.hostPhone2 === creatorEmail;
+  const inSpec = (lobby.spectators || []).some(sp => sp.phone === creatorEmail);
   return !!(inSeat || inHost1 || inHost2 || inSpec);
 }
 
@@ -2196,33 +2289,36 @@ function checkAllLobbiesForExpiredCreators() {
 
 setInterval(() => { try { checkAllLobbiesForExpiredCreators(); } catch(e) {} }, 60 * 1000);
 
+/* ============================================================
+   SEND COINS
+   ============================================================ */
 function openSendCoins() {
   closeMenu();
   const u = getCurrentUser(); if (!u) return;
   document.getElementById("sendCoinBalance").textContent = formatNum(u.coins);
-  document.getElementById("sendCoinPhone").value = "";
+  document.getElementById("sendCoinEmail").value = "";
   document.getElementById("sendCoinAmount").value = "";
   document.getElementById("sendCoinsModal").classList.add("show");
 }
 function closeSendCoins() { document.getElementById("sendCoinsModal").classList.remove("show"); }
 function submitSendCoins() {
   const u = getCurrentUser(); if (!u) return;
-  const phone = document.getElementById("sendCoinPhone").value.trim();
+  const email = normalizeEmail(document.getElementById("sendCoinEmail").value);
   const amount = parseInt(document.getElementById("sendCoinAmount").value);
-  if (!/^09\d{9}$/.test(phone)) { showToast("شماره موبایل معتبر نیست"); return; }
-  if (phone === u.phone) { showToast("نمی‌توانید به خودتان سکه بفرستید"); return; }
+  if (!isValidEmail(email)) { showToast("ایمیل معتبر نیست"); return; }
+  if (email === normalizeEmail(u.email)) { showToast("نمی‌توانید به خودتان سکه بفرستید"); return; }
   if (!amount || amount <= 0) { showToast("عدد معتبر وارد کنید"); return; }
   if (Number(u.coins) < amount) { showToast("سکه کافی ندارید"); return; }
   const acc = getAccounts();
-  if (!acc[phone]) { showToast("کاربر یافت نشد"); return; }
-  const receiver = acc[phone];
+  if (!acc[email]) { showToast("کاربر یافت نشد"); return; }
+  const receiver = acc[email];
   u.coins = Number(u.coins) - amount; u.updated = Date.now();
   receiver.coins = Number(receiver.coins || 0) + amount; receiver.updated = Date.now();
-  acc[u.phone] = u; acc[phone] = receiver;
+  acc[u.email] = u; acc[email] = receiver;
   saveAccounts(acc);
   publishFullUser(u); publishFullUser(receiver);
   logActivity('coin', 'ارسال سکه',
-    `از: ${stripColorCode(u.name)} (${u.phone}) | به: ${stripColorCode(receiver.name)} (${phone}) | مقدار: ${amount} سکه | موجودی فرستنده: ${u.coins} | موجودی گیرنده: ${receiver.coins}`);
+    `از: ${stripColorCode(u.name)} (${u.email}) | به: ${stripColorCode(receiver.name)} (${email}) | مقدار: ${amount} سکه`);
   closeSendCoins();
   updateUI();
   showToast(`${amount} سکه با موفقیت ارسال شد ✅`);
@@ -2259,8 +2355,8 @@ function startGame(lobby) {
     seat: i + 1, role: shuffledRoles[i], side: shuffledRoles[i].side,
     alive: true, ready: true, isBot: s.phone.startsWith('bot_')
   }));
-  const currentPhone = getCurrentPhone();
-  const me = gameState.players.find(p => p.phone === currentPhone);
+  const currentEmail = getCurrentEmail();
+  const me = gameState.players.find(p => p.phone === currentEmail);
   const isObserver = !me;
   document.getElementById("gameScreen").classList.add("show");
   document.getElementById("gameObserverBtn").style.display = isObserver ? "flex" : "none";
@@ -2276,7 +2372,7 @@ function startGame(lobby) {
   }
   addGameLog("🎮 بازی شروع شد! سناریو: " + scenario.name);
   addGameLog("روز ۱ آغاز شد - نوبت صحبت از بازیکن ۱");
-  logActivity('game', 'شروع بازی', 'سناریو: ' + scenario.name + ' | بازیکن: ' + (me ? stripColorCode(me.name) : 'ناظر'));
+  logActivity('game', 'شروع بازی', 'سناریو: ' + scenario.name);
   startTurnTimer(60);
 }
 
@@ -2295,8 +2391,8 @@ function showCardDeal() {
 }
 function closeCardDeal() {
   document.getElementById("cardDealOverlay").classList.remove("show");
-  const currentPhone = getCurrentPhone();
-  const me = gameState.players.find(p => p.phone === currentPhone);
+  const currentEmail = getCurrentEmail();
+  const me = gameState.players.find(p => p.phone === currentEmail);
   if (me) addGameLog("🎴 نقش شما: " + me.role.icon + " " + me.role.name + " (" + (me.role.side === 'mafia' ? 'مافیا' : 'شهر') + ")");
 }
 
@@ -2309,8 +2405,8 @@ function renderScenarioRoles() {
     const role = scenario.roles.find(r => r.name === name);
     return `<div class="role-item"><span class="role-icon">${role.icon}</span><span class="role-name">${name}</span><span class="role-count">×${count}</span></div>`;
   }).join("");
-  const currentPhone = getCurrentPhone();
-  const me = gameState.players.find(p => p.phone === currentPhone);
+  const currentEmail = getCurrentEmail();
+  const me = gameState.players.find(p => p.phone === currentEmail);
   if (me) {
     document.getElementById("myRoleName").textContent = me.role.icon + " " + me.role.name;
     document.getElementById("myRoleDesc").textContent = me.role.desc;
@@ -2320,8 +2416,8 @@ function renderScenarioRoles() {
 function renderGamePlayers() {
   const container = document.getElementById("gamePlayers");
   container.innerHTML = "";
-  const currentPhone = getCurrentPhone();
-  const me = gameState.players.find(p => p.phone === currentPhone);
+  const currentEmail = getCurrentEmail();
+  const me = gameState.players.find(p => p.phone === currentEmail);
   const isMafia = me && me.side === 'mafia';
   const isObserver = !me;
   gameState.players.forEach((p, i) => {
@@ -2329,9 +2425,9 @@ function renderGamePlayers() {
     div.className = "game-player";
     div.dataset.seat = p.seat;
     if (!p.alive) div.classList.add("dead");
-    if (gameState.phase === 'night' && isMafia && p.side === 'mafia' && p.alive && p.phone !== currentPhone) div.classList.add("mafia-teammate");
+    if (gameState.phase === 'night' && isMafia && p.side === 'mafia' && p.alive && p.phone !== currentEmail) div.classList.add("mafia-teammate");
     if (gameState.currentSpeakerIndex === i && gameState.phase === 'day' && p.alive) div.classList.add("speaking");
-    const showRole = isObserver || (isMafia && p.side === 'mafia') || p.phone === currentPhone;
+    const showRole = isObserver || (isMafia && p.side === 'mafia') || p.phone === currentEmail;
     const roleHtml = showRole ? `<div class="game-player-role show">${p.role.icon} ${p.role.name}</div>` : `<div class="game-player-role"></div>`;
     let voteCount = 0;
     if (gameState.votes[p.phone]) voteCount = gameState.votes[p.phone].length;
@@ -2339,7 +2435,7 @@ function renderGamePlayers() {
     const challengeTarget = gameState.challenges[p.phone];
     const challengeHtml = challengeTarget ? `<div class="game-player-challenge-badge">🤝</div>` : "";
     let actionsHtml = "";
-    if (!isObserver && p.alive && p.phone !== currentPhone && gameState.phase === 'day' && gameState.currentSpeakerIndex !== i) {
+    if (!isObserver && p.alive && p.phone !== currentEmail && gameState.phase === 'day' && gameState.currentSpeakerIndex !== i) {
       actionsHtml = `<div class="game-player-actions">
         <button onclick="event.stopPropagation();gameLike('${p.phone}')" title="لایک">👍</button>
         <button onclick="event.stopPropagation();gameDislike('${p.phone}')" title="دیس‌لایک">👎</button>
@@ -2400,9 +2496,9 @@ function onTurnEnd() {
 function gamePrimaryAction() { if (gameState.phase === 'day') gameSkipTurn(); }
 
 function gameSkipTurn() {
-  const currentPhone = getCurrentPhone();
+  const currentEmail = getCurrentEmail();
   const currentSpeaker = gameState.players[gameState.currentSpeakerIndex];
-  if (currentSpeaker && currentSpeaker.phone === currentPhone) {
+  if (currentSpeaker && currentSpeaker.phone === currentEmail) {
     addGameLog("⏭ " + stripColorCode(currentSpeaker.name) + " نوبت خود را رد کرد");
     onTurnEnd();
   }
@@ -2417,10 +2513,10 @@ function gameDislike(phone) {
   if (target) { addGameLog("👎 دیس‌لایک به " + stripColorCode(target.name)); showToast("دیس‌لایک ثبت شد 👎"); }
 }
 function gameChallenge(phone) {
-  const currentPhone = getCurrentPhone();
+  const currentEmail = getCurrentEmail();
   const target = gameState.players.find(p => p.phone === phone);
   if (!target || !target.alive) return;
-  gameState.challenges[currentPhone] = phone;
+  gameState.challenges[currentEmail] = phone;
   addGameLog("🤝 چالش به " + stripColorCode(target.name));
   showToast("چالش ثبت شد! 🤝");
   renderGamePlayers();
@@ -2436,7 +2532,7 @@ function startVoting() {
   renderGamePlayers();
 }
 function submitVote() {
-  const currentPhone = getCurrentPhone();
+  const currentEmail = getCurrentEmail();
   const candidate = prompt("شماره صندلی رای خود را وارد کنید (1-10):");
   if (!candidate) return;
   const seat = parseInt(candidate);
@@ -2444,9 +2540,9 @@ function submitVote() {
   const target = gameState.players.find(p => p.seat === seat && p.alive);
   if (!target) { showToast("این صندلی وجود ندارد یا حذف شده"); return; }
   if (!gameState.votes[target.phone]) gameState.votes[target.phone] = [];
-  if (gameState.votes[target.phone].indexOf(currentPhone) !== -1) { showToast("قبلاً رای داده‌اید"); return; }
-  gameState.votes[target.phone].push(currentPhone);
-  addGameLog("🗳️ " + stripColorCode(gameState.players.find(p => p.phone === currentPhone).name) + " به " + stripColorCode(target.name) + " رای داد");
+  if (gameState.votes[target.phone].indexOf(currentEmail) !== -1) { showToast("قبلاً رای داده‌اید"); return; }
+  gameState.votes[target.phone].push(currentEmail);
+  addGameLog("🗳️ " + stripColorCode(gameState.players.find(p => p.phone === currentEmail).name) + " به " + stripColorCode(target.name) + " رای داد");
   showToast("رای شما به " + stripColorCode(target.name) + " ثبت شد");
   renderGamePlayers();
   setTimeout(() => { if (confirm("آیا رای‌گیری تمام شده؟")) startDefense(); }, 500);
@@ -2537,7 +2633,7 @@ function endGame(winner) {
     if (u) {
       const clans = getClans();
       Object.keys(clans).forEach(id => {
-        if (clans[id].members && clans[id].members.indexOf(u.phone) !== -1) {
+        if (clans[id].members && clans[id].members.indexOf(u.email) !== -1) {
           clans[id].lobbyScore = Math.min(1000, (clans[id].lobbyScore || 0) + 1);
           saveClans(clans); publishClanUpdate(clans[id]);
         }
@@ -2548,8 +2644,8 @@ function endGame(winner) {
 }
 
 function saveMatchHistory(winner) {
-  const currentPhone = getCurrentPhone();
-  const me = gameState.players.find(p => p.phone === currentPhone);
+  const currentEmail = getCurrentEmail();
+  const me = gameState.players.find(p => p.phone === currentEmail);
   if (!me) return;
   const history = JSON.parse(NS.get("match_history") || "[]");
   history.unshift({
@@ -2578,7 +2674,7 @@ function saveMatchHistory(winner) {
     }
     u.hoursPlayed = (u.hoursPlayed || 0) + ((Date.now() - gameState.gameStartTime) / 3600000);
     u.updated = Date.now();
-    const acc = getAccounts(); acc[u.phone] = u; saveAccounts(acc); publishFullUser(u);
+    const acc = getAccounts(); acc[u.email] = u; saveAccounts(acc); publishFullUser(u);
   }
 }
 
@@ -2656,7 +2752,7 @@ function watchLiveGame(id) {
     const u = getCurrentUser();
     if (u) {
       if (!lobby.watchers) lobby.watchers = [];
-      if (lobby.watchers.indexOf(u.phone) === -1) lobby.watchers.push(u.phone);
+      if (lobby.watchers.indexOf(u.email) === -1) lobby.watchers.push(u.email);
       saveCurrentLobby(lobby);
     }
     currentLobbyId = id;
@@ -2685,9 +2781,9 @@ function renderMatchHistory() {
    ============================================================ */
 function initAbly() {
   if (ably) return;
-  const phone = getCurrentPhone() || ('guest_' + Date.now());
-  myClientId = phone;
-  try { ably = new Ably.Realtime({ key: ABLY_KEY, clientId: phone }); }
+  const email = getCurrentEmail() || ('guest_' + Date.now());
+  myClientId = email;
+  try { ably = new Ably.Realtime({ key: ABLY_KEY, clientId: email }); }
   catch(e) { scheduleAblyRetry(__ablyInitAttempts); return; }
   
   ably.connection.on('connected', () => {
@@ -2696,7 +2792,7 @@ function initAbly() {
     ablyUsersCh = ably.channels.get(CH.users());
     ablyUsersCh.subscribe(EV.userFull, msg => { if (msg.data?.phone) applyRemoteUser(msg.data); });
     ablyUsersCh.subscribe(EV.usersFull, msg => {
-      if (msg.data && typeof msg.data === 'object') Object.keys(msg.data).forEach(ph => applyRemoteUser(msg.data[ph]));
+      if (msg.data && typeof msg.data === 'object') Object.keys(msg.data).forEach(em => applyRemoteUser(msg.data[em]));
     });
     ablyUsersCh.subscribe(EV.userDeleted, msg => {
       if (msg.data?.phone) {
@@ -2704,7 +2800,7 @@ function initAbly() {
         delete globalUsers[msg.data.phone];
         const acc = getAccounts();
         if (acc[msg.data.phone]) { delete acc[msg.data.phone]; saveAccounts(acc); }
-        if (getCurrentPhone() === msg.data.phone) logout();
+        if (getCurrentEmail() === msg.data.phone) logout();
       }
     });
     ablyUsersCh.subscribe(EV.userUnblocked, msg => {
@@ -2712,16 +2808,16 @@ function initAbly() {
         const acc = getAccounts();
         if (acc[msg.data.phone]) { acc[msg.data.phone].blocked = null; acc[msg.data.phone].updated = Date.now(); saveAccounts(acc); }
         if (globalUsers[msg.data.phone]) globalUsers[msg.data.phone].blocked = null;
-        if (getCurrentPhone() === msg.data.phone) { document.getElementById("blockedPage").classList.remove("show"); showApp(); showToast("مسدودیت شما برداشته شد ✅"); }
+        if (getCurrentEmail() === msg.data.phone) { document.getElementById("blockedPage").classList.remove("show"); showApp(); showToast("مسدودیت شما برداشته شد ✅"); }
       }
     });
     ablyUsersCh.subscribe(EV.syncRequest, () => {
       const all = getAccounts();
       const toSend = {};
-      Object.keys(all).forEach(ph => {
-        if (deletedUsers[ph]) return;
-        const u = all[ph];
-        toSend[ph] = { phone: u.phone, name: u.name, avatar: u.avatar || DEFAULT_AVATAR, level: u.level || 1, coins: u.coins || 0, score: u.score || 0, hoursPlayed: u.hoursPlayed || 0, watchedGames: u.watchedGames || 0, totalGames: u.totalGames || 0, wins: u.wins || 0, losses: u.losses || 0, citizenWins: u.citizenWins || 0, citizenLosses: u.citizenLosses || 0, mafiaWins: u.mafiaWins || 0, mafiaLosses: u.mafiaLosses || 0, ownedAvatars: u.ownedAvatars || [], ownedFrames: u.ownedFrames || [], activeFrame: u.activeFrame || "", blocked: u.blocked || null, isAdmin: !!u.isAdmin, code: u.code || 0, verified: !!u.verified, label: u.label || "", specialLobbyName: u.specialLobbyName || "", canColorName: !!u.canColorName, disconnects: u.disconnects || 0, hostKicks: u.hostKicks || 0, leaves: u.leaves || 0, updated: u.updated || Date.now() };
+      Object.keys(all).forEach(em => {
+        if (deletedUsers[em]) return;
+        const u = all[em];
+        toSend[em] = { email: em, phone: em, name: u.name, avatar: u.avatar || DEFAULT_AVATAR, level: u.level || 1, coins: u.coins || 0, score: u.score || 0, hoursPlayed: u.hoursPlayed || 0, watchedGames: u.watchedGames || 0, totalGames: u.totalGames || 0, wins: u.wins || 0, losses: u.losses || 0, citizenWins: u.citizenWins || 0, citizenLosses: u.citizenLosses || 0, mafiaWins: u.mafiaWins || 0, mafiaLosses: u.mafiaLosses || 0, ownedAvatars: u.ownedAvatars || [], ownedFrames: u.ownedFrames || [], activeFrame: u.activeFrame || "", blocked: u.blocked || null, isAdmin: !!u.isAdmin, code: u.code || 0, verified: !!u.verified, label: u.label || "", specialLobbyName: u.specialLobbyName || "", canColorName: !!u.canColorName, disconnects: u.disconnects || 0, hostKicks: u.hostKicks || 0, leaves: u.leaves || 0, updated: u.updated || Date.now() };
       });
       if (Object.keys(toSend).length) ablyUsersCh.publish(EV.usersFull, toSend);
       const me = getCurrentUser();
@@ -2730,7 +2826,7 @@ function initAbly() {
 
     setTimeout(() => {
       if (!isAblyReady) return;
-      ablyUsersCh.publish(EV.syncRequest, {from: getCurrentPhone() || myClientId});
+      ablyUsersCh.publish(EV.syncRequest, {from: getCurrentEmail() || myClientId});
       const u = getCurrentUser();
       if (u) publishFullUser(u);
     }, 400);
@@ -2738,11 +2834,11 @@ function initAbly() {
     ablyLobbyListCh = ably.channels.get(CH.lobbies());
     ablyLobbyListCh.subscribe(EV.lobbyFull, msg => { 
       if (Array.isArray(msg.data)) { 
-        const myPhone = getCurrentPhone();
+        const myEmail = getCurrentEmail();
         const merged = {};
         msg.data.forEach(l => {
           const local = sharedLobbies.find(x => x.id === l.id);
-          const meInRemote = local && local.seats && local.seats.some(s => s && s.phone === myPhone);
+          const meInRemote = local && local.seats && local.seats.some(s => s && s.phone === myEmail);
           if (meInRemote) merged[l.id] = local; else merged[l.id] = l;
         });
         sharedLobbies.forEach(l => { if (!merged[l.id]) merged[l.id] = l; });
@@ -2761,10 +2857,10 @@ function initAbly() {
       }
       const idx = sharedLobbies.findIndex(l => l.id === incoming.id);
       if (idx >= 0) {
-        const myPhone = getCurrentPhone();
+        const myEmail = getCurrentEmail();
         const localLobby = sharedLobbies[idx];
-        const meInLocal = localLobby.seats && localLobby.seats.some(s => s && s.phone === myPhone);
-        const meInIncoming = incoming.seats && incoming.seats.some(s => s && s.phone === myPhone);
+        const meInLocal = localLobby.seats && localLobby.seats.some(s => s && s.phone === myEmail);
+        const meInIncoming = incoming.seats && incoming.seats.some(s => s && s.phone === myEmail);
         if (meInLocal && !meInIncoming && !intentionalLeaving) return;
         sharedLobbies[idx] = incoming;
       } else sharedLobbies.unshift(incoming);
@@ -2782,7 +2878,7 @@ function initAbly() {
     });
     ablyLobbyListCh.subscribe(EV.syncRequest, () => { if (sharedLobbies.length) ablyLobbyListCh.publish(EV.lobbyFull, sharedLobbies); });
 
-    setTimeout(() => { if (!isAblyReady) return; ablyLobbyListCh.publish(EV.syncRequest, {from: getCurrentPhone() || myClientId}); }, 500);
+    setTimeout(() => { if (!isAblyReady) return; ablyLobbyListCh.publish(EV.syncRequest, {from: getCurrentEmail() || myClientId}); }, 500);
 
     ablyClanListCh = ably.channels.get(CH.clans());
     ablyClanListCh.subscribe(EV.clansFull, msg => {
@@ -2809,7 +2905,7 @@ function initAbly() {
       if (document.getElementById('topClansPage')?.classList.contains('show')) renderTopClans();
     });
     ablyClanListCh.subscribe(EV.syncRequest, () => { const clans = getClans(); if (Object.keys(clans).length) ablyClanListCh.publish(EV.clansFull, clans); });
-    setTimeout(() => { if (!isAblyReady) return; ablyClanListCh.publish(EV.syncRequest, {from: getCurrentPhone() || myClientId}); }, 600);
+    setTimeout(() => { if (!isAblyReady) return; ablyClanListCh.publish(EV.syncRequest, {from: getCurrentEmail() || myClientId}); }, 600);
 
     ablyAnnCh = ably.channels.get(CH.announcements());
     ablyAnnCh.subscribe(EV.annFull, msg => {
@@ -2832,7 +2928,7 @@ function initAbly() {
       if (document.getElementById('announcementsPage')?.classList.contains('show')) renderAnnouncements();
     });
     ablyAnnCh.subscribe(EV.syncRequest, () => { const filtered = filterAnnouncements(sharedAnnouncements); if (filtered.length) ablyAnnCh.publish(EV.annFull, filtered); });
-    setTimeout(() => { if (!isAblyReady) return; ablyAnnCh.publish(EV.syncRequest, {from: getCurrentPhone() || myClientId}); }, 700);
+    setTimeout(() => { if (!isAblyReady) return; ablyAnnCh.publish(EV.syncRequest, {from: getCurrentEmail() || myClientId}); }, 700);
 
     ablyActivityCh = ably.channels.get(CH.users() + '-activity');
     ablyActivityCh.subscribe(EV.activityLog, msg => {
@@ -2847,17 +2943,13 @@ function initAbly() {
       } catch(e) {}
     });
 
-    // 🆕 Flush any publishes that were queued while Ably was connecting
     setTimeout(() => {
       if (!isAblyReady) return;
-      // Ensure the current user's profile is broadcast
       const u = getCurrentUser();
       if (u) publishFullUser(u);
-      // Flush pending queue
       __flushAllPendingPublishes();
     }, 1200);
 
-    // 🆕 Also flush after another delay for safety
     setTimeout(() => {
       if (!isAblyReady) return;
       const u = getCurrentUser();
@@ -2869,6 +2961,51 @@ function initAbly() {
   ably.connection.on('failed', () => { isAblyReady = false; scheduleAblyReconnect(); });
   ably.connection.on('suspended', () => { isAblyReady = false; scheduleAblyReconnect(); });
   ably.connection.on('closed', () => { isAblyReady = false; });
+}
+
+let __ablyReconnectTimer = null;
+function scheduleAblyReconnect() {
+  if (__ablyReconnectTimer) return;
+  __ablyReconnectTimer = setTimeout(() => {
+    __ablyReconnectTimer = null;
+    if (!isAblyReady) {
+      try {
+        if (ably) { try { ably.close(); } catch(e){} ably = null; }
+        initAblyWhenReady(0);
+      } catch(e) {}
+    }
+  }, 3000);
+}
+
+function reconnectAblyWithCurrentUser() {
+  if (!ably) return;
+  const newEmail = getCurrentEmail();
+  if (!newEmail) return;
+  if (myClientId === newEmail) return;
+  try { ably.close(); } catch(e) {}
+  ably = null; isAblyReady = false;
+  ablyUsersCh = null; ablyLobbyListCh = null; ablyClanListCh = null;
+  ablyAnnCh = null; ablyActivityCh = null; ablyRoomCh = null; ablyClanCh = null;
+  setTimeout(() => initAblyWhenReady(0), 100);
+}
+
+let __ablyInitAttempts = 0;
+function initAblyWhenReady(attempt) {
+  attempt = attempt || 0;
+  __ablyInitAttempts = attempt;
+  if (ably && isAblyReady) return;
+  const hasAbly = (typeof Ably !== 'undefined') && (typeof window.Ably !== 'undefined');
+  if (hasAbly) {
+    try { initAbly(); } catch(e) { scheduleAblyRetry(attempt); }
+    return;
+  }
+  scheduleAblyRetry(attempt);
+}
+
+function scheduleAblyRetry(attempt) {
+  if (attempt >= 30) { console.warn('Ably retry limit reached'); return; }
+  const delay = Math.min(4000, 300 * Math.pow(1.6, attempt));
+  setTimeout(() => initAblyWhenReady(attempt + 1), delay);
 }
 
 function publishMyProfile() { const u = getCurrentUser(); if (u) publishFullUser(u); }
@@ -2883,18 +3020,18 @@ function subscribeLobbyRoom(lobbyId) {
   ablyRoomCh.subscribe(EV.roomState, msg => {
     if (!msg.data || msg.data.id !== currentLobbyId) return;
     let incoming = msg.data;
-    const myPhone = getCurrentPhone();
-    if (myPhone && !intentionalLeaving) {
+    const myEmail = getCurrentEmail();
+    if (myEmail && !intentionalLeaving) {
       if (!incoming.seats) incoming.seats = Array(10).fill(null);
       if (!incoming.spectators) incoming.spectators = [];
-      const meInSeats = incoming.seats.some(s => s && s.phone === myPhone);
-      const meInHost1 = incoming.hostPhone1 === myPhone;
-      const meInHost2 = incoming.hostPhone2 === myPhone;
-      const meInSpec = incoming.spectators.some(sp => sp.phone === myPhone);
+      const meInSeats = incoming.seats.some(s => s && s.phone === myEmail);
+      const meInHost1 = incoming.hostPhone1 === myEmail;
+      const meInHost2 = incoming.hostPhone2 === myEmail;
+      const meInSpec = incoming.spectators.some(sp => sp.phone === myEmail);
       if (!meInSeats && !meInHost1 && !meInHost2 && !meInSpec) {
         const myLocal = getLobbies().find(l => l.id === currentLobbyId);
         if (myLocal && myLocal.seats) {
-          const mySeatData = myLocal.seats.find(s => s && s.phone === myPhone);
+          const mySeatData = myLocal.seats.find(s => s && s.phone === myEmail);
           if (mySeatData) {
             const emptyIdx = incoming.seats.findIndex(s => !s);
             if (emptyIdx !== -1) { incoming.seats[emptyIdx] = mySeatData; setTimeout(() => { publishRoomState(incoming); }, 200); }
@@ -2938,18 +3075,18 @@ function subscribeLobbyRoom(lobbyId) {
   });
   ablyRoomCh.subscribe(EV.webrtcSignal, msg => {
     if (!msg.data || msg.data.lobbyId !== currentLobbyId) return;
-    if (msg.data.to === getCurrentPhone()) handleWebRtcSignal(msg.data.from, msg.data.signal);
+    if (msg.data.to === getCurrentEmail()) handleWebRtcSignal(msg.data.from, msg.data.signal);
   });
   ablyRoomCh.subscribe(EV.hostTransfer, msg => {
     if (!msg.data || msg.data.lobbyId !== currentLobbyId) return;
     const lobby = getCurrentLobby(); if (!lobby) return;
     lobby.creator = msg.data.newHost;
     saveCurrentLobby(lobby); renderLobbyRoom();
-    if (msg.data.newHost === getCurrentPhone()) showToast("شما مدیر لابی شدید 👑");
+    if (msg.data.newHost === getCurrentEmail()) showToast("شما مدیر لابی شدید 👑");
   });
   ablyRoomCh.subscribe(EV.userKicked, msg => {
     if (!msg.data || msg.data.lobbyId !== currentLobbyId) return;
-    if (msg.data.phone === getCurrentPhone()) {
+    if (msg.data.phone === getCurrentEmail()) {
       if (isProcessingKick) return;
       isProcessingKick = true;
       showToast("شما از لابی اخراج شدید!");
@@ -2960,7 +3097,7 @@ function subscribeLobbyRoom(lobbyId) {
   });
   ablyRoomCh.subscribe(EV.userBlocked, msg => {
     if (!msg.data || msg.data.lobbyId !== currentLobbyId) return;
-    if (msg.data.phone === getCurrentPhone()) {
+    if (msg.data.phone === getCurrentEmail()) {
       if (isProcessingKick) return;
       isProcessingKick = true;
       showToast("شما از این لابی مسدود شدید!");
@@ -2977,7 +3114,7 @@ function subscribeLobbyRoom(lobbyId) {
   });
   setTimeout(() => {
     if (!isAblyReady || currentLobbyId !== lobbyId) return;
-    ablyRoomCh.publish(EV.syncRequest, {lobbyId: currentLobbyId, from: getCurrentPhone()});
+    ablyRoomCh.publish(EV.syncRequest, {lobbyId: currentLobbyId, from: getCurrentEmail()});
     const lobby = getCurrentLobby();
     if (lobby) publishRoomState(lobby);
   }, 400);
@@ -2991,6 +3128,7 @@ async function showLobbyLoading() {
     const overlay = document.getElementById('lobbyLoadingOverlay');
     const bar = document.getElementById('lobbyLoadingBar');
     const pct = document.getElementById('lobbyLoadingPercent');
+    if (!overlay || !bar || !pct) { resolve(); return; }
     overlay.classList.add('show');
     bar.style.width = '0%';
     pct.textContent = '0%';
@@ -3005,6 +3143,9 @@ async function showLobbyLoading() {
         overlay.classList.remove('show');
         resolve();
       }, 400);
+    }).catch(() => {
+      overlay.classList.remove('show');
+      resolve();
     });
   });
 }
@@ -3020,7 +3161,7 @@ function enterLobbyRoom(id) {
   disconnectAllPeers();
   const u = getCurrentUser();
   const lobby = getLobbies().find(l => l.id === id);
-  if (lobby && u && lobby.creator === u.phone) {
+  if (lobby && u && lobby.creator === u.email) {
     if (creatorLeaveTimers[id]) { clearTimeout(creatorLeaveTimers[id]); delete creatorLeaveTimers[id]; }
     if (lobby.creatorLeftAt) {
       lobby.creatorLeftAt = null;
@@ -3091,13 +3232,13 @@ function initLobbyRoomUI() {
 }
 
 /* ============================================================
-   SELECT PLAYER AS HOST (HOST 1 or HOST 2)
+   SELECT PLAYER AS HOST
    ============================================================ */
 function lrSelectAsHost(slot) {
   const lobby = getCurrentLobby();
   const u = getCurrentUser();
   if (!lobby || !u) return;
-  if (lobby.creator !== u.phone && ADMIN_PHONES.indexOf(u.phone) === -1) {
+  if (lobby.creator !== u.email && ADMIN_EMAILS.indexOf(u.email) === -1) {
     showToast("فقط سازنده لابی می‌تواند گرداننده انتخاب کند");
     return;
   }
@@ -3151,9 +3292,9 @@ function lrRemoveHost(slot) {
   const lobby = getCurrentLobby();
   const u = getCurrentUser();
   if (!lobby || !u) return;
-  if (lobby.creator !== u.phone && ADMIN_PHONES.indexOf(u.phone) === -1) {
+  if (lobby.creator !== u.email && ADMIN_EMAILS.indexOf(u.email) === -1) {
     const hostPhone = slot === 1 ? lobby.hostPhone1 : lobby.hostPhone2;
-    if (hostPhone !== u.phone) { showToast("دسترسی ندارید"); return; }
+    if (hostPhone !== u.email) { showToast("دسترسی ندارید"); return; }
   }
   const hostPhone = slot === 1 ? lobby.hostPhone1 : lobby.hostPhone2;
   const hostData = slot === 1 ? lobby.hostData1 : lobby.hostData2;
@@ -3193,7 +3334,7 @@ function addLrToast(icon, text) {
 function lrExitLobby() {
   const lobby = getCurrentLobby();
   const u = getCurrentUser();
-  if (lobby && u && lobby.creator === u.phone) {
+  if (lobby && u && lobby.creator === u.email) {
     if (confirm("⚠️ شما سازنده لابی هستید!\n\nاگه خارج بشید، لابی به مدت ۳۰ دقیقه باز می‌مونه و اگه برنگردید، به‌طور خودکار حذف میشه.\n\nآیا مطمئن هستید؟")) leaveLobbyRoom();
   } else {
     if (confirm("آیا مطمئن هستید؟ از لابی خارج می‌شوید!")) leaveLobbyRoom();
@@ -3204,8 +3345,8 @@ function lrDeleteLobby() {
   const lobby = getCurrentLobby();
   const u = getCurrentUser();
   if (!lobby || !u) return;
-  const isHost = lobby.creator === u.phone;
-  const isAdmin = ADMIN_PHONES.indexOf(u.phone) !== -1;
+  const isHost = lobby.creator === u.email;
+  const isAdmin = ADMIN_EMAILS.indexOf(u.email) !== -1;
   if (!isHost && !isAdmin) { showToast("فقط سازنده لابی می‌تواند حذف کند"); return; }
   if (!confirm("⚠️ آیا مطمئن هستید؟ لابی برای همیشه حذف می‌شود!")) return;
   logActivity('lobby', 'حذف لابی', 'لابی: ' + stripColorCode(lobby.name) + ' | سازنده: ' + stripColorCode(lobby.creatorName || 'ناشناس'));
@@ -3231,13 +3372,13 @@ function leaveLobbyRoom() {
   if (u && currentLobbyId) {
     const lobby = getCurrentLobby();
     if (lobby) {
-      const isCreatorLeaving = (lobby.creator === u.phone);
-      const si = lobby.seats.findIndex(s => s && s.phone === u.phone);
+      const isCreatorLeaving = (lobby.creator === u.email);
+      const si = lobby.seats.findIndex(s => s && s.phone === u.email);
       if (si !== -1) lobby.seats[si] = null;
-      if (lobby.hostPhone1 === u.phone) { lobby.hostPhone1 = null; lobby.hostData1 = null; }
-      if (lobby.hostPhone2 === u.phone) { lobby.hostPhone2 = null; lobby.hostData2 = null; }
+      if (lobby.hostPhone1 === u.email) { lobby.hostPhone1 = null; lobby.hostData1 = null; }
+      if (lobby.hostPhone2 === u.email) { lobby.hostPhone2 = null; lobby.hostData2 = null; }
       if (lobby.spectators) {
-        const specIdx = lobby.spectators.findIndex(sp => sp.phone === u.phone);
+        const specIdx = lobby.spectators.findIndex(sp => sp.phone === u.email);
         if (specIdx !== -1) lobby.spectators.splice(specIdx, 1);
       }
       if (isCreatorLeaving) {
@@ -3250,7 +3391,7 @@ function leaveLobbyRoom() {
         saveCurrentLobby(lobby);
         publishRoomState(lobby);
         u.leaves = (u.leaves || 0) + 1; u.updated = Date.now();
-        const acc = getAccounts(); acc[u.phone] = u; saveAccounts(acc); publishFullUser(u);
+        const acc = getAccounts(); acc[u.email] = u; saveAccounts(acc); publishFullUser(u);
       }
       logActivity('lobby', 'خروج از لابی', 'لابی: ' + stripColorCode(lobby.name) + ' | کاربر: ' + stripColorCode(u.name));
     }
@@ -3294,16 +3435,16 @@ function renderLobbyRoom() {
     } else hostNameEl.innerHTML = hostNameParsed.html + hostVerified;
   }
 
-  const isHost = lobby.creator === u.phone;
-  const isAdmin = ADMIN_PHONES.indexOf(u.phone) !== -1;
+  const isHost = lobby.creator === u.email;
+  const isAdmin = ADMIN_EMAILS.indexOf(u.email) !== -1;
 
   const settingsBtn = document.getElementById('lrSettingsBtn');
   if (settingsBtn) { if (isHost || isAdmin) settingsBtn.classList.remove('hidden'); else settingsBtn.classList.add('hidden'); }
 
   const startBtn = document.getElementById('lrStartBtn');
   const readyBtn = document.getElementById('lrReadyBtn');
-  const me = lobby.seats.find(s => s && s.phone === u.phone);
-  const inHost = (lobby.hostPhone1 === u.phone) || (lobby.hostPhone2 === u.phone);
+  const me = lobby.seats.find(s => s && s.phone === u.email);
+  const inHost = (lobby.hostPhone1 === u.email) || (lobby.hostPhone2 === u.email);
   
   if (isHost) {
     const readyCount = lobby.seats.filter(s => s && !s.isGhost && (s.ready || s.phone === lobby.creator)).length;
@@ -3346,7 +3487,7 @@ function renderLobbyRoom() {
         let micOn = false;
         const latest = globalUsers[hostPhone] || getAccounts()[hostPhone];
         if (latest) { if (latest.avatar) displayAvatar = latest.avatar; activeFrame = latest.activeFrame || ""; }
-        if (hostPhone === u.phone && lrMicOn) micOn = true;
+        if (hostPhone === u.email && lrMicOn) micOn = true;
         else { const lg = globalUsers[hostPhone]; if (lg && lg.micOn) micOn = true; }
         let frameHtml = '';
         if (activeFrame) { const fSrc = getFrameSrc(activeFrame); if (fSrc) frameHtml = `<img class="seat-frame" src="${fSrc}" alt="" loading="lazy">`; }
@@ -3382,7 +3523,7 @@ function renderLobbyRoom() {
         let micOn = false;
         const latest = globalUsers[hostPhone] || getAccounts()[hostPhone];
         if (latest) { if (latest.avatar) displayAvatar = latest.avatar; activeFrame = latest.activeFrame || ""; }
-        if (hostPhone === u.phone && lrMicOn) micOn = true;
+        if (hostPhone === u.email && lrMicOn) micOn = true;
         else { const lg = globalUsers[hostPhone]; if (lg && lg.micOn) micOn = true; }
         let frameHtml = '';
         if (activeFrame) { const fSrc = getFrameSrc(activeFrame); if (fSrc) frameHtml = `<img class="seat-frame" src="${fSrc}" alt="" loading="lazy">`; }
@@ -3422,7 +3563,7 @@ function renderLobbyRoom() {
       if (data.phone && !data.phone.startsWith('bot_')) {
         const latest = globalUsers[data.phone] || getAccounts()[data.phone];
         if (latest) { if (latest.name) displayName = latest.name; if (latest.avatar) displayAvatar = latest.avatar; isVerified = !!latest.verified; activeFrame = latest.activeFrame || ""; }
-        if (data.phone === u.phone && lrMicOn) micOn = true;
+        if (data.phone === u.email && lrMicOn) micOn = true;
         else { const lg = globalUsers[data.phone]; if (lg && lg.micOn) micOn = true; }
       }
       let frameHtml = '';
@@ -3457,9 +3598,9 @@ function openHostSheet(phone, slot) {
   const acc = getAccounts();
   const target = acc[phone] || globalUsers[phone];
   document.getElementById("lrSheetTitle").textContent = "👑 گرداننده " + slot + ": " + (target ? stripColorCode(target.name) : "-");
-  const isHost = lobby.creator === u.phone;
-  const isAdmin = ADMIN_PHONES.indexOf(u.phone) !== -1;
-  const isSelf = phone === u.phone;
+  const isHost = lobby.creator === u.email;
+  const isAdmin = ADMIN_EMAILS.indexOf(u.email) !== -1;
+  const isSelf = phone === u.email;
   ['lrSheetMakeHost1','lrSheetMakeHost2','lrSheetTransfer','lrSheetKick','lrSheetBlock','lrSheetRemoveBot','lrSheetTakeLobby','lrSheetAdminBlock'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
@@ -3490,7 +3631,7 @@ function addBotsToLobby() {
   const lobby = getCurrentLobby();
   const u = getCurrentUser();
   if (!lobby || !u) return;
-  if (lobby.creator !== u.phone || ADMIN_PHONES.indexOf(u.phone) === -1) { showToast("فقط مدیر لابی (اکانت مدیریت) می‌تواند بات اضافه کند"); return; }
+  if (lobby.creator !== u.email || ADMIN_EMAILS.indexOf(u.email) === -1) { showToast("فقط مدیر لابی (اکانت مدیریت) می‌تواند بات اضافه کند"); return; }
   if (!lobby.seats) lobby.seats = Array(10).fill(null);
   let added = 0;
   for (let i = 0; i < 10 && added < 5; i++) {
@@ -3553,8 +3694,8 @@ function lrStartOrReady() {
   const lobby = getCurrentLobby();
   const u = getCurrentUser();
   if (!lobby || !u) return;
-  if (lobby.creator === u.phone) { startGame(lobby); return; }
-  const si = lobby.seats.findIndex(s => s && s.phone === u.phone);
+  if (lobby.creator === u.email) { startGame(lobby); return; }
+  const si = lobby.seats.findIndex(s => s && s.phone === u.email);
   if (si === -1) return;
   lobby.seats[si].ready = !lobby.seats[si].ready;
   lrReady = lobby.seats[si].ready;
@@ -3566,13 +3707,13 @@ function lrReact(type) {
   const u = getCurrentUser();
   if (!u || !currentLobbyId) return;
   const lobby = getCurrentLobby(); if (!lobby) return;
-  const si = lobby.seats.findIndex(s => s && s.phone === u.phone);
-  const isHost1 = lobby.hostPhone1 === u.phone;
-  const isHost2 = lobby.hostPhone2 === u.phone;
-  const isCreator = lobby.creator === u.phone;
+  const si = lobby.seats.findIndex(s => s && s.phone === u.email);
+  const isHost1 = lobby.hostPhone1 === u.email;
+  const isHost2 = lobby.hostPhone2 === u.email;
+  const isCreator = lobby.creator === u.email;
   if (si === -1 && !isHost1 && !isHost2 && !isCreator) return;
-  showReactionOnSeat(u.phone, type);
-  publishReaction(u.phone, type);
+  showReactionOnSeat(u.email, type);
+  publishReaction(u.email, type);
   const btn = type === 'like' ? document.getElementById('lrLikeBtn') : document.getElementById('lrDislikeBtn');
   if (btn) { btn.classList.add('pressed'); setTimeout(() => btn.classList.remove('pressed'), 120); }
 }
@@ -3582,8 +3723,8 @@ function transferHost() { showToast('روی بازیکن مورد نظر کلی�
 function lrTransferHost() {
   const lobby = getCurrentLobby();
   const u = getCurrentUser();
-  if (!lobby || !u || lobby.creator !== u.phone) return;
-  if (selectedSeatPhone === u.phone) { showToast("نمی‌توانید به خودتان انتقال دهید"); return; }
+  if (!lobby || !u || lobby.creator !== u.email) return;
+  if (selectedSeatPhone === u.email) { showToast("نمی‌توانید به خودتان انتقال دهید"); return; }
   if (selectedSeatPhone && selectedSeatPhone.startsWith('bot_')) { showToast("نمی‌توانید مدیریت را به بات بدهید"); return; }
   if (confirm("آیا مطمئن هستید؟ مدیریت لابی منتقل می‌شود")) {
     lobby.creator = selectedSeatPhone;
@@ -3654,7 +3795,7 @@ function sendLrChat() {
   if (!lobby.chat) lobby.chat = [];
   const now = new Date();
   const ts = now.getHours().toString().padStart(2, "0") + ":" + now.getMinutes().toString().padStart(2, "0");
-  const msg = { sender: u.phone, text, time: ts };
+  const msg = { sender: u.email, text, time: ts };
   lobby.chat.push(msg); saveCurrentLobby(lobby); publishLrChatMsg(msg);
   logActivity('chat', 'پیام در لابی', 'لابی: ' + stripColorCode(lobby.name) + ' | پیام: ' + text);
   showLrToast(stripColorCode(u.name), text, 5000);
@@ -3672,20 +3813,20 @@ function openBlockedPanel() {
     return;
   }
   const acc = getAccounts();
-  blocked.forEach(ph => {
-    const us = acc[ph] || globalUsers[ph];
+  blocked.forEach(em => {
+    const us = acc[em] || globalUsers[em];
     const item = document.createElement("div");
     item.className = "lr2-blocked-item";
-    item.innerHTML = `<div class="lr2-blocked-item-name">🚫 ${escapeHTML(us ? stripColorCode(us.name) : "کاربر")}</div><button class="lr2-blocked-item-btn" onclick="lrUnblock('${ph}')">آزاد کردن</button>`;
+    item.innerHTML = `<div class="lr2-blocked-item-name">🚫 ${escapeHTML(us ? stripColorCode(us.name) : "کاربر")}</div><button class="lr2-blocked-item-btn" onclick="lrUnblock('${em}')">آزاد کردن</button>`;
     body.appendChild(item);
   });
   document.getElementById("lrBlockedPanel").classList.add("open");
 }
 function closeBlockedPanel() { document.getElementById("lrBlockedPanel").classList.remove("open"); }
-function lrUnblock(ph) {
+function lrUnblock(em) {
   const lobby = getCurrentLobby(); if (!lobby) return;
   if (!lobby.blocked) lobby.blocked = [];
-  const i = lobby.blocked.indexOf(ph);
+  const i = lobby.blocked.indexOf(em);
   if (i !== -1) lobby.blocked.splice(i, 1);
   saveCurrentLobby(lobby); publishRoomState(lobby); openBlockedPanel(); showToast("مسدودیت برداشته شد ✅");
 }
@@ -3699,10 +3840,10 @@ function openPlayerSheet(phone) {
   const acc = getAccounts();
   const target = isBot ? null : (acc[phone] || globalUsers[phone]);
   document.getElementById("lrSheetTitle").textContent = isBot ? "بات" : (target ? stripColorCode(target.name) : "بازیکن");
-  const isHost = lobby.creator === u.phone;
-  const isAdmin = ADMIN_PHONES.indexOf(u.phone) !== -1;
-  const isSelf = phone === u.phone;
-  const targetIsAdmin = !isBot && ADMIN_PHONES.indexOf(phone) !== -1;
+  const isHost = lobby.creator === u.email;
+  const isAdmin = ADMIN_EMAILS.indexOf(u.email) !== -1;
+  const isSelf = phone === u.email;
+  const targetIsAdmin = !isBot && ADMIN_EMAILS.indexOf(phone) !== -1;
   const targetIsCreator = !isBot && isCreator(phone);
   const isSpec = (lobby.spectators || []).some(sp => sp.phone === phone);
   
@@ -3764,7 +3905,7 @@ function lrViewProfile() {
   document.getElementById("lrProfCitizenLosses").textContent = Number(us.citizenLosses || 0);
   document.getElementById("lrProfMafiaWins").textContent = Number(us.mafiaWins || 0);
   document.getElementById("lrProfMafiaLosses").textContent = Number(us.mafiaLosses || 0);
-  document.getElementById("lrProfClanName").textContent = getUserClanName(us.phone);
+  document.getElementById("lrProfClanName").textContent = getUserClanName(us.email || us.phone);
   document.getElementById("lrProfilePage").classList.add("show");
 }
 function closeLrProfilePage() { document.getElementById("lrProfilePage").classList.remove("show"); }
@@ -3772,9 +3913,9 @@ function closeLrProfilePage() { document.getElementById("lrProfilePage").classLi
 function lrKickPlayer() {
   const lobby = getCurrentLobby();
   const u = getCurrentUser();
-  if (!lobby || !u || lobby.creator !== u.phone) return;
+  if (!lobby || !u || lobby.creator !== u.email) return;
   if (guardCreator(selectedSeatPhone)) return;
-  if (ADMIN_PHONES.indexOf(selectedSeatPhone) !== -1) { showToast("نمی‌توانید اکانت مدیریت را اخراج کنید"); return; }
+  if (ADMIN_EMAILS.indexOf(selectedSeatPhone) !== -1) { showToast("نمی‌توانید اکانت مدیریت را اخراج کنید"); return; }
   const kickedPhone = selectedSeatPhone;
   const si = lobby.seats.findIndex(s => s && s.phone === kickedPhone);
   if (si !== -1) lobby.seats[si] = null;
@@ -3796,9 +3937,9 @@ function lrKickPlayer() {
 function lrBlockPlayer() {
   const lobby = getCurrentLobby();
   const u = getCurrentUser();
-  if (!lobby || !u || lobby.creator !== u.phone) return;
+  if (!lobby || !u || lobby.creator !== u.email) return;
   if (guardCreator(selectedSeatPhone)) return;
-  if (ADMIN_PHONES.indexOf(selectedSeatPhone) !== -1) { showToast("نمی‌توانید اکانت مدیریت را مسدود کنید"); return; }
+  if (ADMIN_EMAILS.indexOf(selectedSeatPhone) !== -1) { showToast("نمی‌توانید اکانت مدیریت را مسدود کنید"); return; }
   const blockedPhone = selectedSeatPhone;
   if (!lobby.blocked) lobby.blocked = [];
   if (lobby.blocked.indexOf(blockedPhone) === -1) lobby.blocked.push(blockedPhone);
@@ -3816,7 +3957,7 @@ function lrBlockPlayer() {
 function lrRemoveBot() {
   const lobby = getCurrentLobby();
   const u = getCurrentUser();
-  if (!lobby || !u || lobby.creator !== u.phone || ADMIN_PHONES.indexOf(u.phone) === -1) return;
+  if (!lobby || !u || lobby.creator !== u.email || ADMIN_EMAILS.indexOf(u.email) === -1) return;
   const si = lobby.seats.findIndex(s => s && s.phone === selectedSeatPhone);
   if (si === -1) return;
   lobby.seats[si] = null;
@@ -3827,11 +3968,11 @@ function lrRemoveBot() {
 function lrTakeLobby() {
   const lobby = getCurrentLobby();
   const u = getCurrentUser();
-  if (!lobby || !u || ADMIN_PHONES.indexOf(u.phone) === -1) return;
+  if (!lobby || !u || ADMIN_EMAILS.indexOf(u.email) === -1) return;
   if (confirm("آیا مطمئن هستید؟ مدیریت لابی را می‌گیرید؟")) {
-    lobby.creator = u.phone;
+    lobby.creator = u.email;
     lobby.creatorLeftAt = null;
-    saveCurrentLobby(lobby); publishRoomState(lobby); publishHostTransfer(u.phone);
+    saveCurrentLobby(lobby); publishRoomState(lobby); publishHostTransfer(u.email);
     if (creatorLeaveTimers[lobby.id]) { clearTimeout(creatorLeaveTimers[lobby.id]); delete creatorLeaveTimers[lobby.id]; }
     closePlayerSheet(); renderLobbyRoom(); showToast("مدیریت لابی گرفته شد 👑");
   }
@@ -3867,7 +4008,7 @@ function lrAdminBlockAccount() {
   publishUserBlocked(phone);
   logActivity('admin', 'مسدود کردن اکانت', `کاربر: ${phone} | روز: ${days} | ساعت: ${hours||0} | علت: ${reason}`);
   closePlayerSheet(); renderLobbyRoom();
-  if (phone === getCurrentPhone()) { showBlockedPage(acc[phone].blocked); logout(); }
+  if (phone === getCurrentEmail()) { showBlockedPage(acc[phone].blocked); logout(); }
   showToast(`کاربر مسدود شد ⛔`);
 }
 
@@ -3881,7 +4022,7 @@ function openLobbyPage() {
   renderLobbies();
   try { checkAllLobbiesForExpiredCreators(); } catch(e) {}
   if (ablyLobbyListCh && isAblyReady) {
-    setTimeout(() => { if (isAblyReady) ablyLobbyListCh.publish(EV.syncRequest, {from: getCurrentPhone()}); }, 200);
+    setTimeout(() => { if (isAblyReady) ablyLobbyListCh.publish(EV.syncRequest, {from: getCurrentEmail()}); }, 200);
   }
 }
 function closeLobbyPage() { document.getElementById("lobbyPage").classList.remove("show"); }
@@ -3923,9 +4064,9 @@ function renderLobbies() {
   });
 }
 function refreshLobbies() {
-  if (ablyLobbyListCh && isAblyReady) ablyLobbyListCh.publish(EV.syncRequest, { from: getCurrentPhone() });
+  if (ablyLobbyListCh && isAblyReady) ablyLobbyListCh.publish(EV.syncRequest, { from: getCurrentEmail() });
   if (ablyUsersCh && isAblyReady) {
-    ablyUsersCh.publish(EV.syncRequest, {from: getCurrentPhone()});
+    ablyUsersCh.publish(EV.syncRequest, {from: getCurrentEmail()});
     const u = getCurrentUser();
     if (u) publishFullUser(u);
   }
@@ -3976,12 +4117,12 @@ function createLobby() {
     if (password.length < 3) { showToast("کلمه عبور حداقل ۳ کاراکتر باشد."); return; }
   }
   const seats = Array(10).fill(null);
-  seats[0] = { phone: u.phone, name: u.name, avatar: u.avatar || DEFAULT_AVATAR, ready: false, spectator: false };
+  seats[0] = { phone: u.email, name: u.name, avatar: u.avatar || DEFAULT_AVATAR, ready: false, spectator: false };
   let hasTick = false;
   if (u.specialLobbyName && u.specialLobbyName === stripColorCode(name)) hasTick = true;
   const lobby = {
     id: "lobby_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6),
-    name, creator: u.phone, creatorName: u.name, mode: createLobbyMode,
+    name, creator: u.email, creatorName: u.name, mode: createLobbyMode,
     hasPassword: passEnabled, password, seats, blocked: [], chat: [], hasTick, createdAt: Date.now(),
     spectators: [], watchers: [], creatorLeftAt: null, isLocked: false, chatLockedAll: false, micMutedAll: false,
     hostPhone1: null, hostData1: null, hostPhone2: null, hostData2: null,
@@ -4005,8 +4146,8 @@ function joinLobby(id) {
   const lobby = sharedLobbies.find(l => l.id === id) || getLobbies().find(l => l.id === id);
   if (!lobby) { showToast("لابی یافت نشد!"); return; }
   const u = getCurrentUser(); if (!u) return;
-  if (lobby.blocked && lobby.blocked.indexOf(u.phone) !== -1) { showToast("شما از این لابی مسدود شده‌اید!"); return; }
-  if (lobby.isLocked && lobby.creator !== u.phone) { showToast("🔒 لابی قفل است و نمی‌توانید وارد شوید"); return; }
+  if (lobby.blocked && lobby.blocked.indexOf(u.email) !== -1) { showToast("شما از این لابی مسدود شده‌اید!"); return; }
+  if (lobby.isLocked && lobby.creator !== u.email) { showToast("🔒 لابی قفل است و نمی‌توانید وارد شوید"); return; }
   if (lobby.creatorLeftAt && !isCreatorInsideLobby(lobby)) {
     const elapsed = Date.now() - lobby.creatorLeftAt;
     if (elapsed >= CREATOR_LEAVE_TIMEOUT_MS) {
@@ -4021,14 +4162,14 @@ function joinLobby(id) {
   }
   if (!lobby.seats) lobby.seats = Array(10).fill(null);
   if (!lobby.spectators) lobby.spectators = [];
-  const already = lobby.seats.findIndex(s => s && s.phone === u.phone);
-  const inHost1 = lobby.hostPhone1 === u.phone;
-  const inHost2 = lobby.hostPhone2 === u.phone;
+  const already = lobby.seats.findIndex(s => s && s.phone === u.email);
+  const inHost1 = lobby.hostPhone1 === u.email;
+  const inHost2 = lobby.hostPhone2 === u.email;
   if (already === -1 && !inHost1 && !inHost2) {
     const empty = findLowestEmptySeat(lobby);
     if (empty === -1) { showToast("لابی پر است!"); return; }
-    lobby.seats[empty] = { phone: u.phone, name: u.name, avatar: u.avatar || DEFAULT_AVATAR, ready: false, spectator: false };
-    if (lobby.creator === u.phone) {
+    lobby.seats[empty] = { phone: u.email, name: u.name, avatar: u.avatar || DEFAULT_AVATAR, ready: false, spectator: false };
+    if (lobby.creator === u.email) {
       lobby.creatorLeftAt = null;
       if (creatorLeaveTimers[lobby.id]) { clearTimeout(creatorLeaveTimers[lobby.id]); delete creatorLeaveTimers[lobby.id]; }
     }
@@ -4051,12 +4192,12 @@ function showApp() {
   if (bg) bg.style.display = 'none';
   updateUI();
   const adminBtn = document.getElementById("adminPanelBtn");
-  adminBtn.style.display = ADMIN_PHONES.indexOf(u.phone) !== -1 ? "block" : "none";
+  adminBtn.style.display = ADMIN_EMAILS.indexOf(u.email) !== -1 ? "block" : "none";
   if (u.isAdmin) adminBtn.style.display = "block";
   document.getElementById("adminListBtn").style.display = "block";
   const cf = document.getElementById("creatorFloatBtn");
   if (cf) {
-    if (isCreator(u.phone)) {
+    if (isCreator(u.email)) {
       cf.classList.add('show');
       cf.style.display = 'flex';
       const pos = NS.get("creator_btn_pos");
@@ -4134,7 +4275,7 @@ function openProfilePage() {
   document.getElementById("profileCitizenLosses").textContent = Number(u.citizenLosses || 0);
   document.getElementById("profileMafiaWins").textContent = Number(u.mafiaWins || 0);
   document.getElementById("profileMafiaLosses").textContent = Number(u.mafiaLosses || 0);
-  document.getElementById("profileClanName").textContent = getUserClanName(u.phone);
+  document.getElementById("profileClanName").textContent = getUserClanName(u.email);
   document.getElementById("profilePage").classList.add("show");
 }
 function openAnnouncements() {
@@ -4184,10 +4325,10 @@ function buildLeaderboard() {
   list.innerHTML = "";
   const all = {};
   const localAcc = getAccounts();
-  Object.keys(localAcc).forEach(ph => { if (!deletedUsers[ph]) all[ph] = localAcc[ph]; });
-  Object.keys(globalUsers).forEach(ph => {
-    if (deletedUsers[ph]) return;
-    if (!all[ph] || Number(globalUsers[ph].updated || 0) > Number(all[ph].updated || 0)) all[ph] = mergeUserData(all[ph], globalUsers[ph]);
+  Object.keys(localAcc).forEach(em => { if (!deletedUsers[em]) all[em] = localAcc[em]; });
+  Object.keys(globalUsers).forEach(em => {
+    if (deletedUsers[em]) return;
+    if (!all[em] || Number(globalUsers[em].updated || 0) > Number(all[em].updated || 0)) all[em] = mergeUserData(all[em], globalUsers[em]);
   });
   const users = Object.values(all);
   users.sort((a, b) => {
@@ -4269,10 +4410,10 @@ const AVATARS = [
   {id:"avatar26",name:"",src:"https://cdn.imgurl.ir/uploads/w54470_IMG_20260907_232701_317.jpg",price:2700,currency:"coin"},
   {id:"avatar27",name:"",src:"https://cdn.imgurl.ir/uploads/d71988_IMG_20260907_232702_363.jpg",price:2800,currency:"coin"},
   {id:"avatar28",name:"",src:"https://cdn.imgurl.ir/uploads/r820827_IMG_20260907_232658_577.jpg",price:3000,currency:"coin"},
-  {id:"special_avatar1",name:"",src:"https://cdn.imgurl.ir/uploads/q695392_file_000000007464820e82d38fd66b431dab.png",price:0,currency:"coin",special:true,specialFor:"09001115958"},
-  {id:"special_avatar2",name:"",src:"https://cdn.imgurl.ir/uploads/z290171_IMG_20260901_191506_257.jpg",price:0,currency:"coin",special:true,specialFor:"09001115958"},
-  {id:"special_avatar3",name:"",src:"https://cdn.imgurl.ir/uploads/w264921_file_0000000078208246986681b9571883d7.png",price:0,currency:"coin",special:true,specialFor:"09001115958"},
-  {id:"special_avatar4",name:"",src:"https://cdn.imgurl.ir/uploads/y629889_file_000000007464820e82d38fd66b431dab.png",price:0,currency:"coin",special:true,specialFor:"09001115958"}
+  {id:"special_avatar1",name:"",src:"https://cdn.imgurl.ir/uploads/q695392_file_000000007464820e82d38fd66b431dab.png",price:0,currency:"coin",special:true,specialFor:"tiger.mafia.best@gmail.com"},
+  {id:"special_avatar2",name:"",src:"https://cdn.imgurl.ir/uploads/z290171_IMG_20260901_191506_257.jpg",price:0,currency:"coin",special:true,specialFor:"tiger.mafia.best@gmail.com"},
+  {id:"special_avatar3",name:"",src:"https://cdn.imgurl.ir/uploads/w264921_file_0000000078208246986681b9571883d7.png",price:0,currency:"coin",special:true,specialFor:"tiger.mafia.best@gmail.com"},
+  {id:"special_avatar4",name:"",src:"https://cdn.imgurl.ir/uploads/y629889_file_000000007464820e82d38fd66b431dab.png",price:0,currency:"coin",special:true,specialFor:"tiger.mafia.best@gmail.com"}
 ];
 
 function renderAvatarShop() {
@@ -4281,7 +4422,7 @@ function renderAvatarShop() {
   const u = getCurrentUser(); if (!u) return;
   const owned = u.ownedAvatars || [];
   AVATARS.forEach(av => {
-    if (av.special && av.specialFor && av.specialFor !== u.phone) return;
+    if (av.special && av.specialFor && av.specialFor !== u.email) return;
     const card = document.createElement("div");
     card.className = "avatar-card";
     const isOwned = owned.indexOf(av.id) !== -1;
@@ -4304,7 +4445,7 @@ function renderMyAvatars() {
   const owned = u.ownedAvatars || [];
   if (!owned.length) { grid.innerHTML = `<div class="empty-box" style="margin-top:20px"><div class="empty-icon">🎭</div><h2>هنوز اواتاری نداری</h2></div>`; return; }
   AVATARS.forEach(av => {
-    if (av.special && av.specialFor && av.specialFor !== u.phone) return;
+    if (av.special && av.specialFor && av.specialFor !== u.email) return;
     if (owned.indexOf(av.id) === -1) return;
     const card = document.createElement("div");
     card.className = "avatar-card owned";
@@ -4344,7 +4485,7 @@ function handleFrameClick(fr) {
     if (u.activeFrame === fr.id) { u.activeFrame = ""; showToast("فریم غیرفعال شد"); }
     else { u.activeFrame = fr.id; showToast("فریم فعال شد ✅"); }
     u.updated = Date.now();
-    const acc = getAccounts(); acc[u.phone] = u; saveAccounts(acc); publishFullUser(u);
+    const acc = getAccounts(); acc[u.email] = u; saveAccounts(acc); publishFullUser(u);
     updateUI(); renderFramesShop();
     return;
   }
@@ -4354,7 +4495,7 @@ function handleFrameClick(fr) {
   u.ownedFrames.push(fr.id);
   u.activeFrame = fr.id;
   u.updated = Date.now();
-  const acc = getAccounts(); acc[u.phone] = u; saveAccounts(acc); publishFullUser(u);
+  const acc = getAccounts(); acc[u.email] = u; saveAccounts(acc); publishFullUser(u);
   logActivity('coin', 'خرید فریم', 'کاربر: ' + stripColorCode(u.name) + ' | فریم: ' + fr.id + ' | قیمت: ' + fr.price);
   updateUI(); renderFramesShop(); showToast("فریم خریداری و فعال شد! 🎉");
 }
@@ -4365,33 +4506,33 @@ function handleAvatarClick(av) {
   if (av.price === 0) {
     if (!u.ownedAvatars) u.ownedAvatars = [];
     u.ownedAvatars.push(av.id); u.updated = Date.now();
-    const acc = getAccounts(); acc[u.phone] = u; saveAccounts(acc); publishFullUser(u);
+    const acc = getAccounts(); acc[u.email] = u; saveAccounts(acc); publishFullUser(u);
     updateUI(); renderAvatarShop(); showToast("اواتار رایگان دریافت شد! 🎉"); return;
   }
   if (Number(u.coins) < av.price) { showToast("سکه کافی نداری!"); return; }
   u.coins = Number(u.coins) - av.price;
   if (!u.ownedAvatars) u.ownedAvatars = [];
   u.ownedAvatars.push(av.id); u.updated = Date.now();
-  const acc = getAccounts(); acc[u.phone] = u; saveAccounts(acc); publishFullUser(u);
+  const acc = getAccounts(); acc[u.email] = u; saveAccounts(acc); publishFullUser(u);
   logActivity('coin', 'خرید اواتار', 'کاربر: ' + stripColorCode(u.name) + ' | اواتار: ' + av.id + ' | قیمت: ' + av.price);
   updateUI(); renderAvatarShop(); showToast("اواتار خریداری شد! 🎉");
 }
 function equipAvatar(av) {
   const u = getCurrentUser(); if (!u) return;
   u.avatar = av.src; u.updated = Date.now();
-  const acc = getAccounts(); acc[u.phone] = u; saveAccounts(acc); publishFullUser(u);
+  const acc = getAccounts(); acc[u.email] = u; saveAccounts(acc); publishFullUser(u);
   updateUI(); renderAvatarShop(); renderMyAvatars(); showToast("اواتار تجهیز شد! ✅");
 }
 
 /* ============================================================
-   CLAN SYSTEM (COMPLETE)
+   CLAN SYSTEM
    ============================================================ */
 function openClan() {
   closeMenu(); closeInternalPages();
   const u = getCurrentUser(); if (!u) return;
   const clans = getClans();
   let uid = null;
-  Object.keys(clans).forEach(id => { if (clans[id].members && clans[id].members.indexOf(u.phone) !== -1) uid = id; });
+  Object.keys(clans).forEach(id => { if (clans[id].members && clans[id].members.indexOf(u.email) !== -1) uid = id; });
   if (uid) {
     currentClanId = uid;
     document.getElementById("clanMainContent").style.display = "none";
@@ -4414,16 +4555,16 @@ function createClan() {
   const clans = getClans();
   let already = false, nameExists = false;
   Object.keys(clans).forEach(id => {
-    if (clans[id].members && clans[id].members.indexOf(u.phone) !== -1) already = true;
+    if (clans[id].members && clans[id].members.indexOf(u.email) !== -1) already = true;
     if (stripColorCode(clans[id].name) === stripColorCode(name)) nameExists = true;
   });
   if (already) { showToast("شما قبلاً عضو یک کلن هستید!"); return; }
   if (nameExists) { showToast("این نام قبلاً استفاده شده!"); return; }
   u.coins = Number(u.coins) - 1000; u.updated = Date.now();
   const id = "clan_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5);
-  clans[id] = { id, name, desc: desc || "بدون توضیحات", owner: u.phone, members: [u.phone], admins: [u.phone], avatar: DEFAULT_AVATAR, requests: [], messages: [], verified: false, lobbyScore: 0 };
+  clans[id] = { id, name, desc: desc || "بدون توضیحات", owner: u.email, members: [u.email], admins: [u.email], avatar: DEFAULT_AVATAR, requests: [], messages: [], verified: false, lobbyScore: 0 };
   saveClans(clans); publishClanUpdate(clans[id]);
-  const acc = getAccounts(); acc[u.phone] = u; saveAccounts(acc); publishFullUser(u);
+  const acc = getAccounts(); acc[u.email] = u; saveAccounts(acc); publishFullUser(u);
   document.getElementById("clanNameInput").value = ""; document.getElementById("clanDescInput").value = "";
   logActivity('clan', 'ساخت کلن', 'نام: ' + stripColorCode(name));
   updateUI(); showToast("کلن ساخته شد! 🎉"); openClan();
@@ -4444,15 +4585,15 @@ function searchClans() {
     const card = document.createElement("div");
     card.className = "clan-card";
     const mc = c.members ? c.members.length : 0;
-    const isM = c.members && c.members.indexOf(u.phone) !== -1;
+    const isM = c.members && c.members.indexOf(u.email) !== -1;
     const on = (acc[c.owner] && acc[c.owner].name) || (globalUsers[c.owner] && globalUsers[c.owner].name) || "مدیر";
     let act = "";
     if (isM) act = `<button class="primary-btn" onclick="enterClan('${id}')">ورود به کلن</button>`;
     else {
       let al = false;
-      Object.keys(clans).forEach(cid => { if (clans[cid].members && clans[cid].members.indexOf(u.phone) !== -1) al = true; });
+      Object.keys(clans).forEach(cid => { if (clans[cid].members && clans[cid].members.indexOf(u.email) !== -1) al = true; });
       if (!al) {
-        const ar = c.requests && c.requests.indexOf(u.phone) !== -1;
+        const ar = c.requests && c.requests.indexOf(u.email) !== -1;
         act = ar ? `<button style="color:#888">درخواست داده شده</button>` : `<button class="primary-btn" onclick="requestJoinClan('${id}')">درخواست عضویت</button>`;
       }
     }
@@ -4467,12 +4608,12 @@ function requestJoinClan(id) {
   const u = getCurrentUser(); if (!u) return;
   const clans = getClans();
   let already = false;
-  Object.keys(clans).forEach(cid => { if (clans[cid].members && clans[cid].members.indexOf(u.phone) !== -1) already = true; });
+  Object.keys(clans).forEach(cid => { if (clans[cid].members && clans[cid].members.indexOf(u.email) !== -1) already = true; });
   if (already) { showToast("شما قبلاً عضو یک کلن هستید!"); return; }
   const c = clans[id]; if (!c) return;
   if (!c.requests) c.requests = [];
-  if (c.requests.indexOf(u.phone) !== -1) { showToast("قبلاً درخواست داده‌ای!"); return; }
-  c.requests.push(u.phone); clans[id] = c; saveClans(clans); publishClanUpdate(c);
+  if (c.requests.indexOf(u.email) !== -1) { showToast("قبلاً درخواست داده‌ای!"); return; }
+  c.requests.push(u.email); clans[id] = c; saveClans(clans); publishClanUpdate(c);
   logActivity('clan', 'درخواست عضویت کلن', 'کلن: ' + stripColorCode(c.name));
   showToast("درخواست عضویت ارسال شد ✅"); searchClans();
 }
@@ -4496,8 +4637,8 @@ function renderClanDetail() {
   const verified = c.verified ? VERIFIED_BADGE : "";
   const colored = parseColoredName(c.name);
   document.getElementById("clanDetailName").innerHTML = colored.html + verified;
-  const isO = c.owner === u.phone;
-  const isA = c.admins && c.admins.indexOf(u.phone) !== -1;
+  const isO = c.owner === u.email;
+  const isA = c.admins && c.admins.indexOf(u.email) !== -1;
   document.getElementById("clanSettingsBtn").style.display = (isO || isA) ? "block" : "none";
   renderClanChat();
 }
@@ -4505,8 +4646,8 @@ function openClanSettings() {
   const clans = getClans();
   const c = clans[currentClanId]; if (!c) return;
   const u = getCurrentUser(); if (!u) return;
-  const isO = c.owner === u.phone;
-  const isA = c.admins && c.admins.indexOf(u.phone) !== -1;
+  const isO = c.owner === u.email;
+  const isA = c.admins && c.admins.indexOf(u.email) !== -1;
   if (!isO && !isA) { showToast("فقط مدیر و ادمین‌ها دسترسی دارند!"); return; }
   document.getElementById("clanSettingsAvatar").src = c.avatar || DEFAULT_AVATAR;
   const verified = c.verified ? VERIFIED_BADGE : "";
@@ -4528,34 +4669,34 @@ function renderClanRequests() {
   const reqs = c.requests || [];
   if (!reqs.length) { list.innerHTML = `<p style="color:#777;font-size:12px">هیچ درخواستی وجود ندارد.</p>`; return; }
   const acc = getAccounts();
-  reqs.forEach(ph => {
-    const ru = acc[ph] || globalUsers[ph];
+  reqs.forEach(em => {
+    const ru = acc[em] || globalUsers[em];
     const row = document.createElement("div");
     row.className = "clan-request-row";
-    row.innerHTML = `<div class="req-name">${escapeHTML(ru ? stripColorCode(ru.name) : "کاربر")}</div><button class="accept-btn" onclick="acceptRequest('${ph}')">✅ قبول</button><button class="reject-btn" onclick="rejectRequest('${ph}')">❌ رد</button>`;
+    row.innerHTML = `<div class="req-name">${escapeHTML(ru ? stripColorCode(ru.name) : "کاربر")}</div><button class="accept-btn" onclick="acceptRequest('${em}')">✅ قبول</button><button class="reject-btn" onclick="rejectRequest('${em}')">❌ رد</button>`;
     list.appendChild(row);
   });
 }
-function acceptRequest(ph) {
+function acceptRequest(em) {
   const clans = getClans();
   const c = clans[currentClanId]; if (!c) return;
   let already = false;
-  Object.keys(clans).forEach(cid => { if (cid !== currentClanId && clans[cid].members && clans[cid].members.indexOf(ph) !== -1) already = true; });
+  Object.keys(clans).forEach(cid => { if (cid !== currentClanId && clans[cid].members && clans[cid].members.indexOf(em) !== -1) already = true; });
   if (already) { showToast("این کاربر عضو کلن دیگری است!"); return; }
   if (!c.members) c.members = [];
   if (!c.requests) c.requests = [];
-  const i = c.requests.indexOf(ph);
+  const i = c.requests.indexOf(em);
   if (i !== -1) c.requests.splice(i, 1);
-  if (c.members.indexOf(ph) === -1) c.members.push(ph);
+  if (c.members.indexOf(em) === -1) c.members.push(em);
   clans[currentClanId] = c; saveClans(clans); publishClanUpdate(c);
-  logActivity('clan', 'پذیرش عضو کلن', 'کلن: ' + stripColorCode(c.name) + ' | کاربر: ' + ph);
+  logActivity('clan', 'پذیرش عضو کلن', 'کلن: ' + stripColorCode(c.name) + ' | کاربر: ' + em);
   renderClanRequests(); renderClanMembers(); showToast("کاربر به کلن اضافه شد ✅");
 }
-function rejectRequest(ph) {
+function rejectRequest(em) {
   const clans = getClans();
   const c = clans[currentClanId]; if (!c) return;
   if (!c.requests) c.requests = [];
-  const i = c.requests.indexOf(ph);
+  const i = c.requests.indexOf(em);
   if (i !== -1) c.requests.splice(i, 1);
   clans[currentClanId] = c; saveClans(clans); publishClanUpdate(c);
   renderClanRequests(); showToast("درخواست رد شد ❌");
@@ -4567,21 +4708,21 @@ function renderClanMembers() {
   list.innerHTML = "";
   const mems = c.members || [];
   const u = getCurrentUser(); if (!u) return;
-  const isO = c.owner === u.phone;
+  const isO = c.owner === u.email;
   const acc = getAccounts();
-  mems.forEach(ph => {
-    const m = acc[ph] || globalUsers[ph];
+  mems.forEach(em => {
+    const m = acc[em] || globalUsers[em];
     const row = document.createElement("div");
     row.className = "clan-member-row";
-    const isMO = c.owner === ph;
-    const isMA = c.admins && c.admins.indexOf(ph) !== -1;
+    const isMO = c.owner === em;
+    const isMA = c.admins && c.admins.indexOf(em) !== -1;
     let role = "عضو";
     if (isMO) role = "👑 مدير";
     else if (isMA) role = "⭐ ادمین";
     let acts = "";
-    if (isO && ph !== u.phone) {
-      if (!isMA) acts += `<button onclick="makeAdmin('${ph}')">⭐ ادمین</button>`;
-      acts += `<button onclick="kickMember('${ph}')" style="color:#ff7777">🚫 حذف</button>`;
+    if (isO && em !== u.email) {
+      if (!isMA) acts += `<button onclick="makeAdmin('${em}')">⭐ ادمین</button>`;
+      acts += `<button onclick="kickMember('${em}')" style="color:#ff7777">🚫 حذف</button>`;
     }
     const verified = m && m.verified ? VERIFIED_BADGE : "";
     const av = m ? (m.avatar || DEFAULT_AVATAR) : DEFAULT_AVATAR;
@@ -4595,21 +4736,21 @@ function renderClanMembers() {
     list.appendChild(row);
   });
 }
-function makeAdmin(ph) {
+function makeAdmin(em) {
   const clans = getClans();
   const c = clans[currentClanId]; if (!c) return;
   if (!c.admins) c.admins = [];
-  if (c.admins.indexOf(ph) === -1) c.admins.push(ph);
+  if (c.admins.indexOf(em) === -1) c.admins.push(em);
   clans[currentClanId] = c; saveClans(clans); publishClanUpdate(c);
   renderClanMembers(); showToast("ادمین شد ✅");
 }
-function kickMember(ph) {
+function kickMember(em) {
   const clans = getClans();
   const c = clans[currentClanId]; if (!c) return;
   if (!c.members) c.members = [];
-  const i = c.members.indexOf(ph);
+  const i = c.members.indexOf(em);
   if (i !== -1) c.members.splice(i, 1);
-  if (c.admins) { const ai = c.admins.indexOf(ph); if (ai !== -1) c.admins.splice(ai, 1); }
+  if (c.admins) { const ai = c.admins.indexOf(em); if (ai !== -1) c.admins.splice(ai, 1); }
   clans[currentClanId] = c; saveClans(clans); publishClanUpdate(c);
   renderClanMembers(); showToast("کاربر حذف شد 🚫");
 }
@@ -4617,7 +4758,7 @@ function leaveClan() {
   const clans = getClans();
   const c = clans[currentClanId]; if (!c) return;
   const u = getCurrentUser(); if (!u) return;
-  const isOwner = c.owner === u.phone;
+  const isOwner = c.owner === u.email;
   if (isOwner) {
     if (confirm("آیا مطمئنی؟ با خروج تو کلن منحل میشه!")) {
       delete clans[currentClanId];
@@ -4629,9 +4770,9 @@ function leaveClan() {
       leaveClanDetail(); showToast("کلن منحل شد 💥"); return;
     }
   } else {
-    const idx = c.members.indexOf(u.phone);
+    const idx = c.members.indexOf(u.email);
     if (idx !== -1) c.members.splice(idx, 1);
-    if (c.admins) { const ai = c.admins.indexOf(u.phone); if (ai !== -1) c.admins.splice(ai, 1); }
+    if (c.admins) { const ai = c.admins.indexOf(u.email); if (ai !== -1) c.admins.splice(ai, 1); }
     clans[currentClanId] = c; saveClans(clans); publishClanUpdate(c);
     leaveClanDetail(); showToast("از کلن خارج شدی 👋");
   }
@@ -4682,7 +4823,7 @@ function uploadClanAvatar() {
           const c = clans[currentClanId]; 
           if (!c) { showToast("کلن یافت نشد"); return; }
           u.coins = Number(u.coins) - 1000; u.updated = Date.now();
-          const acc = getAccounts(); acc[u.phone] = u; saveAccounts(acc); publishFullUser(u);
+          const acc = getAccounts(); acc[u.email] = u; saveAccounts(acc); publishFullUser(u);
           c.avatar = base64; clans[currentClanId] = c; saveClans(clans); publishClanUpdate(c);
           updateUI();
           const avEl = document.getElementById("clanSettingsAvatar");
@@ -4714,9 +4855,9 @@ function renderClanChat() {
     const av = (acc[msg.sender] && acc[msg.sender].avatar) || (globalUsers[msg.sender] && globalUsers[msg.sender].avatar) || DEFAULT_AVATAR;
     const verified = (acc[msg.sender] && acc[msg.sender].verified) || (globalUsers[msg.sender] && globalUsers[msg.sender].verified);
     const tick = verified ? VERIFIED_BADGE : "";
-    const isO = c.owner === u.phone;
-    const isA = c.admins && c.admins.indexOf(u.phone) !== -1;
-    const isMy = msg.sender === u.phone;
+    const isO = c.owner === u.email;
+    const isA = c.admins && c.admins.indexOf(u.email) !== -1;
+    const isMy = msg.sender === u.email;
     let acts = "";
     if (isMy || isO || isA) acts += `<button onclick="deleteClanMessage(${idx})">🗑️ حذف</button>`;
     acts += `<button onclick="replyToClanMessage(${idx})">↩️ ریپلای</button>`;
@@ -4747,7 +4888,7 @@ function sendClanMessage() {
   if (!c.messages) c.messages = [];
   const now = new Date();
   const ts = now.getHours().toString().padStart(2, "0") + ":" + now.getMinutes().toString().padStart(2, "0");
-  const msg = { sender: u.phone, text, time: ts };
+  const msg = { sender: u.email, text, time: ts };
   if (clanReplyTo !== null) { msg.replyTo = clanReplyTo; clanReplyTo = null; }
   c.messages.push(msg); clans[currentClanId] = c; saveClans(clans); publishClanMsg(currentClanId, msg);
   logActivity('chat', 'پیام در کلن', 'کلن: ' + stripColorCode(c.name) + ' | پیام: ' + text);
@@ -4758,9 +4899,9 @@ function deleteClanMessage(idx) {
   const c = clans[currentClanId]; if (!c || !c.messages) return;
   const u = getCurrentUser(); if (!u) return;
   const msg = c.messages[idx]; if (!msg) return;
-  const isO = c.owner === u.phone;
-  const isA = c.admins && c.admins.indexOf(u.phone) !== -1;
-  const isMy = msg.sender === u.phone;
+  const isO = c.owner === u.email;
+  const isA = c.admins && c.admins.indexOf(u.email) !== -1;
+  const isMy = msg.sender === u.email;
   if (!isMy && !isO && !isA) { showToast("شما اجازه حذف ندارید!"); return; }
   c.messages.splice(idx, 1); clans[currentClanId] = c; saveClans(clans); publishClanUpdate(c);
   renderClanChat(); showToast("پیام حذف شد 🗑️");
@@ -4778,7 +4919,7 @@ function openStore() { closeMenu(); closeInternalPages(); document.getElementByI
 function closeStore() { document.getElementById("storePage").classList.remove("show"); }
 function claimDailyReward() {
   const u = getCurrentUser(); if (!u) return;
-  const key = "daily_" + u.phone;
+  const key = "daily_" + u.email;
   const last = NS.get(key);
   const now = Date.now();
   const oneDay = 24 * 60 * 60 * 1000;
@@ -4789,7 +4930,7 @@ function claimDailyReward() {
     showToast("بعداً دوباره بیا! (" + h + " ساعت و " + m + " دقیقه)"); return;
   }
   u.coins = Number(u.coins) + 30; u.updated = Date.now();
-  const acc = getAccounts(); acc[u.phone] = u; saveAccounts(acc); publishFullUser(u);
+  const acc = getAccounts(); acc[u.email] = u; saveAccounts(acc); publishFullUser(u);
   NS.set(key, String(now)); updateUI(); showToast("۳۰ سکه روزانه دریافت شد! 🎉");
   logActivity('coin', 'جایزه روزانه', 'کاربر: ' + stripColorCode(u.name) + ' | مقدار: ۳۰ سکه');
 }
@@ -4803,7 +4944,7 @@ function changePassword() {
   if (neu.length < 6) { showToast("رمز جدید حداقل ۶ کاراکتر باشد."); return; }
   const acc = getAccounts();
   u.password = neu; u.updated = Date.now();
-  acc[u.phone] = u; saveAccounts(acc); publishFullUser(u);
+  acc[u.email] = u; saveAccounts(acc); publishFullUser(u);
   document.getElementById("settingsCurrentPassword").value = "";
   document.getElementById("settingsNewPassword").value = "";
   showToast("رمز عبور تغییر کرد ✅");
@@ -4834,14 +4975,14 @@ function changeName() {
   const n = document.getElementById("newName").value.trim();
   const plainName = stripColorCode(n);
   if (plainName.length < 2) { showToast("نام جدید معتبر نیست."); return; }
-  const phone = NS.get("current_user");
+  const email = NS.get("current_user");
   const acc = getAccounts();
-  const u = acc[phone]; if (!u) return;
+  const u = acc[email]; if (!u) return;
   const hasColor = /^<#[0-9a-fA-F]{3,6}>/i.test(n);
   if (hasColor && !u.canColorName) { showToast("شما اجازه استفاده از نام رنگی را ندارید!"); return; }
   if (Number(u.coins) < 70) { showToast("برای تغییر نام ۷۰ سکه لازم است."); return; }
   u.coins = Number(u.coins) - 70; u.name = n; u.updated = Date.now();
-  acc[phone] = u; saveAccounts(acc); publishFullUser(u);
+  acc[email] = u; saveAccounts(acc); publishFullUser(u);
   logActivity('coin', 'تغییر نام', 'نام جدید: ' + stripColorCode(n) + ' | هزینه: ۷۰ سکه');
   updateUI(); closeEditName(); showToast("نام تغییر کرد.");
 }
@@ -4996,7 +5137,7 @@ function endAdminWinDrag() {
 
 function openAdminPanel() {
   const u = getCurrentUser();
-  if (u && isCreator(u.phone)) { askCreatorPasswordAndOpen(); return; }
+  if (u && isCreator(u.email)) { askCreatorPasswordAndOpen(); return; }
   const pass = prompt("رمز پنل مدیریت:");
   if (pass === ADMIN_PASSWORD) { openFloatingAdmin(); }
   else if (pass) { showToast("رمز اشتباه است!"); }
@@ -5032,7 +5173,7 @@ function renderAdminDashboard() {
   const el = document.getElementById('adminDashboard');
   if (!el) return;
   const acc = getAccounts();
-  const users = Object.values(acc).filter(u => !deletedUsers[u.phone]);
+  const users = Object.values(acc).filter(u => !deletedUsers[u.email]);
   const clans = getClans();
   const lobbies = getLobbies();
   const anns = getAnnouncements();
@@ -5055,7 +5196,7 @@ function adminFullReset() {
   const accStr = NS.get("accounts");
   if (accStr) {
     try {
-      const userCount = Object.keys(JSON.parse(accStr)).filter(p => p !== CREATOR_PHONE).length;
+      const userCount = Object.keys(JSON.parse(accStr)).filter(p => p !== CREATOR_EMAIL).length;
       const adminBackup = { timestamp: Date.now(), data: accStr, lobbies: NS.get("lobbies"), clans: NS.get("clans"), userCount };
       NS.set("admin_reset_backup", JSON.stringify(adminBackup));
     } catch(e) {}
@@ -5065,7 +5206,7 @@ function adminFullReset() {
   resetAppStorage();
   globalUsers = {}; sharedLobbies = []; sharedClans = {}; sharedAnnouncements = {};
   ensureSpecialAccounts();
-  NS.set("current_user", CREATOR_PHONE);
+  NS.set("current_user", CREATOR_EMAIL);
   if (ablyUsersCh && isAblyReady) { ablyUsersCh.publish(EV.usersFull, {}); ablyUsersCh.publish(EV.globalReset, {ts: Date.now()}); }
   if (ablyLobbyListCh && isAblyReady) ablyLobbyListCh.publish(EV.lobbyFull, []);
   if (ablyClanListCh && isAblyReady) ablyClanListCh.publish(EV.clansFull, {});
@@ -5179,10 +5320,10 @@ function adminRenderVerifiedUsers() {
   const list = document.getElementById("adminVerifiedUsers");
   const all = {};
   const localAcc = getAccounts();
-  Object.keys(localAcc).forEach(ph => { if (!deletedUsers[ph]) all[ph] = localAcc[ph]; });
-  Object.keys(globalUsers).forEach(ph => {
-    if (deletedUsers[ph]) return;
-    if (!all[ph] || Number(globalUsers[ph].updated || 0) > Number(all[ph].updated || 0)) all[ph] = mergeUserData(all[ph], globalUsers[ph]);
+  Object.keys(localAcc).forEach(em => { if (!deletedUsers[em]) all[em] = localAcc[em]; });
+  Object.keys(globalUsers).forEach(em => {
+    if (deletedUsers[em]) return;
+    if (!all[em] || Number(globalUsers[em].updated || 0) > Number(all[em].updated || 0)) all[em] = mergeUserData(all[em], globalUsers[em]);
   });
   const users = Object.values(all).filter(u => u.verified);
   if (!users.length) { list.innerHTML = `<p style="color:#777;font-size:12px">کاربر تیک‌داری وجود ندارد.</p>`; return; }
@@ -5190,8 +5331,8 @@ function adminRenderVerifiedUsers() {
   users.forEach(u => {
     const div = document.createElement("div");
     div.className = "clan-member-row";
-    const removeBtn = isCreator(u.phone) ? `<button disabled style="height:24px;padding:0 6px;border-radius:4px;border:1px solid #555;background:#1a1a1a;color:#666;font-size:9px;cursor:not-allowed">🔒</button>` : `<button onclick="adminRemoveVerify('${u.phone}')" style="height:24px;padding:0 6px;border-radius:4px;border:1px solid #8a2020;background:#1a0c0c;color:#ff8a8a;font-size:9px;cursor:pointer">حذف</button>`;
-    div.innerHTML = `<img src="${u.avatar || DEFAULT_AVATAR}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid #a87529" loading="lazy" decoding="async"><div class="member-name">${VERIFIED_BADGE} ${escapeHTML(stripColorCode(u.name))} <span style="color:#888;font-size:9px">${u.phone}</span></div>${removeBtn}`;
+    const removeBtn = isCreator(u.email) ? `<button disabled style="height:24px;padding:0 6px;border-radius:4px;border:1px solid #555;background:#1a1a1a;color:#666;font-size:9px;cursor:not-allowed">🔒</button>` : `<button onclick="adminRemoveVerify('${u.email}')" style="height:24px;padding:0 6px;border-radius:4px;border:1px solid #8a2020;background:#1a0c0c;color:#ff8a8a;font-size:9px;cursor:pointer">حذف</button>`;
+    div.innerHTML = `<img src="${u.avatar || DEFAULT_AVATAR}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid #a87529" loading="lazy" decoding="async"><div class="member-name">${VERIFIED_BADGE} ${escapeHTML(stripColorCode(u.name))} <span style="color:#888;font-size:9px">${u.email}</span></div>${removeBtn}`;
     list.appendChild(div);
   });
 }
@@ -5199,10 +5340,10 @@ function adminRenderLabeledUsers() {
   const list = document.getElementById("adminLabeledUsers");
   const all = {};
   const localAcc = getAccounts();
-  Object.keys(localAcc).forEach(ph => { if (!deletedUsers[ph]) all[ph] = localAcc[ph]; });
-  Object.keys(globalUsers).forEach(ph => {
-    if (deletedUsers[ph]) return;
-    if (!all[ph] || Number(globalUsers[ph].updated || 0) > Number(all[ph].updated || 0)) all[ph] = mergeUserData(all[ph], globalUsers[ph]);
+  Object.keys(localAcc).forEach(em => { if (!deletedUsers[em]) all[em] = localAcc[em]; });
+  Object.keys(globalUsers).forEach(em => {
+    if (deletedUsers[em]) return;
+    if (!all[em] || Number(globalUsers[em].updated || 0) > Number(all[em].updated || 0)) all[em] = mergeUserData(all[em], globalUsers[em]);
   });
   const users = Object.values(all).filter(u => u.label && u.label.trim());
   if (!users.length) { list.innerHTML = `<p style="color:#777;font-size:12px">کاربر لیبل‌داری وجود ندارد.</p>`; return; }
@@ -5210,7 +5351,7 @@ function adminRenderLabeledUsers() {
   users.forEach(u => {
     const div = document.createElement("div");
     div.className = "clan-member-row";
-    const removeBtn = isCreator(u.phone) ? `<button disabled style="height:24px;padding:0 6px;border-radius:4px;border:1px solid #555;background:#1a1a1a;color:#666;font-size:9px;cursor:not-allowed">🔒</button>` : `<button onclick="adminRemoveLabel('${u.phone}')" style="height:24px;padding:0 6px;border-radius:4px;border:1px solid #8a2020;background:#1a0c0c;color:#ff8a8a;font-size:9px;cursor:pointer">حذف</button>`;
+    const removeBtn = isCreator(u.email) ? `<button disabled style="height:24px;padding:0 6px;border-radius:4px;border:1px solid #555;background:#1a1a1a;color:#666;font-size:9px;cursor:not-allowed">🔒</button>` : `<button onclick="adminRemoveLabel('${u.email}')" style="height:24px;padding:0 6px;border-radius:4px;border:1px solid #8a2020;background:#1a0c0c;color:#ff8a8a;font-size:9px;cursor:pointer">حذف</button>`;
     div.innerHTML = `<img src="${u.avatar || DEFAULT_AVATAR}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid #a87529" loading="lazy" decoding="async"><div class="member-name">${escapeHTML(stripColorCode(u.name))} <span class="user-label">${escapeHTML(u.label)}</span></div>${removeBtn}`;
     list.appendChild(div);
   });
@@ -5296,38 +5437,38 @@ function adminSearchUsers() {
   list.innerHTML = "";
   const all = {};
   const localAcc = getAccounts();
-  Object.keys(localAcc).forEach(ph => { if (!deletedUsers[ph]) all[ph] = localAcc[ph]; });
-  Object.keys(globalUsers).forEach(ph => {
-    if (deletedUsers[ph]) return;
-    if (!all[ph] || Number(globalUsers[ph].updated || 0) > Number(all[ph].updated || 0)) all[ph] = mergeUserData(all[ph], globalUsers[ph]);
+  Object.keys(localAcc).forEach(em => { if (!deletedUsers[em]) all[em] = localAcc[em]; });
+  Object.keys(globalUsers).forEach(em => {
+    if (deletedUsers[em]) return;
+    if (!all[em] || Number(globalUsers[em].updated || 0) > Number(all[em].updated || 0)) all[em] = mergeUserData(all[em], globalUsers[em]);
   });
   let users = Object.values(all);
-  if (q) users = users.filter(u => (u.phone && u.phone.includes(q)) || (u.name && stripColorCode(u.name).toLowerCase().includes(q)));
+  if (q) users = users.filter(u => (u.email && u.email.includes(q)) || (u.name && stripColorCode(u.name).toLowerCase().includes(q)));
   if (!users.length) { list.innerHTML = `<p style="color:#777;font-size:12px">کاربری یافت نشد.</p>`; return; }
   users.forEach(u => {
-    const isPermBlocked = permBlocked[u.phone] ? " (دایمی)" : "";
+    const isPermBlocked = permBlocked[u.email] ? " (دایمی)" : "";
     const div = document.createElement("div");
     div.className = "clan-member-row";
     const verified = u.verified ? VERIFIED_BADGE + " " : "";
     const label = u.label ? ` [${u.label}]` : "";
     const isAdmin = u.isAdmin ? " ⭐" : "";
     const colorBadge = u.canColorName ? " 🎨" : "";
-    const protectedBadge = isCreator(u.phone) ? " 🔒" : "";
-    const isProtected = isCreator(u.phone);
+    const protectedBadge = isCreator(u.email) ? " 🔒" : "";
+    const isProtected = isCreator(u.email);
     const disableAttr = isProtected ? 'disabled' : '';
     const disabledStyle = isProtected ? 'style="height:24px;padding:0 5px;border-radius:4px;border:1px solid #555;background:#1a1a1a;color:#666;font-size:8px;cursor:not-allowed"' : '';
     div.innerHTML = `
       <img src="${u.avatar || DEFAULT_AVATAR}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid #a87529" loading="lazy" decoding="async">
-      <div class="member-name">${verified}${escapeHTML(stripColorCode(u.name))}${label}${isAdmin}${colorBadge}${protectedBadge}${isPermBlocked}<br><span style="color:#888;font-size:9px">${u.phone} | کد: ${u.code || "-"} | سکه: ${formatNum(u.coins)}</span></div>
-      <input id="adminCoinInput_${u.phone}" type="number" placeholder="سکه" style="width:52px;height:24px;border-radius:4px;border:1px solid #4e381d;background:#030303;color:#fff;font-size:9px;padding:0 4px">
-      <button onclick="adminGiveCoin('${u.phone}')" style="height:24px;padding:0 5px;border-radius:4px;border:1px solid #76521e;background:linear-gradient(#dca33f,#744810);color:#160d02;font-size:9px;cursor:pointer">➕</button>
-      <button onclick="adminTakeCoin('${u.phone}')" ${disableAttr} ${disabledStyle}>➖</button>
-      <button onclick="adminChangeName('${u.phone}')" ${disableAttr} ${disabledStyle}>✏️</button>
-      <button onclick="adminBlockUser('${u.phone}')" ${disableAttr} ${disabledStyle}>🚫</button>
-      <button onclick="adminMakeAdminUI('${u.phone}')" ${disableAttr} ${disabledStyle}>⭐</button>
-      <button onclick="adminDeleteAccount('${u.phone}')" ${disableAttr} ${disabledStyle}>💀</button>
-      <button onclick="adminResetCoin('${u.phone}')" ${disableAttr} ${disabledStyle}>💰0</button>
-      <button onclick="copyPhone('${u.phone}')" style="height:24px;padding:0 5px;border-radius:4px;border:1px solid #4e381d;background:#0c0b08;color:#ddd;font-size:9px;cursor:pointer">📋</button>
+      <div class="member-name">${verified}${escapeHTML(stripColorCode(u.name))}${label}${isAdmin}${colorBadge}${protectedBadge}${isPermBlocked}<br><span style="color:#888;font-size:9px">${u.email} | کد: ${u.code || "-"} | سکه: ${formatNum(u.coins)}</span></div>
+      <input id="adminCoinInput_${u.email}" type="number" placeholder="سکه" style="width:52px;height:24px;border-radius:4px;border:1px solid #4e381d;background:#030303;color:#fff;font-size:9px;padding:0 4px">
+      <button onclick="adminGiveCoin('${u.email}')" style="height:24px;padding:0 5px;border-radius:4px;border:1px solid #76521e;background:linear-gradient(#dca33f,#744810);color:#160d02;font-size:9px;cursor:pointer">➕</button>
+      <button onclick="adminTakeCoin('${u.email}')" ${disableAttr} ${disabledStyle}>➖</button>
+      <button onclick="adminChangeName('${u.email}')" ${disableAttr} ${disabledStyle}>✏️</button>
+      <button onclick="adminBlockUser('${u.email}')" ${disableAttr} ${disabledStyle}>🚫</button>
+      <button onclick="adminMakeAdminUI('${u.email}')" ${disableAttr} ${disabledStyle}>⭐</button>
+      <button onclick="adminDeleteAccount('${u.email}')" ${disableAttr} ${disabledStyle}>💀</button>
+      <button onclick="adminResetCoin('${u.email}')" ${disableAttr} ${disabledStyle}>💰0</button>
+      <button onclick="copyPhone('${u.email}')" style="height:24px;padding:0 5px;border-radius:4px;border:1px solid #4e381d;background:#0c0b08;color:#ddd;font-size:9px;cursor:pointer">📋</button>
     `;
     list.appendChild(div);
   });
@@ -5361,7 +5502,7 @@ function adminDeleteAccount(phone) {
   deletedUsers[phone] = true;
   saveDeletedUsers();
   if (ablyUsersCh && isAblyReady) ablyUsersCh.publish(EV.userDeleted, {phone});
-  if (getCurrentPhone() === phone) logout();
+  if (getCurrentEmail() === phone) logout();
   logActivity('admin', 'حذف اکانت', 'کاربر: ' + phone + ' | نام: ' + name);
   showToast(`اکانت ${name} حذف شد 💀`);
   adminSearchUsers(); renderAdminList();
@@ -5424,7 +5565,7 @@ function adminBlockUser(phone) {
   acc[phone].blocked = { until: Date.now() + totalMs, reason: reason.trim(), date: new Date().toLocaleDateString("fa-IR") };
   acc[phone].updated = Date.now();
   saveAccounts(acc); publishFullUser(acc[phone]);
-  if (phone === getCurrentPhone()) { showBlockedPage(acc[phone].blocked); logout(); }
+  if (phone === getCurrentEmail()) { showBlockedPage(acc[phone].blocked); logout(); }
   logActivity('admin', 'مسدود کردن کاربر', `کاربر: ${phone} | مدت: ${days} روز و ${hours||0} ساعت | علت: ${reason}`);
   showToast("کاربر مسدود شد"); adminSearchUsers();
 }
@@ -5449,7 +5590,7 @@ function adminPermBlockUser() {
   const acc = getAccounts();
   if (acc[phone]) { delete acc[phone]; saveAccounts(acc); }
   delete globalUsers[phone];
-  if (getCurrentPhone() === phone) { showBlockedPage({reason:"مسدودیت دایمی", until:Date.now()+365*24*60*60*1000}); logout(); }
+  if (getCurrentEmail() === phone) { showBlockedPage({reason:"مسدودیت دایمی", until:Date.now()+365*24*60*60*1000}); logout(); }
   document.getElementById("adminPermBlockPhone").value = "";
   logActivity('admin', 'مسدودیت دایمی دستگاه', 'شماره: ' + phone);
   adminRenderPermBlocked(); showToast("مسدود دایمی شد 🚫");
@@ -5542,7 +5683,7 @@ function adminTakeAllCoins() {
   const acc = getAccounts();
   Object.keys(acc).forEach(phone => {
     if (deletedUsers[phone]) return;
-    if (phone === CREATOR_PHONE) return;
+    if (phone === CREATOR_EMAIL) return;
     acc[phone].coins = Math.max(0, (acc[phone].coins || 0) - val); acc[phone].updated = Date.now();
     publishFullUser(acc[phone]);
   });
@@ -5674,10 +5815,10 @@ function renderAdminList() {
   const listPage = document.getElementById("adminListContent");
   const all = {};
   const localAcc = getAccounts();
-  Object.keys(localAcc).forEach(ph => { if (!deletedUsers[ph]) all[ph] = localAcc[ph]; });
-  Object.keys(globalUsers).forEach(ph => {
-    if (deletedUsers[ph]) return;
-    if (!all[ph] || Number(globalUsers[ph].updated || 0) > Number(all[ph].updated || 0)) all[ph] = mergeUserData(all[ph], globalUsers[ph]);
+  Object.keys(localAcc).forEach(em => { if (!deletedUsers[em]) all[em] = localAcc[em]; });
+  Object.keys(globalUsers).forEach(em => {
+    if (deletedUsers[em]) return;
+    if (!all[em] || Number(globalUsers[em].updated || 0) > Number(all[em].updated || 0)) all[em] = mergeUserData(all[em], globalUsers[em]);
   });
   const admins = Object.values(all).filter(u => u.isAdmin);
   if (list) {
@@ -5688,7 +5829,7 @@ function renderAdminList() {
       div.className = "clan-member-row";
       const verified = u.verified ? VERIFIED_BADGE + " " : "";
       const nameParsed = parseColoredName(u.name || "کاربر");
-      div.innerHTML = `<img src="${u.avatar || DEFAULT_AVATAR}" style="width:30px;height:30px;border-radius:50%;object-fit:cover" loading="lazy" decoding="async"><div class="member-name">${verified}${nameParsed.html} ⭐</div><div class="member-role">${u.phone}</div>`;
+      div.innerHTML = `<img src="${u.avatar || DEFAULT_AVATAR}" style="width:30px;height:30px;border-radius:50%;object-fit:cover" loading="lazy" decoding="async"><div class="member-name">${verified}${nameParsed.html} ⭐</div><div class="member-role">${u.email}</div>`;
       list.appendChild(div);
     });
   }
@@ -5744,8 +5885,8 @@ function createWebRtcPeer(remotePhone, isInitiator) {
     if (st !== 'failed' && st !== 'closed' && st !== 'disconnected') { syncTrackToPeer(remotePhone); return existing; }
     else { try { existing.destroy(); } catch(e) {} delete webRtcPeers[remotePhone]; delete micSenderMap[remotePhone]; }
   }
-  const myPhone = getCurrentPhone();
-  if (!myPhone || remotePhone === myPhone) return null;
+  const myEmail = getCurrentEmail();
+  if (!myEmail || remotePhone === myEmail) return null;
   const peer = new SimplePeer({
     initiator: isInitiator, trickle: true,
     config: { iceServers: ICE_SERVERS, iceCandidatePoolSize: 10, iceTransportPolicy: 'all', bundlePolicy: 'max-bundle', rtcpMuxPolicy: 'require' },
@@ -5790,23 +5931,23 @@ function cleanupRemoteAudio(phone) {
 }
 
 function connectToAllPeers() {
-  const myPhone = getCurrentPhone();
+  const myEmail = getCurrentEmail();
   const lobby = getCurrentLobby();
-  if (!lobby || !lobby.seats || !myPhone) return;
+  if (!lobby || !lobby.seats || !myEmail) return;
   lobby.seats.forEach((seat) => {
-    if (!seat || seat.phone === myPhone) return;
+    if (!seat || seat.phone === myEmail) return;
     if (seat.phone && seat.phone.startsWith('bot_')) return;
-    const shouldInitiate = comparePhones(myPhone, seat.phone);
+    const shouldInitiate = comparePhones(myEmail, seat.phone);
     if (!webRtcPeers[seat.phone]) createWebRtcPeer(seat.phone, shouldInitiate);
     else syncTrackToPeer(seat.phone);
   });
-  if (lobby.hostPhone1 && lobby.hostPhone1 !== myPhone) {
-    const shouldInitiate = comparePhones(myPhone, lobby.hostPhone1);
+  if (lobby.hostPhone1 && lobby.hostPhone1 !== myEmail) {
+    const shouldInitiate = comparePhones(myEmail, lobby.hostPhone1);
     if (!webRtcPeers[lobby.hostPhone1]) createWebRtcPeer(lobby.hostPhone1, shouldInitiate);
     else syncTrackToPeer(lobby.hostPhone1);
   }
-  if (lobby.hostPhone2 && lobby.hostPhone2 !== myPhone) {
-    const shouldInitiate = comparePhones(myPhone, lobby.hostPhone2);
+  if (lobby.hostPhone2 && lobby.hostPhone2 !== myEmail) {
+    const shouldInitiate = comparePhones(myEmail, lobby.hostPhone2);
     if (!webRtcPeers[lobby.hostPhone2]) createWebRtcPeer(lobby.hostPhone2, shouldInitiate);
     else syncTrackToPeer(lobby.hostPhone2);
   }
@@ -5819,8 +5960,8 @@ function disconnectAllPeers() {
 }
 
 function handleWebRtcSignal(from, signal) {
-  const myPhone = getCurrentPhone();
-  if (!myPhone || from === myPhone) return;
+  const myEmail = getCurrentEmail();
+  if (!myEmail || from === myEmail) return;
   if (!webRtcPeers[from]) createWebRtcPeer(from, false);
   try { if (webRtcPeers[from]) webRtcPeers[from].signal(signal); } catch(e) {}
 }
@@ -5839,7 +5980,7 @@ async function enableMicrophone() {
     isMicAccessGranted = true; lrMicOn = true;
     const btn = document.getElementById('lrMicBtn'); if (btn) btn.classList.add('active');
     const u = getCurrentUser();
-    publishMic(u.phone, true);
+    publishMic(u.email, true);
     Object.keys(webRtcPeers).forEach(phone => syncTrackToPeer(phone));
     setTimeout(() => connectToAllPeers(), 200);
     setTimeout(() => connectToAllPeers(), 1000);
@@ -5858,7 +5999,7 @@ async function disableMicrophone() {
   const btn = document.getElementById('lrMicBtn'); if (btn) btn.classList.remove('active');
   if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
   const u = getCurrentUser();
-  if (u) publishMic(u.phone, false);
+  if (u) publishMic(u.email, false);
   Object.keys(webRtcPeers).forEach(phone => {
     const peer = webRtcPeers[phone];
     if (peer && peer._pc) {
@@ -5870,7 +6011,6 @@ async function disableMicrophone() {
   showToast('میکروفون غیرفعال شد');
 }
 
-/* 🆕 Robust publishRoomState with queueing */
 function publishRoomState(lobby) {
   if (!lobby || !lobby.id) return;
   if (ablyRoomCh && isAblyReady) { try { ablyRoomCh.publish(EV.roomState, lobby); } catch(e) {} }
@@ -5883,7 +6023,7 @@ function publishRoomState(lobby) {
 function publishLrChatMsg(msg) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish(EV.chat, {lobbyId: currentLobbyId, msg}); }
 function publishReaction(phone, reaction) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish(EV.react, {lobbyId: currentLobbyId, phone, reaction}); }
 function publishMic(phone, on) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish(EV.mic, {lobbyId: currentLobbyId, phone, on}); }
-function publishWebRtcSignal(to, signal) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish(EV.webrtcSignal, { lobbyId: currentLobbyId, from: getCurrentPhone(), to, signal }); }
+function publishWebRtcSignal(to, signal) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish(EV.webrtcSignal, { lobbyId: currentLobbyId, from: getCurrentEmail(), to, signal }); }
 function publishHostTransfer(newHost) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish(EV.hostTransfer, { lobbyId: currentLobbyId, newHost }); }
 function publishUserKicked(phone) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish(EV.userKicked, { lobbyId: currentLobbyId, phone }); }
 function publishUserBlocked(phone) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish(EV.userBlocked, { lobbyId: currentLobbyId, phone }); }
@@ -5918,24 +6058,22 @@ function publishClanUpdate(clan) {
    ============================================================ */
 document.getElementById("loginForm").addEventListener("submit", function(e) {
   e.preventDefault(); clearError(); loadDeletedData(); ensureSpecialAccounts();
-  const phone = document.getElementById("loginPhone").value.trim();
+  const email = normalizeEmail(document.getElementById("loginEmail").value);
   const pass = document.getElementById("loginPassword").value;
-  if (deletedUsers[phone]) { showError("این اکانت حذف شده است."); return; }
-  if (permBlocked[phone]) { showError("این دستگاه مسدود دایمی شده است."); return; }
+  if (!isValidEmail(email)) { showError("ایمیل معتبر نیست."); return; }
+  if (deletedUsers[email]) { showError("این اکانت حذف شده است."); return; }
+  if (permBlocked[email]) { showError("این دستگاه مسدود دایمی شده است."); return; }
   const acc = getAccounts();
-  const user = acc[phone];
-  if (!user) { showError("این شماره ثبت نام نکرده است."); return; }
-  if (user.password !== pass) { showError("شماره یا رمز ورود اشتباه است."); return; }
+  const user = acc[email];
+  if (!user) { showError("این ایمیل ثبت نام نکرده است."); return; }
+  if (user.password !== pass) { showError("ایمیل یا رمز ورود اشتباه است."); return; }
   if (user.blocked && user.blocked.until > Date.now()) { showBlockedPage(user.blocked); return; }
-  if (user.blocked && user.blocked.until <= Date.now()) { user.blocked = null; acc[phone] = user; saveAccounts(acc); }
-  NS.set("current_user", phone); showApp();
+  if (user.blocked && user.blocked.until <= Date.now()) { user.blocked = null; acc[email] = user; saveAccounts(acc); }
+  NS.set("current_user", email); showApp();
   logActivity('auth', 'ورود به حساب', 'کاربر: ' + stripColorCode(user.name));
-  // 🆕 Publish immediately (will queue if Ably not ready)
   publishFullUser(user);
-  // 🆕 Reconnect Ably if the client was a guest
   reconnectAblyWithCurrentUser();
   if (!ably) initAblyWhenReady(0);
-  // 🆕 Retry publishing after delays to ensure sync
   setTimeout(() => { const u = getCurrentUser(); if (u) publishFullUser(u); }, 1500);
   setTimeout(() => { const u = getCurrentUser(); if (u) publishFullUser(u); }, 4000);
 });
@@ -5943,34 +6081,31 @@ document.getElementById("loginForm").addEventListener("submit", function(e) {
 document.getElementById("registerForm").addEventListener("submit", function(e) {
   e.preventDefault(); clearError();
   const name = document.getElementById("registerName").value.trim();
-  const phone = document.getElementById("registerPhone").value.trim();
+  const email = normalizeEmail(document.getElementById("registerEmail").value);
   const pass = document.getElementById("registerPassword").value;
   if (name.length < 2) { showError("نام حداقل ۲ کاراکتر باشد."); return; }
-  if (!/^09\d{9}$/.test(phone)) { showError("شماره موبایل معتبر نیست."); return; }
+  if (!isValidEmail(email)) { showError("ایمیل معتبر نیست."); return; }
   if (pass.length < 6) { showError("رمز باید حداقل ۶ کاراکتر باشد."); return; }
-  if (deletedUsers[phone]) { showError("این شماره قبلاً حذف شده و قابل ثبت‌نام مجدد نیست."); return; }
-  if (permBlocked[phone]) { showError("این دستگاه مسدود دایمی شده است."); return; }
+  if (deletedUsers[email]) { showError("این ایمیل قبلاً حذف شده و قابل ثبت‌نام مجدد نیست."); return; }
+  if (permBlocked[email]) { showError("این دستگاه مسدود دایمی شده است."); return; }
   const acc = getAccounts();
-  if (acc[phone]) { showError("این شماره قبلاً ثبت نام کرده است."); return; }
-  const existingCount = Object.keys(acc).filter(ph => ph !== CREATOR_PHONE && !deletedUsers[ph]).length;
+  if (acc[email]) { showError("این ایمیل قبلاً ثبت نام کرده است."); return; }
+  const existingCount = Object.keys(acc).filter(em => em !== CREATOR_EMAIL && !deletedUsers[em]).length;
   const newCode = 100 + existingCount;
-  acc[phone] = {
-    name, phone, password: pass, coins: 300, gems: 0, level: 1, avatar: DEFAULT_AVATAR,
+  acc[email] = {
+    name, email, password: pass, coins: 300, gems: 0, level: 1, avatar: DEFAULT_AVATAR,
     ownedAvatars: ["free1","free2"], ownedFrames: [], activeFrame: "",
     score: 0, hoursPlayed: 0, watchedGames: 0, totalGames: 0,
     wins: 0, losses: 0, citizenWins: 0, citizenLosses: 0, mafiaWins: 0, mafiaLosses: 0,
     disconnects: 0, hostKicks: 0, leaves: 0, code: newCode, verified: false, label: "", specialLobbyName: "",
     canColorName: false, updated: Date.now()
   };
-  saveAccounts(acc); NS.set("current_user", phone); showApp();
-  logActivity('auth', 'ثبت نام', 'نام: ' + name + ' | شماره: ' + phone + ' | کد: ' + newCode);
-  // 🆕 Publish IMMEDIATELY (was only after 800ms before — if Ably wasn't ready, data was lost)
+  saveAccounts(acc); NS.set("current_user", email); showApp();
+  logActivity('auth', 'ثبت نام', 'نام: ' + name + ' | ایمیل: ' + email + ' | کد: ' + newCode);
   const newUser = getCurrentUser();
   if (newUser) publishFullUser(newUser);
-  // 🆕 Reconnect Ably so the clientId matches the new phone number
   reconnectAblyWithCurrentUser();
   if (!ably) initAblyWhenReady(0);
-  // 🆕 Retry publishing after delays for robustness
   setTimeout(() => { const u = getCurrentUser(); if (u) publishFullUser(u); }, 800);
   setTimeout(() => { const u = getCurrentUser(); if (u) publishFullUser(u); }, 2000);
   setTimeout(() => { const u = getCurrentUser(); if (u) publishFullUser(u); }, 5000);
@@ -6009,15 +6144,14 @@ document.addEventListener("click", function onFirstClick() {
   document.removeEventListener("click", onFirstClick);
 }, { passive: true });
 
-/* 🆕 More aggressive periodic sync (every 10s instead of 20s) */
 setInterval(() => {
   if (!isAblyReady) { __schedulePubFlush(); return; }
-  const phone = getCurrentPhone();
-  if (!phone) return;
+  const email = getCurrentEmail();
+  if (!email) return;
   const u = getCurrentUser();
   if (u && ablyUsersCh) { try { publishFullUser(u); } catch(e) {} }
-  if (ablyUsersCh) { try { ablyUsersCh.publish(EV.syncRequest, {from: phone}); } catch(e) {} }
-  if (ablyLobbyListCh) { try { ablyLobbyListCh.publish(EV.syncRequest, {from: phone}); } catch(e) {} }
+  if (ablyUsersCh) { try { ablyUsersCh.publish(EV.syncRequest, {from: email}); } catch(e) {} }
+  if (ablyLobbyListCh) { try { ablyLobbyListCh.publish(EV.syncRequest, {from: email}); } catch(e) {} }
   if (currentLobbyId && ablyRoomCh) {
     const lobby = getCurrentLobby();
     if (lobby && !intentionalLeaving) { try { ablyRoomCh.publish(EV.roomState, lobby); } catch(e) {} }
@@ -6029,8 +6163,8 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && isAblyReady) {
     const u = getCurrentUser();
     if (u && ablyUsersCh) { try { publishFullUser(u); } catch(e) {} }
-    if (ablyUsersCh) { try { ablyUsersCh.publish(EV.syncRequest, {from: getCurrentPhone()}); } catch(e) {} }
-    if (ablyLobbyListCh) { try { ablyLobbyListCh.publish(EV.syncRequest, {from: getCurrentPhone()}); } catch(e) {} }
+    if (ablyUsersCh) { try { ablyUsersCh.publish(EV.syncRequest, {from: getCurrentEmail()}); } catch(e) {} }
+    if (ablyLobbyListCh) { try { ablyLobbyListCh.publish(EV.syncRequest, {from: getCurrentEmail()}); } catch(e) {} }
     if (currentLobbyId && ablyRoomCh) {
       const lobby = getCurrentLobby();
       if (lobby) { try { publishRoomState(lobby); } catch(e) {} }
@@ -6039,13 +6173,23 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-/* 🆕 Flush pending publishes on any user interaction (helps when Ably just reconnected) */
 document.addEventListener('click', () => { if (isAblyReady) __flushAllPendingPublishes(); }, { passive: true });
 document.addEventListener('touchstart', () => { if (isAblyReady) __flushAllPendingPublishes(); }, { passive: true });
 
-console.log('%cمافیابست • Pro Edition v4.0.0 (Complete + Sync Fix)', 'color:#f0c15b;font-weight:bold');
-console.log('%c✅ سرور حالا اطلاعات کاربران جدید رو کامل ذخیره و منتشر می‌کنه', 'color:#2ecc71;font-weight:bold');
+console.log('%cمافیابست • Pro Edition v5.0.0 (Backendless + WebRTC)', 'color:#f0c15b;font-weight:bold');
+console.log('%c✅ ورود با ایمیل + ذخیره‌سازی روی Backendless + ارتباط صوتی WebRTC', 'color:#2ecc71;font-weight:bold');
 console.log('Creator: ᴍʀ.ᴛɪɢᴇʀ | Support: @MafiaBest_Support');
+
+/* ============================================================
+   🚀 BOOT START - با Safety Net
+   ============================================================ */
+try {
+  fastBoot();
+} catch(e) {
+  console.warn('[Boot] Initial fastBoot failed, forcing UI show:', e);
+  LoadingScreen.hide();
+  try { showAuth(); } catch(e2) {}
+}
 </script>
 </body>
 </html>

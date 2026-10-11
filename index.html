@@ -8,7 +8,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://cdn.imgurl.ir" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.ably.com">
-<link rel="dns-prefetch" href="https://unpkg.com">
 <link rel="dns-prefetch" href="https://api.backendless.com">
 <style>
 html,body{background:#000;margin:0;padding:0}
@@ -18,7 +17,6 @@ html,body{background:#000;margin:0;padding:0}
 <link rel="preload" as="image" href="https://cdn.imgurl.ir/uploads/v815577_file_00000000d37081f4bcc7c475a7a7d884.png" fetchpriority="high">
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.ably.com/lib/ably.min-1.js" defer></script>
-<script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js" defer></script>
 <script src="https://api.backendless.com/sdk/js/latest/backendless.min.js" defer></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}
@@ -1326,9 +1324,6 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 <script>
 'use strict';
 
-/* ============================================================
-   🔒 BACKENDLESS + GAME INSTANCE
-   ============================================================ */
 const BACKENDLESS_APP_ID = "C50651A5-1DFC-4BA1-AA34-B4444E9AC5A5";
 const BACKENDLESS_API_KEY = "9303E7E8-BAF9-4023-A34B-E4E024192785";
 const BACKENDLESS_SERVER_URL = "https://api.backendless.com";
@@ -1371,7 +1366,8 @@ const EV = {
   chat: GAME_INSTANCE_ID + 'chat',
   react: GAME_INSTANCE_ID + 'react',
   mic: GAME_INSTANCE_ID + 'mic',
-  webrtcSignal: GAME_INSTANCE_ID + 'webrtc_signal',
+  voiceChunk: GAME_INSTANCE_ID + 'voice_chunk',
+  voiceStop: GAME_INSTANCE_ID + 'voice_stop',
   hostTransfer: GAME_INSTANCE_ID + 'host_transfer',
   userKicked: GAME_INSTANCE_ID + 'user_kicked',
   userBlocked: GAME_INSTANCE_ID + 'user_blocked',
@@ -1423,9 +1419,6 @@ function __flushAllPendingPublishes() {
   }
 }
 
-/* ============================================================
-   IMAGE CACHE + LOADING (IMPROVED - Cache API + IndexedDB fallback)
-   ============================================================ */
 const CACHE_VERSION = "game-assets-v1";
 const CACHE_NAME = CACHE_VERSION + "-runtime";
 
@@ -1702,9 +1695,6 @@ let __bootTimeoutHandle = null;
 function fastBoot() {
   if (__booted) return;
   __booted = true;
-
-  // Safety net: اگر به هر دلیلی مراحل boot بیش از 6 ثانیه طول کشید،
-  // صفحه لودینگ بسته شود تا کاربر گیر نکند
   __bootTimeoutHandle = setTimeout(() => {
     console.warn('[Boot] Safety timeout triggered');
     LoadingScreen.hide();
@@ -1715,13 +1705,10 @@ function fastBoot() {
       try { showAuth(); } catch(e2) {}
     }
   }, 6000);
-
   try {
     LoadingScreen.setText('آماده‌سازی...');
     LoadingScreen.setProgress(30);
-    // Preload غیرمسدودکننده - هرگز منتظر آن نمی‌مانیم
     AssetCache.preloadQueue(CRITICAL_ASSETS, 6, 'high').catch(() => {});
-    // به سرعت به مرحله بعد برو
     setTimeout(() => continueBoot(true), 20);
   } catch(e) {
     console.warn('[Boot] fastBoot error:', e);
@@ -1782,9 +1769,6 @@ async function continueBoot(installed) {
   }
 }
 
-/* ============================================================
-   BACKENDLESS INIT
-   ============================================================ */
 let backendlessReady = false;
 function initBackendless() {
   try {
@@ -1792,22 +1776,14 @@ function initBackendless() {
     Backendless.initApp(BACKENDLESS_APP_ID, BACKENDLESS_API_KEY);
     Backendless.serverURL = BACKENDLESS_SERVER_URL;
     backendlessReady = true;
-    console.log('Backendless initialized');
   } catch(e) { console.warn('Backendless init error:', e); }
 }
 
-/* ============================================================
-   ABLY
-   ============================================================ */
 const ABLY_KEY = 'NNYzzQ.eE37aA:Z_c93xzAiMn7C1FarkC_FabCfllAtLA8mbsvXEAmIZI';
 let ably = null, isAblyReady = false;
 let currentLobbyId = null;
 let ablyRoomCh = null;
 let lrMicOn = false;
-let localStream = null;
-let webRtcPeers = {};
-let audioElements = {};
-let isMicAccessGranted = false;
 let toastTimer = null;
 let globalUsers = {};
 let sharedLobbies = [];
@@ -1839,7 +1815,14 @@ let audioUnlocked = false;
 let audioContextRef = null;
 let intentionalLeaving = false;
 let isProcessingKick = false;
-let micSenderMap = {};
+
+let voiceMediaRecorder = null;
+let voiceStream = null;
+let voicePlayQueue = {};
+let voiceChunkDuration = 250;
+let voiceActive = false;
+let voiceSequence = 0;
+let voiceAudioCtx = null;
 
 const DEFAULT_AVATAR = "https://cdn.imgurl.ir/uploads/v815577_file_00000000d37081f4bcc7c475a7a7d884.png";
 const CREATOR_LEAVE_TIMEOUT_MS = 30 * 60 * 1000;
@@ -1904,9 +1887,6 @@ let gameState = {
   gameStartTime: null, clanScoreGiven: false, log: []
 };
 
-/* ============================================================
-   ACTIVITY LOG
-   ============================================================ */
 function logActivity(category, action, details) {
   try {
     const entry = {
@@ -1968,9 +1948,6 @@ function renderActivityLog() {
   `).join("");
 }
 
-/* ============================================================
-   HELPERS
-   ============================================================ */
 function parseColoredName(raw) {
   if (!raw) return { text: "", html: "" };
   const match = String(raw).match(/^<#([0-9a-fA-F]{3,6})>(.*)$/i);
@@ -2018,9 +1995,6 @@ function isValidEmail(email) {
   return /^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$/i.test(e);
 }
 
-/* ============================================================
-   DELETED DATA + PERM BLOCKED
-   ============================================================ */
 function loadDeletedData() {
   try { deletedUsers = JSON.parse(NS.get("deleted_users") || "{}"); } catch(e){ deletedUsers = {}; }
   try { deletedClans = JSON.parse(NS.get("deleted_clans") || "{}"); } catch(e){ deletedClans = {}; }
@@ -2228,9 +2202,6 @@ function applyRemoteUser(data) {
   if (document.getElementById('leaguePage')?.classList.contains('show')) buildLeaderboard();
 }
 
-/* ============================================================
-   CREATOR LEAVE TIMER
-   ============================================================ */
 function isCreatorInsideLobby(lobby) {
   if (!lobby) return false;
   const creatorEmail = lobby.creator;
@@ -2289,9 +2260,6 @@ function checkAllLobbiesForExpiredCreators() {
 
 setInterval(() => { try { checkAllLobbiesForExpiredCreators(); } catch(e) {} }, 60 * 1000);
 
-/* ============================================================
-   SEND COINS
-   ============================================================ */
 function openSendCoins() {
   closeMenu();
   const u = getCurrentUser(); if (!u) return;
@@ -2324,9 +2292,6 @@ function submitSendCoins() {
   showToast(`${amount} سکه با موفقیت ارسال شد ✅`);
 }
 
-/* ============================================================
-   GAME LOGIC
-   ============================================================ */
 function startGame(lobby) {
   const seats = lobby.seats.filter(s => s && !s.isGhost);
   if (seats.length < 10) { showToast("برای شروع بازی باید ۱۰ بازیکن حضور داشته باشند!"); return; }
@@ -2718,9 +2683,6 @@ function observerToggleAlive(phone) {
 }
 function observerToggleMic() { toggleLrMic(); }
 
-/* ============================================================
-   LIVE STREAM + MATCH HISTORY
-   ============================================================ */
 function openLiveStream() {
   closeMenu(); closeInternalPages();
   renderLiveStream();
@@ -2776,9 +2738,6 @@ function renderMatchHistory() {
   list.innerHTML = history.map(h => `<div class="announcement-item"><h4>${h.result === 'برد' ? '🏆' : '❌'} ${h.result} - ${h.scenario}</h4><p>نقش شما: ${h.myRole} (${h.mySide}) | برنده: ${h.winner}</p><div class="ann-time">${h.date} | مدت: ${h.duration}</div></div>`).join("");
 }
 
-/* ============================================================
-   ABLY INIT
-   ============================================================ */
 function initAbly() {
   if (ably) return;
   const email = getCurrentEmail() || ('guest_' + Date.now());
@@ -3010,9 +2969,6 @@ function scheduleAblyRetry(attempt) {
 
 function publishMyProfile() { const u = getCurrentUser(); if (u) publishFullUser(u); }
 
-/* ============================================================
-   SUBSCRIBE LOBBY ROOM
-   ============================================================ */
 function subscribeLobbyRoom(lobbyId) {
   if (!ably || !isAblyReady) return;
   if (ablyRoomCh) try { ablyRoomCh.unsubscribe(); } catch(e) {}
@@ -3073,9 +3029,38 @@ function subscribeLobbyRoom(lobbyId) {
     globalUsers[msg.data.phone].micOn = msg.data.on;
     renderLobbyRoom();
   });
-  ablyRoomCh.subscribe(EV.webrtcSignal, msg => {
+  ablyRoomCh.subscribe(EV.voiceChunk, msg => {
     if (!msg.data || msg.data.lobbyId !== currentLobbyId) return;
-    if (msg.data.to === getCurrentEmail()) handleWebRtcSignal(msg.data.from, msg.data.signal);
+    const myEmail = getCurrentEmail();
+    if (!myEmail || msg.data.from === myEmail) return;
+    const lobby = getCurrentLobby();
+    if (!lobby) return;
+    const isInLobby = (lobby.seats && lobby.seats.some(s => s && s.phone === msg.data.from)) ||
+                      lobby.hostPhone1 === msg.data.from ||
+                      lobby.hostPhone2 === msg.data.from;
+    if (!isInLobby) return;
+    if (gameState.active) {
+      const speaker = gameState.players.find(p => p.phone === msg.data.from);
+      const me = gameState.players.find(p => p.phone === myEmail);
+      if (!speaker || !me) return;
+      if (gameState.phase === 'night') {
+        if (speaker.side !== 'mafia') return;
+        if (me.side !== 'mafia') return;
+      } else if (gameState.phase === 'day') {
+        const currentSpeaker = gameState.players[gameState.currentSpeakerIndex];
+        const isHost = lobby.creator === msg.data.from || 
+                       lobby.hostPhone1 === msg.data.from || 
+                       lobby.hostPhone2 === msg.data.from;
+        if (!isHost && (!currentSpeaker || currentSpeaker.phone !== msg.data.from)) {
+          return;
+        }
+      }
+    }
+    enqueueVoicePlayback(msg.data.from, msg.data.data, msg.data.seq);
+  });
+  ablyRoomCh.subscribe(EV.voiceStop, msg => {
+    if (!msg.data || msg.data.lobbyId !== currentLobbyId) return;
+    clearVoiceQueue(msg.data.from);
   });
   ablyRoomCh.subscribe(EV.hostTransfer, msg => {
     if (!msg.data || msg.data.lobbyId !== currentLobbyId) return;
@@ -3120,9 +3105,6 @@ function subscribeLobbyRoom(lobbyId) {
   }, 400);
 }
 
-/* ============================================================
-   LOBBY LOADING + ENTER
-   ============================================================ */
 async function showLobbyLoading() {
   return new Promise((resolve) => {
     const overlay = document.getElementById('lobbyLoadingOverlay');
@@ -3156,9 +3138,8 @@ function enterLobbyRoom(id) {
   document.getElementById("lobbyRoomPage").classList.add("show");
   lrMicOn = false; isMicAccessGranted = false;
   intentionalLeaving = false;
-  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
-  const btn = document.getElementById('lrMicBtn'); if (btn) btn.classList.remove('active');
-  disconnectAllPeers();
+  stopVoiceCapture();
+  voicePlayQueue = {};
   const u = getCurrentUser();
   const lobby = getLobbies().find(l => l.id === id);
   if (lobby && u && lobby.creator === u.email) {
@@ -3184,8 +3165,6 @@ function enterLobbyRoom(id) {
     subscribeLobbyRoom(id);
     initLobbyRoomUI();
     renderLobbyRoom();
-    setTimeout(() => connectToAllPeers(), 800);
-    setTimeout(() => connectToAllPeers(), 2000);
   });
 }
 
@@ -3231,9 +3210,6 @@ function initLobbyRoomUI() {
   if (playerSheet && !playerSheet._bound) { playerSheet._bound = true; playerSheet.onclick = (e) => { if (e.target === playerSheet) closePlayerSheet(); }; }
 }
 
-/* ============================================================
-   SELECT PLAYER AS HOST
-   ============================================================ */
 function lrSelectAsHost(slot) {
   const lobby = getCurrentLobby();
   const u = getCurrentUser();
@@ -3328,9 +3304,6 @@ function addLrToast(icon, text) {
   setTimeout(function() { if (toast.parentElement) { toast.style.animation = 'lr2ToastOut 0.3s forwards'; setTimeout(() => toast.remove(), 300); } }, 5000);
 }
 
-/* ============================================================
-   LOBBY LEAVE / DELETE / RENDER
-   ============================================================ */
 function lrExitLobby() {
   const lobby = getCurrentLobby();
   const u = getCurrentUser();
@@ -3356,8 +3329,7 @@ function lrDeleteLobby() {
   if (creatorLeaveTimers[lobby.id]) { clearTimeout(creatorLeaveTimers[lobby.id]); delete creatorLeaveTimers[lobby.id]; }
   intentionalLeaving = true;
   currentLobbyId = null;
-  disconnectAllPeers();
-  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+  stopVoiceCapture();
   document.getElementById("lobbyRoomPage").classList.remove("show");
   showToast("لابی حذف شد 🗑️");
   goHome();
@@ -3365,10 +3337,8 @@ function lrDeleteLobby() {
 
 function leaveLobbyRoom() {
   const u = getCurrentUser();
-  disconnectAllPeers();
-  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
-  lrMicOn = false; isMicAccessGranted = false;
-  const btn = document.getElementById('lrMicBtn'); if (btn) btn.classList.remove('active');
+  stopVoiceCapture();
+  voicePlayQueue = {};
   if (u && currentLobbyId) {
     const lobby = getCurrentLobby();
     if (lobby) {
@@ -4012,9 +3982,6 @@ function lrAdminBlockAccount() {
   showToast(`کاربر مسدود شد ⛔`);
 }
 
-/* ============================================================
-   LOBBY LIST PAGE
-   ============================================================ */
 function openLobbyPage() {
   closeMenu(); closeInternalPages();
   document.getElementById("lobbyPage").classList.add("show");
@@ -4179,9 +4146,6 @@ function joinLobby(id) {
   enterLobbyRoom(id);
 }
 
-/* ============================================================
-   AUTH + UI
-   ============================================================ */
 function showAuth() { document.getElementById("authScreen").style.display = "flex"; document.getElementById("app").style.display = "none"; }
 function showApp() {
   const u = getCurrentUser();
@@ -4352,9 +4316,6 @@ function buildLeaderboard() {
   });
 }
 
-/* ============================================================
-   AVATAR SHOP
-   ============================================================ */
 function openAvatarShop() {
   closeMenu(); closeInternalPages();
   currentAvatarTab = "shop";
@@ -4524,9 +4485,6 @@ function equipAvatar(av) {
   updateUI(); renderAvatarShop(); renderMyAvatars(); showToast("اواتار تجهیز شد! ✅");
 }
 
-/* ============================================================
-   CLAN SYSTEM
-   ============================================================ */
 function openClan() {
   closeMenu(); closeInternalPages();
   const u = getCurrentUser(); if (!u) return;
@@ -4912,9 +4870,6 @@ function replyToClanMessage(idx) {
   showToast("در حال ریپلای به پیام...");
 }
 
-/* ============================================================
-   STORE + DAILY + RULES + SETTINGS
-   ============================================================ */
 function openStore() { closeMenu(); closeInternalPages(); document.getElementById("storePage").classList.add("show"); }
 function closeStore() { document.getElementById("storePage").classList.remove("show"); }
 function claimDailyReward() {
@@ -4995,9 +4950,8 @@ function showProfileInfo() {
 }
 function logout() {
   closeMenu(); closeInternalPages();
-  disconnectAllPeers();
-  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
-  lrMicOn = false; isMicAccessGranted = false;
+  stopVoiceCapture();
+  voicePlayQueue = {};
   if (ably) { try { ably.close(); } catch(e) {} }
   ably = null; isAblyReady = false;
   NS.remove("current_user");
@@ -5023,9 +4977,6 @@ function showBlockedPage(blocked) {
   document.getElementById("authScreen").style.display = "none";
 }
 
-/* ============================================================
-   CREATOR FLOATING DRAG
-   ============================================================ */
 let creatorDragState = null;
 function startCreatorDrag(e) {
   e.preventDefault();
@@ -5066,9 +5017,6 @@ function endCreatorDrag(e) {
   creatorDragState = null;
 }
 
-/* ============================================================
-   ADMIN FLOATING WINDOW
-   ============================================================ */
 function askCreatorPasswordAndOpen() {
   const pwd = prompt("🔐 رمز پنل سازنده را وارد کنید:");
   if (pwd === null) return;
@@ -5848,9 +5796,6 @@ function renderAdminList() {
   }
 }
 
-/* ============================================================
-   WEBRTC
-   ============================================================ */
 function unlockAudioPlayback() {
   try {
     if (!audioContextRef) {
@@ -5861,154 +5806,282 @@ function unlockAudioPlayback() {
     const silent = new Audio();
     silent.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
     silent.volume = 0.01; silent.play().catch(()=>{});
-    Object.keys(audioElements).forEach(k => { try { audioElements[k].play().catch(()=>{}); } catch(e){} });
     audioUnlocked = true;
     document.getElementById('audioUnlockBtn').classList.remove('show');
     showToast('صدا فعال شد 🔊');
   } catch(e) {}
 }
 
-const ICE_SERVERS = [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:stun1.l.google.com:19302' },
-  { urls: 'stun:stun2.l.google.com:19302' },
-  { urls: 'stun:stun3.l.google.com:19302' },
-  { urls: 'stun:stun4.l.google.com:19302' }
-];
-
-function comparePhones(a, b) { return a < b; }
-
-function createWebRtcPeer(remotePhone, isInitiator) {
-  const existing = webRtcPeers[remotePhone];
-  if (existing && existing._pc) {
-    const st = existing._pc.iceConnectionState;
-    if (st !== 'failed' && st !== 'closed' && st !== 'disconnected') { syncTrackToPeer(remotePhone); return existing; }
-    else { try { existing.destroy(); } catch(e) {} delete webRtcPeers[remotePhone]; delete micSenderMap[remotePhone]; }
+function getVoiceAudioCtx() {
+  if (!voiceAudioCtx) {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (Ctx) voiceAudioCtx = new Ctx();
+    } catch(e) {}
   }
-  const myEmail = getCurrentEmail();
-  if (!myEmail || remotePhone === myEmail) return null;
-  const peer = new SimplePeer({
-    initiator: isInitiator, trickle: true,
-    config: { iceServers: ICE_SERVERS, iceCandidatePoolSize: 10, iceTransportPolicy: 'all', bundlePolicy: 'max-bundle', rtcpMuxPolicy: 'require' },
-    objectMode: false
-  });
-  peer.on('signal', (signal) => { try { publishWebRtcSignal(remotePhone, signal); } catch(e) {} });
-  peer.on('stream', (stream) => { playRemoteAudio(remotePhone, stream); });
-  peer.on('track', (track, stream) => { if (track.kind === 'audio') playRemoteAudio(remotePhone, stream); });
-  peer.on('connect', () => { syncTrackToPeer(remotePhone); });
-  peer.on('close', () => { cleanupRemoteAudio(remotePhone); delete webRtcPeers[remotePhone]; delete micSenderMap[remotePhone]; });
-  peer.on('error', () => { try { peer.destroy(); } catch(e) {} delete webRtcPeers[remotePhone]; delete micSenderMap[remotePhone]; });
-  webRtcPeers[remotePhone] = peer;
-  return peer;
+  if (voiceAudioCtx && voiceAudioCtx.state === 'suspended') {
+    voiceAudioCtx.resume().catch(()=>{});
+  }
+  return voiceAudioCtx;
 }
 
-function syncTrackToPeer(remotePhone) {
-  const peer = webRtcPeers[remotePhone];
-  if (!peer || !peer._pc) return;
-  const senders = peer._pc.getSenders ? peer._pc.getSenders() : [];
-  const audioSender = senders.find(s => s.track && s.track.kind === 'audio');
-  if (lrMicOn && localStream) {
-    const track = localStream.getAudioTracks()[0];
-    if (!track) return;
-    if (audioSender) { try { audioSender.replaceTrack(track); } catch(e) {} }
-    else { try { const sender = peer._pc.addTrack(track, localStream); micSenderMap[remotePhone] = sender; } catch(e) {} }
-  } else { if (audioSender) { try { audioSender.replaceTrack(null); } catch(e) {} } }
-}
-
-function playRemoteAudio(phone, stream) {
-  if (audioElements[phone]) { try { audioElements[phone].srcObject = stream; audioElements[phone].play().catch(()=>{}); return; } catch(e) {} }
+function base64ToArrayBuffer(base64) {
   try {
-    const audio = new Audio();
-    audio.srcObject = stream; audio.autoplay = true; audio.volume = 1.0;
-    audio.setAttribute('playsinline', 'true');
-    audioElements[phone] = audio;
-    audio.play().catch(() => { if (!audioUnlocked) document.getElementById('audioUnlockBtn').classList.add('show'); });
+    const binary = atob(base64);
+    const len = binary.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes.buffer;
+  } catch(e) { return null; }
+}
+
+async function startVoiceCapture() {
+  try {
+    voiceStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        channelCount: 1,
+        sampleRate: 24000
+      },
+      video: false
+    });
+    
+    const mimeTypes = [
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/ogg;codecs=opus',
+      'audio/mp4',
+      ''
+    ];
+    let selectedMime = '';
+    for (const m of mimeTypes) {
+      if (m === '' || (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m))) {
+        selectedMime = m;
+        break;
+      }
+    }
+    
+    voiceMediaRecorder = new MediaRecorder(voiceStream, {
+      mimeType: selectedMime || undefined,
+      audioBitsPerSecond: 24000
+    });
+    
+    voiceActive = true;
+    voiceSequence = 0;
+    
+    voiceMediaRecorder.ondataavailable = (e) => {
+      if (!e.data || e.data.size === 0) return;
+      if (!voiceActive) return;
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result.split(',')[1];
+        if (!base64) return;
+        const seq = voiceSequence++;
+        publishVoiceChunk(base64, seq);
+      };
+      reader.readAsDataURL(e.data);
+    };
+    
+    voiceMediaRecorder.start(voiceChunkDuration);
+    
+    const btn = document.getElementById('lrMicBtn');
+    if (btn) btn.classList.add('active');
+    
+    lrMicOn = true;
+    isMicAccessGranted = true;
+    
+    const u = getCurrentUser();
+    if (u) publishMic(u.email, true);
+    
+    showToast('میکروفون فعال شد 🎤');
+    renderLobbyRoom();
+    
+  } catch(err) {
+    console.error('Voice capture error:', err);
+    showToast('دسترسی به میکروفون داده نشد');
+    lrMicOn = false;
+    voiceActive = false;
+    if (voiceStream) { voiceStream.getTracks().forEach(t => t.stop()); voiceStream = null; }
+    const btn = document.getElementById('lrMicBtn');
+    if (btn) btn.classList.remove('active');
+    renderLobbyRoom();
+  }
+}
+
+function stopVoiceCapture() {
+  voiceActive = false;
+  lrMicOn = false;
+  isMicAccessGranted = false;
+  
+  if (voiceMediaRecorder && voiceMediaRecorder.state !== 'inactive') {
+    try { voiceMediaRecorder.stop(); } catch(e) {}
+  }
+  voiceMediaRecorder = null;
+  
+  if (voiceStream) {
+    voiceStream.getTracks().forEach(t => t.stop());
+    voiceStream = null;
+  }
+  
+  const btn = document.getElementById('lrMicBtn');
+  if (btn) btn.classList.remove('active');
+  
+  const u = getCurrentUser();
+  if (u) {
+    publishMic(u.email, false);
+    publishVoiceStop(u.email);
+  }
+  
+  renderLobbyRoom();
+}
+
+function publishVoiceChunk(base64Data, seq) {
+  if (!ablyRoomCh || !isAblyReady || !currentLobbyId) return;
+  const u = getCurrentUser();
+  if (!u) return;
+  try {
+    ablyRoomCh.publish(EV.voiceChunk, {
+      lobbyId: currentLobbyId,
+      from: u.email,
+      data: base64Data,
+      seq: seq,
+      ts: Date.now()
+    });
+  } catch(e) {
+    console.warn('Voice chunk publish failed:', e);
+  }
+}
+
+function publishVoiceStop(phone) {
+  if (!ablyRoomCh || !isAblyReady || !currentLobbyId) return;
+  try {
+    ablyRoomCh.publish(EV.voiceStop, {
+      lobbyId: currentLobbyId,
+      from: phone
+    });
   } catch(e) {}
 }
 
-function cleanupRemoteAudio(phone) {
-  if (audioElements[phone]) { try { audioElements[phone].pause(); audioElements[phone].srcObject = null; } catch(e) {} delete audioElements[phone]; }
-}
-
-function connectToAllPeers() {
-  const myEmail = getCurrentEmail();
-  const lobby = getCurrentLobby();
-  if (!lobby || !lobby.seats || !myEmail) return;
-  lobby.seats.forEach((seat) => {
-    if (!seat || seat.phone === myEmail) return;
-    if (seat.phone && seat.phone.startsWith('bot_')) return;
-    const shouldInitiate = comparePhones(myEmail, seat.phone);
-    if (!webRtcPeers[seat.phone]) createWebRtcPeer(seat.phone, shouldInitiate);
-    else syncTrackToPeer(seat.phone);
-  });
-  if (lobby.hostPhone1 && lobby.hostPhone1 !== myEmail) {
-    const shouldInitiate = comparePhones(myEmail, lobby.hostPhone1);
-    if (!webRtcPeers[lobby.hostPhone1]) createWebRtcPeer(lobby.hostPhone1, shouldInitiate);
-    else syncTrackToPeer(lobby.hostPhone1);
+function enqueueVoicePlayback(fromPhone, base64Data, seq) {
+  if (!voicePlayQueue[fromPhone]) {
+    voicePlayQueue[fromPhone] = {
+      queue: [],
+      playing: false,
+      lastSeq: -1
+    };
   }
-  if (lobby.hostPhone2 && lobby.hostPhone2 !== myEmail) {
-    const shouldInitiate = comparePhones(myEmail, lobby.hostPhone2);
-    if (!webRtcPeers[lobby.hostPhone2]) createWebRtcPeer(lobby.hostPhone2, shouldInitiate);
-    else syncTrackToPeer(lobby.hostPhone2);
+  const pq = voicePlayQueue[fromPhone];
+  
+  if (seq <= pq.lastSeq) return;
+  
+  if (pq.queue.length > 8) {
+    pq.queue.splice(0, pq.queue.length - 8);
+  }
+  
+  pq.queue.push({ data: base64Data, seq: seq });
+  
+  if (!pq.playing) playNextVoiceChunk(fromPhone);
+}
+
+function playNextVoiceChunk(fromPhone) {
+  const pq = voicePlayQueue[fromPhone];
+  if (!pq || !pq.queue.length) {
+    if (pq) pq.playing = false;
+    return;
+  }
+  
+  const item = pq.queue.shift();
+  pq.lastSeq = item.seq;
+  pq.playing = true;
+  
+  try {
+    const arrayBuffer = base64ToArrayBuffer(item.data);
+    if (!arrayBuffer) {
+      pq.playing = false;
+      playNextVoiceChunk(fromPhone);
+      return;
+    }
+    
+    const ctx = getVoiceAudioCtx();
+    if (!ctx) {
+      playChunkWithAudioTag(fromPhone, item.data);
+      return;
+    }
+    
+    ctx.decodeAudioData(arrayBuffer.slice(0), (audioBuffer) => {
+      const source = ctx.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(ctx.destination);
+      source.onended = () => {
+        playNextVoiceChunk(fromPhone);
+      };
+      source.start(0);
+    }, (err) => {
+      playChunkWithAudioTag(fromPhone, item.data);
+    });
+  } catch(e) {
+    pq.playing = false;
+    playNextVoiceChunk(fromPhone);
   }
 }
 
-function disconnectAllPeers() {
-  Object.keys(audioElements).forEach(key => cleanupRemoteAudio(key));
-  Object.keys(webRtcPeers).forEach(key => { try { webRtcPeers[key].destroy(); } catch(e) {} delete webRtcPeers[key]; });
-  micSenderMap = {};
+function playChunkWithAudioTag(fromPhone, base64Data) {
+  try {
+    const audio = new Audio('data:audio/webm;base64,' + base64Data);
+    audio.volume = 1.0;
+    audio.onended = () => {
+      const pq = voicePlayQueue[fromPhone];
+      if (pq) playNextVoiceChunk(fromPhone);
+    };
+    audio.onerror = () => {
+      const pq = voicePlayQueue[fromPhone];
+      if (pq) { pq.playing = false; playNextVoiceChunk(fromPhone); }
+    };
+    audio.play().catch(() => {
+      const pq = voicePlayQueue[fromPhone];
+      if (pq) { pq.playing = false; playNextVoiceChunk(fromPhone); }
+    });
+  } catch(e) {
+    const pq = voicePlayQueue[fromPhone];
+    if (pq) { pq.playing = false; playNextVoiceChunk(fromPhone); }
+  }
 }
 
-function handleWebRtcSignal(from, signal) {
-  const myEmail = getCurrentEmail();
-  if (!myEmail || from === myEmail) return;
-  if (!webRtcPeers[from]) createWebRtcPeer(from, false);
-  try { if (webRtcPeers[from]) webRtcPeers[from].signal(signal); } catch(e) {}
+function clearVoiceQueue(fromPhone) {
+  if (voicePlayQueue[fromPhone]) {
+    voicePlayQueue[fromPhone].queue = [];
+    voicePlayQueue[fromPhone].playing = false;
+    voicePlayQueue[fromPhone].lastSeq = -1;
+  }
 }
 
 async function toggleLrMic() {
   const u = getCurrentUser();
-  if (!u || !currentLobbyId) { showToast('لطفاً ابتدا وارد لابی شوید'); return; }
-  if (lrMicOn) await disableMicrophone(); else await enableMicrophone();
-}
-
-async function enableMicrophone() {
-  try {
-    showToast('درخواست دسترسی...');
-    const constraints = { audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true, channelCount: 1, sampleRate: 48000 }, video: false };
-    localStream = await navigator.mediaDevices.getUserMedia(constraints);
-    isMicAccessGranted = true; lrMicOn = true;
-    const btn = document.getElementById('lrMicBtn'); if (btn) btn.classList.add('active');
-    const u = getCurrentUser();
-    publishMic(u.email, true);
-    Object.keys(webRtcPeers).forEach(phone => syncTrackToPeer(phone));
-    setTimeout(() => connectToAllPeers(), 200);
-    setTimeout(() => connectToAllPeers(), 1000);
-    renderLobbyRoom();
-    showToast('میکروفون فعال شد 🎤');
-  } catch (err) {
-    lrMicOn = false; isMicAccessGranted = false;
-    showToast('دسترسی داده نشد');
-    if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
-    renderLobbyRoom();
+  if (!u || !currentLobbyId) { 
+    showToast('لطفاً ابتدا وارد لابی شوید'); 
+    return; 
+  }
+  
+  if (gameState.active && gameState.phase === 'night') {
+    const me = gameState.players.find(p => p.phone === u.email);
+    if (me && me.side !== 'mafia') {
+      showToast('در شب فقط مافیا می‌تواند صحبت کند');
+      return;
+    }
+  }
+  
+  if (lrMicOn) {
+    stopVoiceCapture();
+  } else {
+    await startVoiceCapture();
   }
 }
 
-async function disableMicrophone() {
-  lrMicOn = false; isMicAccessGranted = false;
-  const btn = document.getElementById('lrMicBtn'); if (btn) btn.classList.remove('active');
-  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
-  const u = getCurrentUser();
-  if (u) publishMic(u.email, false);
-  Object.keys(webRtcPeers).forEach(phone => {
-    const peer = webRtcPeers[phone];
-    if (peer && peer._pc) {
-      const senders = peer._pc.getSenders ? peer._pc.getSenders() : [];
-      senders.forEach(s => { if (s.track && s.track.kind === 'audio') { try { s.replaceTrack(null); } catch(e) {} } });
-    }
-  });
-  renderLobbyRoom();
-  showToast('میکروفون غیرفعال شد');
+function disconnectAllPeers() {
+  stopVoiceCapture();
+  voicePlayQueue = {};
 }
 
 function publishRoomState(lobby) {
@@ -6023,7 +6096,6 @@ function publishRoomState(lobby) {
 function publishLrChatMsg(msg) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish(EV.chat, {lobbyId: currentLobbyId, msg}); }
 function publishReaction(phone, reaction) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish(EV.react, {lobbyId: currentLobbyId, phone, reaction}); }
 function publishMic(phone, on) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish(EV.mic, {lobbyId: currentLobbyId, phone, on}); }
-function publishWebRtcSignal(to, signal) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish(EV.webrtcSignal, { lobbyId: currentLobbyId, from: getCurrentEmail(), to, signal }); }
 function publishHostTransfer(newHost) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish(EV.hostTransfer, { lobbyId: currentLobbyId, newHost }); }
 function publishUserKicked(phone) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish(EV.userKicked, { lobbyId: currentLobbyId, phone }); }
 function publishUserBlocked(phone) { if (ablyRoomCh && isAblyReady) ablyRoomCh.publish(EV.userBlocked, { lobbyId: currentLobbyId, phone }); }
@@ -6053,9 +6125,6 @@ function publishClanUpdate(clan) {
   if (ablyClanCh && isAblyReady) { try { ablyClanCh.publish(EV.clanUpdate, clan); } catch(e) {} }
 }
 
-/* ============================================================
-   EVENT LISTENERS
-   ============================================================ */
 document.getElementById("loginForm").addEventListener("submit", function(e) {
   e.preventDefault(); clearError(); loadDeletedData(); ensureSpecialAccounts();
   const email = normalizeEmail(document.getElementById("loginEmail").value);
@@ -6176,13 +6245,9 @@ document.addEventListener('visibilitychange', () => {
 document.addEventListener('click', () => { if (isAblyReady) __flushAllPendingPublishes(); }, { passive: true });
 document.addEventListener('touchstart', () => { if (isAblyReady) __flushAllPendingPublishes(); }, { passive: true });
 
-console.log('%cمافیابست • Pro Edition v5.0.0 (Backendless + WebRTC)', 'color:#f0c15b;font-weight:bold');
-console.log('%c✅ ورود با ایمیل + ذخیره‌سازی روی Backendless + ارتباط صوتی WebRTC', 'color:#2ecc71;font-weight:bold');
-console.log('Creator: ᴍʀ.ᴛɪɢᴇʀ | Support: @MafiaBest_Support');
+console.log('%cمافیابست • Pro Edition v6.0.0 (Ably Voice)', 'color:#f0c15b;font-weight:bold');
+console.log('%c✅ ارتباط صوتی با Ably - بدون نیاز به WebRTC/STUN', 'color:#2ecc71;font-weight:bold');
 
-/* ============================================================
-   🚀 BOOT START - با Safety Net
-   ============================================================ */
 try {
   fastBoot();
 } catch(e) {

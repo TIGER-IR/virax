@@ -1325,7 +1325,7 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 'use strict';
 
 /* ============================================================
-   GLOBAL VARIABLES (همه اعلام شدن تا ReferenceError نداشته باشیم)
+   GLOBAL VARIABLES
    ============================================================ */
 const GAME_INSTANCE_ID = "mafia_ali_2024_v1_";
 
@@ -1418,7 +1418,6 @@ let audioContextRef = null;
 let intentionalLeaving = false;
 let isProcessingKick = false;
 
-/* Voice system variables — همه اعلام شدن */
 let isMicAccessGranted = false;
 let voiceMediaRecorder = null;
 let voiceStream = null;
@@ -1446,7 +1445,7 @@ const VERIFIED_BADGE = `<img class="verified-badge" src="https://cdn.imgurl.ir/u
 const ABLY_KEY = 'NNYzzQ.SZ3D7A:k9MnlENaJwWGoudGwBbtfN1_Ric4r_qCBU15gKsHs7k';
 
 /* ============================================================
-   ASSETS CACHE — Cache API + IndexedDB
+   ASSETS CACHE
    ============================================================ */
 const CACHE_NAME = "mafiabest-assets-v2";
 
@@ -1817,9 +1816,6 @@ function isValidEmail(email) {
   return /^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$/i.test(e);
 }
 
-/* ============================================================
-   DELETED DATA
-   ============================================================ */
 function loadDeletedData() {
   try { deletedUsers = JSON.parse(NS.get("deleted_users") || "{}"); } catch(e){ deletedUsers = {}; }
   try { deletedClans = JSON.parse(NS.get("deleted_clans") || "{}"); } catch(e){ deletedClans = {}; }
@@ -2474,12 +2470,14 @@ function subscribeLobbyRoom(lobbyId) {
 }
 
 /* ============================================================
-   VOICE SYSTEM v2 — PCM زنده (بدون MediaRecorder) ✅ NEW
+   VOICE SYSTEM v3 — نسخه بهبودیافته برای کیفیت بالا
+   (چانک بزرگتر + بافر jitter بیشتر + مدیریت هوشمند دیرهنگام)
    ============================================================ */
-const VOICE_RATE = 16000;
-const VOICE_SEND_SAMPLES = 1600;
-const VOICE_JITTER = 0.12;
-const VOICE_MAX_AHEAD = 0.8;
+const VOICE_RATE = 16000;               // نرخ نمونه‌برداری ارسال
+const VOICE_SEND_SAMPLES = 3200;        // 200ms در هر بسته (کاهش تعداد پیام)
+const VOICE_JITTER = 0.32;              // بافر اولیه 320ms (تحمل jitter شبکه)
+const VOICE_MAX_BUFFER = 1.2;           // حداکثر بافر مجاز
+const VOICE_MIN_AHEAD = 0.008;          // حداقل زمان پخش جلوتر
 let voiceProcessor = null;
 let voiceSourceNode = null;
 let voiceMuteGain = null;
@@ -2554,7 +2552,7 @@ async function startVoiceCapture() {
     });
 
     voiceSourceNode = ctx.createMediaStreamSource(voiceStream);
-    voiceProcessor = ctx.createScriptProcessor(2048, 1, 1);
+    voiceProcessor = ctx.createScriptProcessor(4096, 1, 1);
     voiceMuteGain = ctx.createGain();
     voiceMuteGain.gain.value = 0;
     voicePending = [];
@@ -2570,8 +2568,10 @@ async function startVoiceCapture() {
         const start = Math.floor(i * ratio);
         let end = Math.floor((i + 1) * ratio);
         if (end <= start) end = start + 1;
+        if (end > input.length) end = input.length;
+        if (end <= start) { voicePending.push(0); continue; }
         let sum = 0;
-        for (let j = start; j < end && j < input.length; j++) sum += input[j];
+        for (let j = start; j < end; j++) sum += input[j];
         voicePending.push(sum / (end - start));
       }
       while (voicePending.length >= VOICE_SEND_SAMPLES) {
@@ -2660,15 +2660,59 @@ function publishVoiceStop(phone) {
   try { ablyRoomCh.publish(EV.voiceStop, { lobbyId: currentLobbyId, from: phone }); } catch(e) {}
 }
 
+/* پخش صدا: مدیریت هوشمند دیرهنگام - بدون ریست timeline */
 function enqueueVoicePlayback(fromPhone, base64Data, seq) {
   const ctx = getVoiceAudioCtx();
   if (!ctx) return;
+
   let st = voicePlayQueue[fromPhone];
-  if (!st || st.next === undefined) {
-    st = voicePlayQueue[fromPhone] = { next: 0, lastSeq: -1, sources: [] };
+  if (!st) {
+    st = voicePlayQueue[fromPhone] = {
+      next: 0,
+      lastSeq: -1,
+      sources: [],
+      started: false,
+      underrunCount: 0
+    };
   }
-  if (seq === 0) { st.lastSeq = -1; st.next = 0; }
+
+  // شروع مجدد مایک (seq=0) → فقط timeline رو ریست کن
+  if (seq === 0) {
+    st.lastSeq = -1;
+    st.next = 0;
+    st.started = false;
+    // منابع قدیمی رو قطع کن
+    (st.sources || []).forEach(function(s) { try { s.stop(); } catch(e) {} });
+    st.sources = [];
+  }
+
+  // بسته تکراری یا قدیمی
   if (seq <= st.lastSeq) return;
+
+  // تشخیص گپ در ترتیب بسته‌ها
+  if (st.lastSeq !== -1 && seq > st.lastSeq + 1) {
+    const missing = seq - st.lastSeq - 1;
+    // اگر گپ کوچیک (1-3 بسته) → سکوت درج کن
+    if (missing <= 3 && st.started) {
+      const gapSamples = missing * VOICE_SEND_SAMPLES;
+      const silenceBuf = ctx.createBuffer(1, gapSamples, VOICE_RATE);
+      // نمونه‌ها به‌صورت پیش‌فرض صفر پر شدن (سکوت)
+      const now = ctx.currentTime;
+      // فقط اگر timeline نزدیک حال باشه سکوت درج کن
+      if (st.next > now - 0.05 && st.next < now + VOICE_MAX_BUFFER) {
+        const silSrc = ctx.createBufferSource();
+        silSrc.buffer = silenceBuf;
+        silSrc.connect(ctx.destination);
+        try { silSrc.start(st.next); } catch(e) {}
+        st.next += silenceBuf.duration;
+      }
+    } else if (missing > 6) {
+      // گپ بزرگ → timeline رو reset کن (شروع دوباره)
+      st.next = 0;
+      st.started = false;
+    }
+  }
+
   st.lastSeq = seq;
 
   const buf = base64ToArrayBuffer(base64Data);
@@ -2680,8 +2724,26 @@ function enqueueVoicePlayback(fromPhone, base64Data, seq) {
   for (let i = 0; i < n; i++) ch[i] = view.getInt16(i * 2, true) / 32768;
 
   const now = ctx.currentTime;
-  if (st.next < now + 0.02) st.next = now + VOICE_JITTER;
-  if (st.next - now > VOICE_MAX_AHEAD) return;
+
+  // اگر هنوز شروع نشده یا timeline ریست شده
+  if (!st.started || st.next === 0) {
+    st.next = now + VOICE_JITTER;
+    st.started = true;
+  }
+
+  // اگر از حال عقب افتادیم (زمان پخش گذشته)
+  if (st.next < now - 0.03) {
+    // جلوتر از حال بزن اما با فاصله کم
+    st.next = now + VOICE_MIN_AHEAD;
+    st.underrunCount++;
+  }
+
+  // اگر خیلی جلو افتادیم (بافر بیش از حد)
+  const buffered = st.next - now;
+  if (buffered > VOICE_MAX_BUFFER) {
+    // بسته‌های خیلی قدیمی رو رد کن و timeline رو جبران کن
+    st.next = now + VOICE_JITTER;
+  }
 
   const src = ctx.createBufferSource();
   src.buffer = audioBuffer;
@@ -2691,8 +2753,16 @@ function enqueueVoicePlayback(fromPhone, base64Data, seq) {
     if (i !== -1) st.sources.splice(i, 1);
   };
   st.sources.push(src);
-  try { src.start(st.next); } catch(e) {}
-  st.next += audioBuffer.duration;
+
+  const startTime = Math.max(st.next, now + VOICE_MIN_AHEAD);
+  try { src.start(startTime); } catch(e) {}
+  st.next = startTime + audioBuffer.duration;
+
+  // جلوگیری از انباشت منابع (پاک‌سازی قدیمی‌ها)
+  if (st.sources.length > 60) {
+    const toRemove = st.sources.splice(0, st.sources.length - 40);
+    toRemove.forEach(function(s) { try { s.stop(); } catch(e) {} });
+  }
 }
 
 function clearVoiceQueue(fromPhone) {
@@ -2702,6 +2772,7 @@ function clearVoiceQueue(fromPhone) {
   st.sources = [];
   st.next = 0;
   st.lastSeq = -1;
+  st.started = false;
 }
 
 async function toggleLrMic() {
@@ -2764,9 +2835,6 @@ function publishClanUpdate(clan) {
   if (ablyClanCh && isAblyReady) { try { ablyClanCh.publish(EV.clanUpdate, clan); } catch(e) {} }
 }
 
-/* ============================================================
-   SHOW / HIDE
-   ============================================================ */
 function showAuth() {
   document.getElementById("authScreen").style.display = "flex";
   document.getElementById("app").style.display = "none";
@@ -4214,9 +4282,6 @@ function joinLobby(id) {
   enterLobbyRoom(id);
 }
 
-/* ============================================================
-   OTHER UI PAGES
-   ============================================================ */
 function getUserClanName(phone) {
   const clans = getClans();
   let n = "-";
@@ -5880,7 +5945,7 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-console.log('%cمافیابست • v8.0.0 (PCM Voice + Offline Assets)', 'color:#f0c15b;font-weight:bold');
+console.log('%cمافیابست • v9.0.0 (High-Quality Voice)', 'color:#f0c15b;font-weight:bold');
 
 try {
   fastBoot();

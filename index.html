@@ -17,6 +17,21 @@ html,body{background:#000;margin:0;padding:0}
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}
 html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vazirmatn",Tahoma,sans-serif;overflow-x:hidden}
+
+/* === Connection Status Banner === */
+#connBanner{position:fixed;top:0;left:0;right:0;z-index:99997;display:none;padding:10px 14px;font-family:inherit;font-size:13px;font-weight:800;text-align:center;color:#fff;box-shadow:0 2px 12px rgba(0,0,0,.6);transition:transform .3s,opacity .3s;transform:translateY(-100%)}
+#connBanner.show{display:block;transform:translateY(0)}
+#connBanner.state-connecting{background:linear-gradient(90deg,#b87333,#8b5a1e);color:#fff}
+#connBanner.state-slow{background:linear-gradient(90deg,#d39e00,#8b6914);color:#1a0e00}
+#connBanner.state-failed{background:linear-gradient(90deg,#c0392b,#7a1e10);color:#fff}
+#connBanner.state-reconnecting{background:linear-gradient(90deg,#2980b9,#1a4d70);color:#fff}
+#connBanner .cnn-txt{display:inline-block;vertical-align:middle}
+#connBanner .cnn-btn{display:inline-block;vertical-align:middle;margin-right:10px;padding:5px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.6);background:rgba(0,0,0,.25);color:#fff;font-family:inherit;font-size:12px;font-weight:900;cursor:pointer}
+#connBanner .cnn-btn:active{transform:scale(.95)}
+#connBanner .cnn-spin{display:inline-block;vertical-align:middle;width:14px;height:14px;margin-left:8px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:connSpin .9s linear infinite}
+@keyframes connSpin{to{transform:rotate(360deg)}}
+#connPing{display:inline-block;font-size:11px;opacity:.85;font-weight:600;margin-right:8px;direction:ltr}
+
 #loadingScreen{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#000;transition:opacity .5s ease,visibility .5s ease}
 #loadingScreen.hide{opacity:0;visibility:hidden;pointer-events:none}
 .loading-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
@@ -693,6 +708,13 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 <body>
 <div id="bootBg"></div>
 
+<div id="connBanner">
+  <span class="cnn-txt" id="connBannerText">در حال اتصال به سرور...</span>
+  <span id="connPing"></span>
+  <button class="cnn-btn" id="connRetryBtn" onclick="manualReconnectAbly()">تلاش مجدد</button>
+  <span class="cnn-spin" id="connSpinner"></span>
+</div>
+
 <div id="loadingScreen">
 <img class="loading-image" src="https://cdn.imgurl.ir/uploads/q712771_IMG_20260910_213129_944.jpg" alt="Loading" fetchpriority="high" decoding="async">
 <div class="loading-overlay"></div>
@@ -1324,9 +1346,6 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 <script>
 'use strict';
 
-/* ============================================================
-   GLOBAL VARIABLES
-   ============================================================ */
 const GAME_INSTANCE_ID = "mafia_ali_2024_v1_";
 
 const NS = {
@@ -1432,6 +1451,16 @@ let __bootTimeoutHandle = null;
 let __ablyReconnectTimer = null;
 let __ablyInitAttempts = 0;
 
+/* ===== Connection Quality Monitoring ===== */
+let connectionState = "idle"; // idle | connecting | connected | slow | failed | reconnecting
+let connBannerHideTimer = null;
+let lastPingAt = 0;
+let ablyLatencySamples = [];
+let ablyLatency = 0;
+let ablyQuality = "unknown"; // good | medium | poor | unknown
+let connMonitorInterval = null;
+let connFailStreak = 0;
+
 const DEFAULT_AVATAR = "https://cdn.imgurl.ir/uploads/v815577_file_00000000d37081f4bcc7c475a7a7d884.png";
 const CREATOR_LEAVE_TIMEOUT_MS = 30 * 60 * 1000;
 const CREATOR_EMAIL = "tiger.mafia.best@gmail.com";
@@ -1443,6 +1472,35 @@ const ADMIN_PASSWORD = "Q9#vT2$pB7@xZ4&xM8*F3!wN6^yG5";
 const VERIFIED_BADGE = `<img class="verified-badge" src="https://cdn.imgurl.ir/uploads/s720144_IMG_20260404_133310_188.jpg" alt="✓" loading="lazy" decoding="async">`;
 
 const ABLY_KEY = 'NNYzzQ.SZ3D7A:k9MnlENaJwWGoudGwBbtfN1_Ric4r_qCBU15gKsHs7k';
+
+/* ============================================================
+   CONNECTION BANNER UI
+   ============================================================ */
+function showConnBanner(state, text, showRetry, showSpinner, pingText) {
+  const banner = document.getElementById('connBanner');
+  const txt = document.getElementById('connBannerText');
+  const retry = document.getElementById('connRetryBtn');
+  const spin = document.getElementById('connSpinner');
+  const ping = document.getElementById('connPing');
+  if (!banner) return;
+  banner.classList.remove('state-connecting','state-slow','state-failed','state-reconnecting');
+  banner.classList.add('state-' + state);
+  banner.classList.add('show');
+  if (txt) txt.textContent = text;
+  if (retry) retry.style.display = showRetry ? 'inline-block' : 'none';
+  if (spin) spin.style.display = showSpinner ? 'inline-block' : 'none';
+  if (ping) ping.textContent = pingText || '';
+  if (connBannerHideTimer) { clearTimeout(connBannerHideTimer); connBannerHideTimer = null; }
+}
+function hideConnBanner() {
+  const banner = document.getElementById('connBanner');
+  if (!banner) return;
+  banner.classList.remove('show');
+}
+function hideConnBannerDelayed(ms) {
+  if (connBannerHideTimer) clearTimeout(connBannerHideTimer);
+  connBannerHideTimer = setTimeout(() => hideConnBanner(), ms || 2500);
+}
 
 /* ============================================================
    ASSETS CACHE
@@ -1770,9 +1828,6 @@ function finishBoot() {
   }
 }
 
-/* ============================================================
-   UTILS
-   ============================================================ */
 function showToast(m) {
   const t = document.getElementById("toast");
   if (!t) return;
@@ -2109,17 +2164,32 @@ function __flushAllPendingPublishes() {
 }
 
 /* ============================================================
-   ABLY
+   ABLY + CONNECTION QUALITY
    ============================================================ */
 function initAbly() {
   if (ably) return;
   const email = getCurrentEmail() || ('guest_' + Date.now());
   myClientId = email;
+
+  connectionState = "connecting";
+  showConnBanner('connecting', 'در حال اتصال به سرور...', false, true, '');
+
   try { ably = new Ably.Realtime({ key: ABLY_KEY, clientId: email }); }
-  catch(e) { scheduleAblyRetry(__ablyInitAttempts); return; }
+  catch(e) {
+    console.warn('[Ably] init error:', e);
+    connectionState = "failed";
+    showConnBanner('failed', '❌ اتصال به سرور ممکن نشد', true, false, '');
+    scheduleAblyRetry(__ablyInitAttempts);
+    return;
+  }
 
   ably.connection.on('connected', () => {
     isAblyReady = true;
+    connectionState = "connected";
+    connFailStreak = 0;
+    hideConnBannerDelayed(1500);
+
+    startConnectionMonitor();
 
     ablyUsersCh = ably.channels.get(CH.users());
     ablyUsersCh.subscribe(EV.userFull, msg => { if (msg.data?.phone) applyRemoteUser(msg.data); });
@@ -2286,10 +2356,80 @@ function initAbly() {
       __flushAllPendingPublishes();
     }, 4000);
   });
-  ably.connection.on('disconnected', () => { isAblyReady = false; scheduleAblyReconnect(); });
-  ably.connection.on('failed', () => { isAblyReady = false; scheduleAblyReconnect(); });
-  ably.connection.on('suspended', () => { isAblyReady = false; scheduleAblyReconnect(); });
-  ably.connection.on('closed', () => { isAblyReady = false; });
+
+  ably.connection.on('disconnected', () => {
+    isAblyReady = false;
+    connectionState = "reconnecting";
+    showConnBanner('reconnecting', '🔄 اتصال قطع شد - در حال تلاش برای بازگشت...', true, true, '');
+    scheduleAblyReconnect();
+  });
+  ably.connection.on('failed', () => {
+    isAblyReady = false;
+    connectionState = "failed";
+    showConnBanner('failed', '❌ اتصال به سرور ناموفق - اینترنت را بررسی کنید', true, false, '');
+    scheduleAblyReconnect();
+  });
+  ably.connection.on('suspended', () => {
+    isAblyReady = false;
+    connectionState = "reconnecting";
+    showConnBanner('reconnecting', '⚠️ اتصال ضعیف - تلاش مجدد...', true, true, '');
+    scheduleAblyReconnect();
+  });
+  ably.connection.on('closed', () => {
+    isAblyReady = false;
+  });
+}
+
+function startConnectionMonitor() {
+  if (connMonitorInterval) clearInterval(connMonitorInterval);
+  connMonitorInterval = setInterval(async () => {
+    if (!ably) return;
+    try {
+      const t0 = Date.now();
+      // Ping via Ably time API
+      if (ably.time) {
+        await ably.time();
+        const ping = Date.now() - t0;
+        ablyLatency = ping;
+        ablyLatencySamples.push(ping);
+        if (ablyLatencySamples.length > 8) ablyLatencySamples.shift();
+        const avg = ablyLatencySamples.reduce((a,b) => a+b, 0) / ablyLatencySamples.length;
+
+        if (avg < 250) ablyQuality = "good";
+        else if (avg < 700) ablyQuality = "medium";
+        else ablyQuality = "poor";
+
+        // اگر کیفیت ضعیف بود، هشدار بده
+        if (ablyQuality === "poor") {
+          showConnBanner('slow', '⚠️ اینترنت شما کند است - ممکن است صدا قطع شود', true, false, `Ping: ${Math.round(avg)}ms`);
+          hideConnBannerDelayed(4000);
+        } else if (ablyQuality === "medium") {
+          showConnBanner('slow', '🟡 کیفیت اتصال متوسط است', false, false, `Ping: ${Math.round(avg)}ms`);
+          hideConnBannerDelayed(2500);
+        }
+      }
+    } catch(e) {
+      console.warn('[ConnMonitor]', e);
+    }
+  }, 15000);
+}
+
+function manualReconnectAbly() {
+  if (connectionState === "connecting") return;
+  showToast('🔄 تلاش مجدد...');
+  connectionState = "connecting";
+  showConnBanner('connecting', 'در حال اتصال مجدد...', false, true, '');
+
+  try {
+    if (ably) { try { ably.close(); } catch(e) {} }
+    ably = null;
+    isAblyReady = false;
+    ablyUsersCh = null; ablyLobbyListCh = null; ablyClanListCh = null;
+    ablyAnnCh = null; ablyActivityCh = null; ablyRoomCh = null; ablyClanCh = null;
+    setTimeout(() => initAblyWhenReady(0), 200);
+  } catch(e) {
+    console.warn('[ManualReconnect]', e);
+  }
 }
 
 function scheduleAblyReconnect() {
@@ -2327,7 +2467,12 @@ function initAblyWhenReady(attempt) {
   scheduleAblyRetry(attempt);
 }
 function scheduleAblyRetry(attempt) {
-  if (attempt >= 30) { console.warn('Ably retry limit'); return; }
+  if (attempt >= 30) {
+    console.warn('Ably retry limit');
+    connectionState = "failed";
+    showConnBanner('failed', '❌ اتصال ممکن نشد - لطفاً اینترنت خود را بررسی کرده و دکمه تلاش مجدد را بزنید', true, false, '');
+    return;
+  }
   const delay = Math.min(4000, 300 * Math.pow(1.6, attempt));
   setTimeout(() => initAblyWhenReady(attempt + 1), delay);
 }
@@ -2470,14 +2615,16 @@ function subscribeLobbyRoom(lobbyId) {
 }
 
 /* ============================================================
-   VOICE SYSTEM v3 — نسخه بهبودیافته برای کیفیت بالا
-   (چانک بزرگتر + بافر jitter بیشتر + مدیریت هوشمند دیرهنگام)
+   VOICE SYSTEM v4 — با کیفیت بالا و بدون قطعی
+   چانک 300ms + بافر 600ms + بدون ریست timeline
    ============================================================ */
-const VOICE_RATE = 16000;               // نرخ نمونه‌برداری ارسال
-const VOICE_SEND_SAMPLES = 3200;        // 200ms در هر بسته (کاهش تعداد پیام)
-const VOICE_JITTER = 0.32;              // بافر اولیه 320ms (تحمل jitter شبکه)
-const VOICE_MAX_BUFFER = 1.2;           // حداکثر بافر مجاز
-const VOICE_MIN_AHEAD = 0.008;          // حداقل زمان پخش جلوتر
+const VOICE_RATE = 16000;               // نرخ نمونه‌برداری
+const VOICE_SEND_SAMPLES = 4800;        // 300ms در هر بسته (3.3 msg/sec)
+const VOICE_JITTER = 0.60;              // بافر اولیه 600ms (تحمل jitter زیاد)
+const VOICE_MAX_BUFFER = 1.5;           // حداکثر بافر مجاز
+const VOICE_MIN_AHEAD = 0.005;          // حداقل فاصله پخش
+const VOICE_SILENCE_THRESHOLD = 0.01;   // آستانه سکوت (اختیاری)
+
 let voiceProcessor = null;
 let voiceSourceNode = null;
 let voiceMuteGain = null;
@@ -2546,8 +2693,20 @@ async function startVoiceCapture() {
     if (!ctx) { showToast('مرورگر از صدا پشتیبانی نمی‌کند'); return; }
     if (ctx.state === 'suspended') { try { await ctx.resume(); } catch(e) {} }
 
+    // چک اتصال قبل از شروع
+    if (!isAblyReady) {
+      showToast('⛔ اتصال به سرور برقرار نیست');
+      showConnBanner('failed', '❌ برای ارسال صدا باید به سرور متصل باشید', true, false, '');
+      return;
+    }
+
     voiceStream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        channelCount: 1
+      },
       video: false
     });
 
@@ -2561,6 +2720,8 @@ async function startVoiceCapture() {
 
     voiceProcessor.onaudioprocess = function(e) {
       if (!voiceActive) return;
+      if (!isAblyReady) return; // اگه قطع شد، ارسال نکن
+
       const input = e.inputBuffer.getChannelData(0);
       const ratio = ctx.sampleRate / VOICE_RATE;
       const outLen = Math.floor(input.length / ratio);
@@ -2603,7 +2764,10 @@ async function startVoiceCapture() {
     renderLobbyRoom();
   } catch(err) {
     console.error('Voice capture error:', err);
-    showToast('دسترسی به میکروفون داده نشد');
+    let msg = 'دسترسی به میکروفون داده نشد';
+    if (err && err.name === 'NotAllowedError') msg = '⛔ اجازه دسترسی به میکروفون داده نشد';
+    else if (err && err.name === 'NotFoundError') msg = '⛔ میکروفونی پیدا نشد';
+    showToast(msg);
     lrMicOn = false;
     isMicAccessGranted = false;
     voiceActive = false;
@@ -2660,7 +2824,7 @@ function publishVoiceStop(phone) {
   try { ablyRoomCh.publish(EV.voiceStop, { lobbyId: currentLobbyId, from: phone }); } catch(e) {}
 }
 
-/* پخش صدا: مدیریت هوشمند دیرهنگام - بدون ریست timeline */
+/* پخش صدا با کیفیت بالا - مدیریت کامل underrun و jitter */
 function enqueueVoicePlayback(fromPhone, base64Data, seq) {
   const ctx = getVoiceAudioCtx();
   if (!ctx) return;
@@ -2672,16 +2836,18 @@ function enqueueVoicePlayback(fromPhone, base64Data, seq) {
       lastSeq: -1,
       sources: [],
       started: false,
-      underrunCount: 0
+      underruns: 0,
+      packetsReceived: 0
     };
   }
 
-  // شروع مجدد مایک (seq=0) → فقط timeline رو ریست کن
+  // شروع مجدد مایک (seq=0)
   if (seq === 0) {
     st.lastSeq = -1;
     st.next = 0;
     st.started = false;
-    // منابع قدیمی رو قطع کن
+    st.underruns = 0;
+    st.packetsReceived = 0;
     (st.sources || []).forEach(function(s) { try { s.stop(); } catch(e) {} });
     st.sources = [];
   }
@@ -2689,28 +2855,18 @@ function enqueueVoicePlayback(fromPhone, base64Data, seq) {
   // بسته تکراری یا قدیمی
   if (seq <= st.lastSeq) return;
 
-  // تشخیص گپ در ترتیب بسته‌ها
-  if (st.lastSeq !== -1 && seq > st.lastSeq + 1) {
-    const missing = seq - st.lastSeq - 1;
-    // اگر گپ کوچیک (1-3 بسته) → سکوت درج کن
-    if (missing <= 3 && st.started) {
-      const gapSamples = missing * VOICE_SEND_SAMPLES;
-      const silenceBuf = ctx.createBuffer(1, gapSamples, VOICE_RATE);
-      // نمونه‌ها به‌صورت پیش‌فرض صفر پر شدن (سکوت)
-      const now = ctx.currentTime;
-      // فقط اگر timeline نزدیک حال باشه سکوت درج کن
-      if (st.next > now - 0.05 && st.next < now + VOICE_MAX_BUFFER) {
-        const silSrc = ctx.createBufferSource();
-        silSrc.buffer = silenceBuf;
-        silSrc.connect(ctx.destination);
-        try { silSrc.start(st.next); } catch(e) {}
-        st.next += silenceBuf.duration;
-      }
-    } else if (missing > 6) {
-      // گپ بزرگ → timeline رو reset کن (شروع دوباره)
-      st.next = 0;
-      st.started = false;
-    }
+  st.packetsReceived++;
+
+  // تشخیص گپ
+  const gap = st.lastSeq === -1 ? 0 : (seq - st.lastSeq - 1);
+
+  // اگر گپ کوچک (1-2 بسته): فقط علامت بزن
+  // اگر گپ بزرگ (>3): timeline رو jump کن
+  if (gap > 3 && st.started) {
+    const now = ctx.currentTime;
+    // به جای ریست کامل، فقط جلو بپر با فاصله جبرانی
+    st.next = Math.max(st.next, now + 0.15);
+    st.underruns++;
   }
 
   st.lastSeq = seq;
@@ -2725,23 +2881,21 @@ function enqueueVoicePlayback(fromPhone, base64Data, seq) {
 
   const now = ctx.currentTime;
 
-  // اگر هنوز شروع نشده یا timeline ریست شده
+  // اگر هنوز شروع نشده یا timeline reset شده
   if (!st.started || st.next === 0) {
     st.next = now + VOICE_JITTER;
     st.started = true;
   }
 
-  // اگر از حال عقب افتادیم (زمان پخش گذشته)
-  if (st.next < now - 0.03) {
-    // جلوتر از حال بزن اما با فاصله کم
+  // اگر عقب افتادیم (زمان پخش گذشته) - با نرمی جبران کن، نه ریست
+  if (st.next < now - 0.05) {
     st.next = now + VOICE_MIN_AHEAD;
-    st.underrunCount++;
+    st.underruns++;
   }
 
-  // اگر خیلی جلو افتادیم (بافر بیش از حد)
+  // اگر خیلی جلو افتادیم
   const buffered = st.next - now;
   if (buffered > VOICE_MAX_BUFFER) {
-    // بسته‌های خیلی قدیمی رو رد کن و timeline رو جبران کن
     st.next = now + VOICE_JITTER;
   }
 
@@ -2758,9 +2912,9 @@ function enqueueVoicePlayback(fromPhone, base64Data, seq) {
   try { src.start(startTime); } catch(e) {}
   st.next = startTime + audioBuffer.duration;
 
-  // جلوگیری از انباشت منابع (پاک‌سازی قدیمی‌ها)
-  if (st.sources.length > 60) {
-    const toRemove = st.sources.splice(0, st.sources.length - 40);
+  // پاک‌سازی منابع قدیمی
+  if (st.sources.length > 100) {
+    const toRemove = st.sources.splice(0, st.sources.length - 60);
     toRemove.forEach(function(s) { try { s.stop(); } catch(e) {} });
   }
 }
@@ -2778,6 +2932,11 @@ function clearVoiceQueue(fromPhone) {
 async function toggleLrMic() {
   const u = getCurrentUser();
   if (!u || !currentLobbyId) { showToast('لطفاً ابتدا وارد لابی شوید'); return; }
+  if (!isAblyReady) {
+    showToast('⛔ اتصال به سرور برقرار نیست');
+    showConnBanner('failed', '❌ برای ارسال صدا باید متصل باشید', true, false, '');
+    return;
+  }
   if (gameState.active && gameState.phase === 'night') {
     const me = gameState.players.find(p => p.phone === u.email);
     if (me && me.side !== 'mafia') { showToast('در شب فقط مافیا می‌تواند صحبت کند'); return; }
@@ -2791,9 +2950,6 @@ function disconnectAllPeers() {
   voicePlayQueue = {};
 }
 
-/* ============================================================
-   PUBLISHERS
-   ============================================================ */
 function publishRoomState(lobby) {
   if (!lobby || !lobby.id) return;
   if (ablyRoomCh && isAblyReady) { try { ablyRoomCh.publish(EV.roomState, lobby); } catch(e) {} }
@@ -5009,6 +5165,7 @@ function logout() {
   closeMenu(); closeInternalPages();
   stopVoiceCapture();
   voicePlayQueue = {};
+  if (connMonitorInterval) { clearInterval(connMonitorInterval); connMonitorInterval = null; }
   if (ably) { try { ably.close(); } catch(e) {} }
   ably = null; isAblyReady = false;
   NS.remove("current_user");
@@ -5016,6 +5173,7 @@ function logout() {
   const cf = document.getElementById("creatorFloatBtn");
   if (cf) { cf.classList.remove('show'); cf.style.display = 'none'; }
   closeFloatingAdmin();
+  hideConnBanner();
   showAuth(); switchAuth("login");
 }
 function comingSoon() { showToast("بزودی"); }
@@ -5945,7 +6103,7 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-console.log('%cمافیابست • v9.0.0 (High-Quality Voice)', 'color:#f0c15b;font-weight:bold');
+console.log('%cمافیابست • v10.0.0 (High-Quality Voice + Connection Monitor)', 'color:#f0c15b;font-weight:bold');
 
 try {
   fastBoot();

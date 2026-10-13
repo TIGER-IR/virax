@@ -29,8 +29,6 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 .loading-progress-bar{height:100%;width:0%;background:linear-gradient(90deg,#e2a43c,#ffe39b);border-radius:2px;transition:width .3s ease}
 .loading-count{color:#8b6914;font-size:11px;font-weight:600;direction:ltr}
 @keyframes spin{to{transform:rotate(360deg)}}
-
-/* AUTH SCREEN - RED/WHITE/ORANGE THEME */
 #authScreen{position:fixed;inset:0;z-index:5000;display:none;align-items:center;justify-content:center;padding:18px;overflow:auto;background:radial-gradient(circle at 50% 30%,rgba(180,30,20,.35),transparent 45%),radial-gradient(circle at 50% 80%,rgba(255,120,30,.2),transparent 50%),rgba(0,0,0,.96);backdrop-filter:blur(8px)}
 .auth-box{width:min(430px,100%);padding:3px;border-radius:22px;background:linear-gradient(145deg,#ff6b35,#7a0f0f 12%,#1a0505 50%,#c73b1a 90%,#3a0a05);box-shadow:0 0 0 1px #4a0f08,0 0 50px rgba(255,90,40,.35)}
 .auth-inner{border-radius:19px;padding:25px 20px 20px;background:linear-gradient(160deg,#1a0808,#050202 70%)}
@@ -52,7 +50,6 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 .auth-note{margin-top:12px;text-align:center;color:#b06858;font-size:10px;line-height:1.9}
 .auth-note b{color:#ff9b5c}
 .error{display:none;margin-bottom:12px;padding:9px;border-radius:9px;text-align:center;color:#ffb0b0;background:rgba(180,20,20,.3);border:1px solid #b02a2a;font-size:11px}
-
 #app{display:none;position:relative;min-height:100vh;min-height:100svh;overflow:hidden;background-image:url("https://cdn.imgurl.ir/uploads/q712771_IMG_20260910_213129_944.jpg");background-size:cover;background-position:center top;background-repeat:no-repeat}
 .top-bar{position:absolute;z-index:30;top:10px;left:9px;right:9px;height:55px;display:flex;align-items:center;justify-content:space-between}
 .currency-area{display:flex;align-items:center;gap:8px;direction:ltr}
@@ -1328,11 +1325,10 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 'use strict';
 
 /* ============================================================
-   متغیرهای سراسری — همه اعلام شدن تا ReferenceError نداشته باشیم
+   GLOBAL VARIABLES (همه اعلام شدن تا ReferenceError نداشته باشیم)
    ============================================================ */
 const GAME_INSTANCE_ID = "mafia_ali_2024_v1_";
 
-// NS wrapper
 const NS = {
   _key: function(k) { return GAME_INSTANCE_ID + k; },
   get: function(k) { try { return localStorage.getItem(NS._key(k)); } catch(e) { return null; } },
@@ -1379,7 +1375,6 @@ const EV = {
   activityLog: GAME_INSTANCE_ID + 'activity_log'
 };
 
-// ⚠️ همه متغیرها اینجا اعلام شدن
 let __pendingUserPublishes = {};
 let __pendingLobbyPublishes = {};
 let __pendingClanPublishes = {};
@@ -1423,8 +1418,8 @@ let audioContextRef = null;
 let intentionalLeaving = false;
 let isProcessingKick = false;
 
-// Voice variables - همه اعلام شدن ✅
-let isMicAccessGranted = false;   // ⬅️ این متغیر باعث خطا شده بود
+/* Voice system variables — همه اعلام شدن */
+let isMicAccessGranted = false;
 let voiceMediaRecorder = null;
 let voiceStream = null;
 let voicePlayQueue = {};
@@ -1433,7 +1428,6 @@ let voiceActive = false;
 let voiceSequence = 0;
 let voiceAudioCtx = null;
 
-// Assets
 let __booted = false;
 let __bootTimeoutHandle = null;
 let __ablyReconnectTimer = null;
@@ -1452,7 +1446,7 @@ const VERIFIED_BADGE = `<img class="verified-badge" src="https://cdn.imgurl.ir/u
 const ABLY_KEY = 'NNYzzQ.SZ3D7A:k9MnlENaJwWGoudGwBbtfN1_Ric4r_qCBU15gKsHs7k';
 
 /* ============================================================
-   ASSETS CACHE — Cache API + IndexedDB (پایدار و آفلاین)
+   ASSETS CACHE — Cache API + IndexedDB
    ============================================================ */
 const CACHE_NAME = "mafiabest-assets-v2";
 
@@ -1518,7 +1512,6 @@ const AssetCache = (function(){
     } catch(e) {}
     return null;
   }
-
   async function putInCacheAPI(url, blob, contentType) {
     if (!HAS_CACHE_API) return false;
     try {
@@ -1533,7 +1526,6 @@ const AssetCache = (function(){
       return true;
     } catch(e) { return false; }
   }
-
   async function getFromDisk(url) {
     try {
       const cached = await ImageDB.get(url);
@@ -1541,7 +1533,6 @@ const AssetCache = (function(){
     } catch(e) {}
     return null;
   }
-
   async function download(url) {
     if (!IS_HTTP) return null;
     try {
@@ -1554,7 +1545,6 @@ const AssetCache = (function(){
       return blob;
     } catch(e) { return null; }
   }
-
   async function getBlob(url) {
     if (loadedBlobs.has(url)) return loadedBlobs.get(url);
     let blob = await getFromCacheAPI(url);
@@ -1563,7 +1553,6 @@ const AssetCache = (function(){
     if (blob) loadedBlobs.set(url, blob);
     return blob;
   }
-
   function preloadAll(urls, concurrency, onProgress) {
     if (!urls || !urls.length) {
       if (onProgress) onProgress(1, 1, 0);
@@ -1598,11 +1587,9 @@ const AssetCache = (function(){
       next();
     });
   }
-
   return { getBlob, preloadAll, HAS_CACHE_API };
 })();
 
-/* لیست کامل تصاویر برنامه - همه اینجا کش می‌شن */
 const ALL_ASSETS = [
   "https://cdn.imgurl.ir/uploads/q712771_IMG_20260910_213129_944.jpg",
   "https://cdn.imgurl.ir/uploads/v815577_file_00000000d37081f4bcc7c475a7a7d884.png",
@@ -1714,21 +1701,15 @@ const LoadingScreen = (function(){
   return { setText, setProgress, setCount, hide };
 })();
 
-/* ============================================================
-   BOOT — حالا منتظر می‌مونه تا همه تصاویر دانلود بشن
-   ============================================================ */
 function fastBoot() {
   if (__booted) return;
   __booted = true;
-
-  // safety net طولانی‌تر - چون منتظر دانلود تصاویر هستیم
   __bootTimeoutHandle = setTimeout(() => {
     console.warn('[Boot] Safety timeout');
     LoadingScreen.hide();
     try { const u = getCurrentUser(); if (u) showApp(); else showAuth(); } catch(e) { try { showAuth(); } catch(e2) {} }
-  }, 120000); // 2 دقیقه
+  }, 120000);
 
-  // بارگذاری داده‌ها (سریع)
   try {
     loadDeletedData();
     ensureSpecialAccounts();
@@ -1736,7 +1717,6 @@ function fastBoot() {
     try { saveAccountsBackup(); } catch(e) {}
   } catch(e) { console.warn(e); }
 
-  // شروع دانلود تصاویر با نمایش پیشرفت واقعی
   LoadingScreen.setText('در حال دانلود تصاویر بازی...');
   LoadingScreen.setProgress(2);
 
@@ -2494,8 +2474,17 @@ function subscribeLobbyRoom(lobbyId) {
 }
 
 /* ============================================================
-   VOICE SYSTEM — Ably-based (بدون WebRTC)
+   VOICE SYSTEM v2 — PCM زنده (بدون MediaRecorder) ✅ NEW
    ============================================================ */
+const VOICE_RATE = 16000;
+const VOICE_SEND_SAMPLES = 1600;
+const VOICE_JITTER = 0.12;
+const VOICE_MAX_AHEAD = 0.8;
+let voiceProcessor = null;
+let voiceSourceNode = null;
+let voiceMuteGain = null;
+let voicePending = [];
+
 function unlockAudioPlayback() {
   try {
     if (!audioContextRef) {
@@ -2515,13 +2504,22 @@ function unlockAudioPlayback() {
 function getVoiceAudioCtx() {
   if (!voiceAudioCtx) {
     try {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (Ctx) voiceAudioCtx = new Ctx();
+      if (audioContextRef) voiceAudioCtx = audioContextRef;
+      else {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (Ctx) voiceAudioCtx = new Ctx();
+      }
     } catch(e) {}
   }
   if (voiceAudioCtx && voiceAudioCtx.state === 'suspended') voiceAudioCtx.resume().catch(()=>{});
   return voiceAudioCtx;
 }
+
+['touchstart','click'].forEach(function(evName) {
+  document.addEventListener(evName, function() {
+    try { getVoiceAudioCtx(); } catch(e) {}
+  }, { passive: true });
+});
 
 function base64ToArrayBuffer(base64) {
   try {
@@ -2533,44 +2531,64 @@ function base64ToArrayBuffer(base64) {
   } catch(e) { return null; }
 }
 
+function voicePcmToBase64(int16) {
+  const bytes = new Uint8Array(int16.buffer, int16.byteOffset, int16.byteLength);
+  let bin = '';
+  const step = 0x8000;
+  for (let i = 0; i < bytes.length; i += step) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + step));
+  }
+  return btoa(bin);
+}
+
 async function startVoiceCapture() {
   try {
+    if (voiceActive) return;
+    const ctx = getVoiceAudioCtx();
+    if (!ctx) { showToast('مرورگر از صدا پشتیبانی نمی‌کند'); return; }
+    if (ctx.state === 'suspended') { try { await ctx.resume(); } catch(e) {} }
+
     voiceStream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1, sampleRate: 24000 },
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
       video: false
     });
 
-    const mimeTypes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4', ''];
-    let selectedMime = '';
-    for (const m of mimeTypes) {
-      if (m === '' || (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m))) {
-        selectedMime = m;
-        break;
-      }
-    }
-
-    voiceMediaRecorder = new MediaRecorder(voiceStream, {
-      mimeType: selectedMime || undefined,
-      audioBitsPerSecond: 24000
-    });
-
-    voiceActive = true;
+    voiceSourceNode = ctx.createMediaStreamSource(voiceStream);
+    voiceProcessor = ctx.createScriptProcessor(2048, 1, 1);
+    voiceMuteGain = ctx.createGain();
+    voiceMuteGain.gain.value = 0;
+    voicePending = [];
     voiceSequence = 0;
+    voiceActive = true;
 
-    voiceMediaRecorder.ondataavailable = (e) => {
-      if (!e.data || e.data.size === 0) return;
+    voiceProcessor.onaudioprocess = function(e) {
       if (!voiceActive) return;
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result.split(',')[1];
-        if (!base64) return;
-        const seq = voiceSequence++;
-        publishVoiceChunk(base64, seq);
-      };
-      reader.readAsDataURL(e.data);
+      const input = e.inputBuffer.getChannelData(0);
+      const ratio = ctx.sampleRate / VOICE_RATE;
+      const outLen = Math.floor(input.length / ratio);
+      for (let i = 0; i < outLen; i++) {
+        const start = Math.floor(i * ratio);
+        let end = Math.floor((i + 1) * ratio);
+        if (end <= start) end = start + 1;
+        let sum = 0;
+        for (let j = start; j < end && j < input.length; j++) sum += input[j];
+        voicePending.push(sum / (end - start));
+      }
+      while (voicePending.length >= VOICE_SEND_SAMPLES) {
+        const part = voicePending.splice(0, VOICE_SEND_SAMPLES);
+        const pcm = new Int16Array(part.length);
+        for (let k = 0; k < part.length; k++) {
+          let s = part[k];
+          if (s > 1) s = 1; else if (s < -1) s = -1;
+          pcm[k] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        }
+        publishVoiceChunk(voicePcmToBase64(pcm), voiceSequence++);
+      }
     };
 
-    voiceMediaRecorder.start(voiceChunkDuration);
+    voiceSourceNode.connect(voiceProcessor);
+    voiceProcessor.connect(voiceMuteGain);
+    voiceMuteGain.connect(ctx.destination);
 
     const btn = document.getElementById('lrMicBtn');
     if (btn) btn.classList.add('active');
@@ -2597,13 +2615,16 @@ async function startVoiceCapture() {
 }
 
 function stopVoiceCapture() {
+  const wasActive = voiceActive;
   voiceActive = false;
   lrMicOn = false;
   isMicAccessGranted = false;
 
-  if (voiceMediaRecorder && voiceMediaRecorder.state !== 'inactive') {
-    try { voiceMediaRecorder.stop(); } catch(e) {}
-  }
+  try { if (voiceProcessor) { voiceProcessor.onaudioprocess = null; voiceProcessor.disconnect(); } } catch(e) {}
+  try { if (voiceSourceNode) voiceSourceNode.disconnect(); } catch(e) {}
+  try { if (voiceMuteGain) voiceMuteGain.disconnect(); } catch(e) {}
+  voiceProcessor = null; voiceSourceNode = null; voiceMuteGain = null;
+  voicePending = [];
   voiceMediaRecorder = null;
 
   if (voiceStream) {
@@ -2615,7 +2636,7 @@ function stopVoiceCapture() {
   if (btn) btn.classList.remove('active');
 
   const u = getCurrentUser();
-  if (u) {
+  if (u && wasActive) {
     publishMic(u.email, false);
     publishVoiceStop(u.email);
   }
@@ -2640,59 +2661,47 @@ function publishVoiceStop(phone) {
 }
 
 function enqueueVoicePlayback(fromPhone, base64Data, seq) {
-  if (!voicePlayQueue[fromPhone]) {
-    voicePlayQueue[fromPhone] = { queue: [], playing: false, lastSeq: -1 };
+  const ctx = getVoiceAudioCtx();
+  if (!ctx) return;
+  let st = voicePlayQueue[fromPhone];
+  if (!st || st.next === undefined) {
+    st = voicePlayQueue[fromPhone] = { next: 0, lastSeq: -1, sources: [] };
   }
-  const pq = voicePlayQueue[fromPhone];
-  if (seq <= pq.lastSeq) return;
-  if (pq.queue.length > 8) pq.queue.splice(0, pq.queue.length - 8);
-  pq.queue.push({ data: base64Data, seq: seq });
-  if (!pq.playing) playNextVoiceChunk(fromPhone);
-}
+  if (seq === 0) { st.lastSeq = -1; st.next = 0; }
+  if (seq <= st.lastSeq) return;
+  st.lastSeq = seq;
 
-function playNextVoiceChunk(fromPhone) {
-  const pq = voicePlayQueue[fromPhone];
-  if (!pq || !pq.queue.length) { if (pq) pq.playing = false; return; }
-  const item = pq.queue.shift();
-  pq.lastSeq = item.seq;
-  pq.playing = true;
-  try {
-    const arrayBuffer = base64ToArrayBuffer(item.data);
-    if (!arrayBuffer) { pq.playing = false; playNextVoiceChunk(fromPhone); return; }
-    const ctx = getVoiceAudioCtx();
-    if (!ctx) { playChunkWithAudioTag(fromPhone, item.data); return; }
-    ctx.decodeAudioData(arrayBuffer.slice(0), (audioBuffer) => {
-      const source = ctx.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(ctx.destination);
-      source.onended = () => playNextVoiceChunk(fromPhone);
-      source.start(0);
-    }, (err) => { playChunkWithAudioTag(fromPhone, item.data); });
-  } catch(e) {
-    pq.playing = false;
-    playNextVoiceChunk(fromPhone);
-  }
-}
+  const buf = base64ToArrayBuffer(base64Data);
+  if (!buf || buf.byteLength < 2) return;
+  const view = new DataView(buf);
+  const n = Math.floor(buf.byteLength / 2);
+  const audioBuffer = ctx.createBuffer(1, n, VOICE_RATE);
+  const ch = audioBuffer.getChannelData(0);
+  for (let i = 0; i < n; i++) ch[i] = view.getInt16(i * 2, true) / 32768;
 
-function playChunkWithAudioTag(fromPhone, base64Data) {
-  try {
-    const audio = new Audio('data:audio/webm;base64,' + base64Data);
-    audio.volume = 1.0;
-    audio.onended = () => { const pq = voicePlayQueue[fromPhone]; if (pq) playNextVoiceChunk(fromPhone); };
-    audio.onerror = () => { const pq = voicePlayQueue[fromPhone]; if (pq) { pq.playing = false; playNextVoiceChunk(fromPhone); } };
-    audio.play().catch(() => { const pq = voicePlayQueue[fromPhone]; if (pq) { pq.playing = false; playNextVoiceChunk(fromPhone); } });
-  } catch(e) {
-    const pq = voicePlayQueue[fromPhone];
-    if (pq) { pq.playing = false; playNextVoiceChunk(fromPhone); }
-  }
+  const now = ctx.currentTime;
+  if (st.next < now + 0.02) st.next = now + VOICE_JITTER;
+  if (st.next - now > VOICE_MAX_AHEAD) return;
+
+  const src = ctx.createBufferSource();
+  src.buffer = audioBuffer;
+  src.connect(ctx.destination);
+  src.onended = function() {
+    const i = st.sources.indexOf(src);
+    if (i !== -1) st.sources.splice(i, 1);
+  };
+  st.sources.push(src);
+  try { src.start(st.next); } catch(e) {}
+  st.next += audioBuffer.duration;
 }
 
 function clearVoiceQueue(fromPhone) {
-  if (voicePlayQueue[fromPhone]) {
-    voicePlayQueue[fromPhone].queue = [];
-    voicePlayQueue[fromPhone].playing = false;
-    voicePlayQueue[fromPhone].lastSeq = -1;
-  }
+  const st = voicePlayQueue[fromPhone];
+  if (!st) return;
+  (st.sources || []).forEach(function(s) { try { s.stop(); } catch(e) {} });
+  st.sources = [];
+  st.next = 0;
+  st.lastSeq = -1;
 }
 
 async function toggleLrMic() {
@@ -2815,7 +2824,6 @@ function updateUI() {
   else { badgeEl.innerHTML = ""; badgeEl.style.display = "none"; }
 }
 
-/* FRAMES */
 const FRAMES = [
   {id:"frame1", src:"https://cdn.imgurl.ir/uploads/r861788_IMG_20260909_221506_133.jpg", price:5000},
   {id:"frame2", src:"https://cdn.imgurl.ir/uploads/s38626_IMG_20260909_221405_287.jpg", price:6000},
@@ -2832,7 +2840,6 @@ function getFrameSrc(frameId) {
   return f ? f.src : "";
 }
 
-/* SCENARIOS */
 const SCENARIOS = {
   takavar: {
     name: "تکاور",
@@ -2874,9 +2881,6 @@ let gameState = {
   gameStartTime: null, clanScoreGiven: false, log: []
 };
 
-/* ============================================================
-   ACTIVITY LOG
-   ============================================================ */
 function logActivity(category, action, details) {
   try {
     const entry = {
@@ -2924,9 +2928,6 @@ function renderActivityLog() {
   `).join("");
 }
 
-/* ============================================================
-   GAME LOGIC
-   ============================================================ */
 function startGame(lobby) {
   const seats = lobby.seats.filter(s => s && !s.isGhost);
   if (seats.length < 10) { showToast("برای شروع بازی باید ۱۰ بازیکن حضور داشته باشند!"); return; }
@@ -3273,9 +3274,6 @@ function observerToggleAlive(phone) {
 }
 function observerToggleMic() { toggleLrMic(); }
 
-/* ============================================================
-   LIVE STREAM + MATCH HISTORY
-   ============================================================ */
 function openLiveStream() { closeMenu(); closeInternalPages(); renderLiveStream(); document.getElementById("liveStreamPage").classList.add("show"); }
 function renderLiveStream() {
   const list = document.getElementById("liveStreamList");
@@ -3316,9 +3314,6 @@ function renderMatchHistory() {
   list.innerHTML = history.map(h => `<div class="announcement-item"><h4>${h.result === 'برد' ? '🏆' : '❌'} ${h.result} - ${h.scenario}</h4><p>نقش شما: ${h.myRole} (${h.mySide}) | برنده: ${h.winner}</p><div class="ann-time">${h.date} | مدت: ${h.duration}</div></div>`).join("");
 }
 
-/* ============================================================
-   LOBBY SYSTEM
-   ============================================================ */
 async function showLobbyLoading() {
   return new Promise((resolve) => {
     const overlay = document.getElementById('lobbyLoadingOverlay');
@@ -3327,7 +3322,6 @@ async function showLobbyLoading() {
     if (!overlay || !bar || !pct) { resolve(); return; }
     overlay.classList.add('show');
     bar.style.width = '0%'; pct.textContent = '0%';
-    // چون همه چیز کش شده، سرعت بالاست
     let i = 0;
     const iv = setInterval(() => {
       i += 25;
@@ -4329,7 +4323,6 @@ function buildLeaderboard() {
   });
 }
 
-/* AVATARS */
 const AVATARS = [
   {id:"free1",name:"",src:"https://cdn.imgurl.ir/uploads/u02312_file_00000000d56c8211a467677795d2a0fb.png",price:0},
   {id:"free2",name:"",src:"https://cdn.imgurl.ir/uploads/r417544_file_00000000d37081f4bcc7c475a7a7d884.png",price:0},
@@ -4495,7 +4488,6 @@ function equipAvatar(av) {
   updateUI(); renderAvatarShop(); renderMyAvatars(); showToast("اواتار تجهیز شد! ✅");
 }
 
-/* CLAN */
 function openClan() {
   closeMenu(); closeInternalPages();
   const u = getCurrentUser(); if (!u) return;
@@ -4872,7 +4864,6 @@ function replyToClanMessage(idx) {
   showToast("در حال ریپلای به پیام...");
 }
 
-/* STORE / RULES / SETTINGS */
 function openStore() { closeMenu(); closeInternalPages(); document.getElementById("storePage").classList.add("show"); }
 function closeStore() { document.getElementById("storePage").classList.remove("show"); }
 function claimDailyReward() {
@@ -4976,7 +4967,6 @@ function showBlockedPage(blocked) {
   document.getElementById("authScreen").style.display = "none";
 }
 
-/* SEND COINS */
 function openSendCoins() {
   closeMenu();
   const u = getCurrentUser(); if (!u) return;
@@ -5006,9 +4996,6 @@ function submitSendCoins() {
   showToast(`${amount} سکه با موفقیت ارسال شد ✅`);
 }
 
-/* ============================================================
-   CREATOR FLOATING BTN + ADMIN PANEL
-   ============================================================ */
 let creatorDragState = null;
 function startCreatorDrag(e) {
   e.preventDefault();
@@ -5777,9 +5764,6 @@ function renderAdminList() {
   }
 }
 
-/* ============================================================
-   EVENT LISTENERS — Login / Register
-   ============================================================ */
 document.getElementById("loginForm").addEventListener("submit", function(e) {
   e.preventDefault(); clearError(); loadDeletedData(); ensureSpecialAccounts();
   const email = normalizeEmail(document.getElementById("loginEmail").value);
@@ -5896,11 +5880,8 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-console.log('%cمافیابست • v7.0.0 (Offline Assets + Ably Voice)', 'color:#f0c15b;font-weight:bold');
+console.log('%cمافیابست • v8.0.0 (PCM Voice + Offline Assets)', 'color:#f0c15b;font-weight:bold');
 
-/* ============================================================
-   BOOT START
-   ============================================================ */
 try {
   fastBoot();
 } catch(e) {

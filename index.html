@@ -17,21 +17,6 @@ html,body{background:#000;margin:0;padding:0}
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}
 html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vazirmatn",Tahoma,sans-serif;overflow-x:hidden}
-
-/* === Connection Status Banner === */
-#connBanner{position:fixed;top:0;left:0;right:0;z-index:99997;display:none;padding:10px 14px;font-family:inherit;font-size:13px;font-weight:800;text-align:center;color:#fff;box-shadow:0 2px 12px rgba(0,0,0,.6);transition:transform .3s,opacity .3s;transform:translateY(-100%)}
-#connBanner.show{display:block;transform:translateY(0)}
-#connBanner.state-connecting{background:linear-gradient(90deg,#b87333,#8b5a1e);color:#fff}
-#connBanner.state-slow{background:linear-gradient(90deg,#d39e00,#8b6914);color:#1a0e00}
-#connBanner.state-failed{background:linear-gradient(90deg,#c0392b,#7a1e10);color:#fff}
-#connBanner.state-reconnecting{background:linear-gradient(90deg,#2980b9,#1a4d70);color:#fff}
-#connBanner .cnn-txt{display:inline-block;vertical-align:middle}
-#connBanner .cnn-btn{display:inline-block;vertical-align:middle;margin-right:10px;padding:5px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.6);background:rgba(0,0,0,.25);color:#fff;font-family:inherit;font-size:12px;font-weight:900;cursor:pointer}
-#connBanner .cnn-btn:active{transform:scale(.95)}
-#connBanner .cnn-spin{display:inline-block;vertical-align:middle;width:14px;height:14px;margin-left:8px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:connSpin .9s linear infinite}
-@keyframes connSpin{to{transform:rotate(360deg)}}
-#connPing{display:inline-block;font-size:11px;opacity:.85;font-weight:600;margin-right:8px;direction:ltr}
-
 #loadingScreen{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#000;transition:opacity .5s ease,visibility .5s ease}
 #loadingScreen.hide{opacity:0;visibility:hidden;pointer-events:none}
 .loading-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
@@ -44,6 +29,8 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 .loading-progress-bar{height:100%;width:0%;background:linear-gradient(90deg,#e2a43c,#ffe39b);border-radius:2px;transition:width .3s ease}
 .loading-count{color:#8b6914;font-size:11px;font-weight:600;direction:ltr}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* AUTH SCREEN - RED/WHITE/ORANGE THEME */
 #authScreen{position:fixed;inset:0;z-index:5000;display:none;align-items:center;justify-content:center;padding:18px;overflow:auto;background:radial-gradient(circle at 50% 30%,rgba(180,30,20,.35),transparent 45%),radial-gradient(circle at 50% 80%,rgba(255,120,30,.2),transparent 50%),rgba(0,0,0,.96);backdrop-filter:blur(8px)}
 .auth-box{width:min(430px,100%);padding:3px;border-radius:22px;background:linear-gradient(145deg,#ff6b35,#7a0f0f 12%,#1a0505 50%,#c73b1a 90%,#3a0a05);box-shadow:0 0 0 1px #4a0f08,0 0 50px rgba(255,90,40,.35)}
 .auth-inner{border-radius:19px;padding:25px 20px 20px;background:linear-gradient(160deg,#1a0808,#050202 70%)}
@@ -65,6 +52,78 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 .auth-note{margin-top:12px;text-align:center;color:#b06858;font-size:10px;line-height:1.9}
 .auth-note b{color:#ff9b5c}
 .error{display:none;margin-bottom:12px;padding:9px;border-radius:9px;text-align:center;color:#ffb0b0;background:rgba(180,20,20,.3);border:1px solid #b02a2a;font-size:11px}
+
+/* AUTH SCREEN v2 — modern look (override layer; original rules above are kept) */
+#authScreen{background:radial-gradient(circle at 50% 18%,rgba(200,40,25,.40),transparent 46%),radial-gradient(circle at 15% 90%,rgba(255,120,30,.22),transparent 50%),radial-gradient(circle at 90% 70%,rgba(120,10,40,.30),transparent 50%),#050202}
+.auth-bg{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.auth-bg .orb{position:absolute;border-radius:50%;filter:blur(60px);opacity:.5;animation:orbFloat 14s ease-in-out infinite}
+.auth-bg .o1{width:260px;height:260px;background:#ff5a2a;top:-70px;right:-60px}
+.auth-bg .o2{width:300px;height:300px;background:#a0121c;bottom:-110px;left:-90px;animation-delay:-5s}
+.auth-bg .o3{width:180px;height:180px;background:#ff9b3d;top:45%;left:55%;opacity:.25;animation-delay:-9s}
+@keyframes orbFloat{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(26px,-34px) scale(1.12)}}
+.auth-bg .fs{position:absolute;font-size:34px;color:rgba(255,140,80,.13);animation:suitRise 16s linear infinite;bottom:-60px}
+.auth-bg .s1{right:8%;animation-delay:0s}.auth-bg .s2{right:28%;font-size:26px;animation-delay:-4s}
+.auth-bg .s3{right:50%;font-size:40px;animation-delay:-8s}.auth-bg .s4{right:68%;font-size:28px;animation-delay:-2s}
+.auth-bg .s5{right:86%;font-size:32px;animation-delay:-11s}.auth-bg .s6{right:40%;font-size:22px;animation-delay:-13s}
+@keyframes suitRise{0%{transform:translateY(0) rotate(0);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-115vh) rotate(200deg);opacity:0}}
+.auth-box{position:relative;z-index:1;margin:auto;width:min(440px,100%);padding:1.5px;border-radius:26px;background:linear-gradient(160deg,rgba(255,130,60,.9),rgba(120,20,15,.5) 30%,rgba(40,8,5,.6) 60%,rgba(255,90,40,.7));box-shadow:0 20px 60px rgba(0,0,0,.6),0 0 60px rgba(255,90,40,.22);animation:boxIn .55s cubic-bezier(.2,.9,.3,1) both}
+@keyframes boxIn{from{opacity:0;transform:translateY(24px) scale(.97)}to{opacity:1;transform:none}}
+.auth-inner{border-radius:25px;padding:26px 20px 18px;background:linear-gradient(165deg,rgba(26,9,8,.96),rgba(7,3,3,.97) 70%);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.logo-wrap{position:relative;width:92px;height:92px;margin:0 auto 12px}
+.logo-wrap .logo-circle{position:absolute;inset:5px;width:auto;height:auto;margin:0}
+.logo-ring{position:absolute;inset:0;border-radius:50%;border:2px solid transparent;border-top-color:#ff7a30;border-left-color:rgba(255,122,48,.35);animation:spin 3.2s linear infinite}
+.auth-title{font-size:30px;background:linear-gradient(90deg,#ffd0a0,#ff8a3d 50%,#ff5a5a);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none}
+.auth-tagline{min-height:18px;text-align:center;font-size:12px;color:#ffab85;margin:-12px 0 16px;transition:opacity .35s,transform .35s}
+.auth-tagline.out{opacity:0;transform:translateY(5px)}
+.auth-tabs{position:relative;gap:0;padding:4px;border-radius:14px;background:#0f0505;border:1px solid #4a1510}
+.auth-tabs::before{content:'';position:absolute;top:4px;bottom:4px;right:4px;width:calc(50% - 4px);border-radius:10px;background:linear-gradient(180deg,#ff8a3d,#d63a2a 55%,#8a0a0a);box-shadow:0 0 18px rgba(255,100,40,.45);transition:transform .32s cubic-bezier(.3,.9,.3,1)}
+.auth-tabs[data-t="register"]::before{transform:translateX(-100%)}
+.auth-tab,.auth-tab.active{position:relative;background:transparent;border:none;box-shadow:none;height:42px;color:#c98878;transition:color .25s}
+.auth-tab.active{color:#fff}
+.auth-welcome{display:flex;flex-direction:column;gap:3px;margin-bottom:14px;text-align:right}
+.auth-welcome b{font-size:17px;color:#fff;font-weight:800}
+.auth-welcome span{font-size:12px;color:#b98a7c}
+#loginForm,#registerForm{animation:formIn .4s ease both}
+@keyframes formIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.form-group label{display:flex;justify-content:space-between;align-items:center}
+.form-group label small{color:#7d4a3e;font-weight:500}
+.input-wrap input{height:52px;border-radius:14px;font-size:16px;background:rgba(255,255,255,.04);border:1.5px solid #4f1a12}
+.input-wrap input:focus{background:rgba(255,255,255,.07);border-color:#ff7a30;box-shadow:0 0 0 4px rgba(255,122,48,.14)}
+.input-wrap input:not(:placeholder-shown):valid{border-color:#7a3a22}
+.pw-toggle{position:absolute;left:6px;top:50%;transform:translateY(-50%);width:40px;height:40px;border:none;background:transparent;font-size:17px;cursor:pointer;opacity:.75;border-radius:10px}
+.pw-toggle:active{background:rgba(255,255,255,.08)}
+.input-wrap:has(.pw-toggle) input{padding-left:48px}
+.ok-tick{position:absolute;left:14px;top:50%;transform:translateY(-50%) scale(0);font-style:normal;color:#2ecc71;font-weight:900;font-size:17px;transition:transform .25s}
+.ok-tick.show{transform:translateY(-50%) scale(1)}
+.pw-meter{display:flex;align-items:center;gap:10px;margin:8px 4px 0}
+.pw-bars{flex:1;display:flex;gap:5px}
+.pw-bars i{flex:1;height:5px;border-radius:5px;background:#2a1210;transition:background .25s}
+.pw-bars[data-s="1"] i:nth-child(-n+1){background:#e63946}
+.pw-bars[data-s="2"] i:nth-child(-n+2){background:#ff8a3d}
+.pw-bars[data-s="3"] i:nth-child(-n+3){background:#f4c542}
+.pw-bars[data-s="4"] i{background:#2ecc71}
+.pw-meter small{font-size:11px;color:#a77a6c;min-width:62px;text-align:left}
+.auth-steps{display:flex;align-items:center;justify-content:center;gap:6px;margin:0 0 16px}
+.auth-steps .st{display:flex;flex-direction:column;align-items:center;gap:4px;opacity:.5}
+.auth-steps .st i{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:12px;font-weight:800;border:1.5px solid #6a2a1c;color:#d49080;background:#120505}
+.auth-steps .st em{font-style:normal;font-size:10px;color:#c9917f}
+.auth-steps .st.on{opacity:1}
+.auth-steps .st.on i{background:linear-gradient(#ff8a3d,#c73b1a);color:#fff;border-color:#ff9b5c;box-shadow:0 0 12px rgba(255,120,50,.5)}
+.auth-steps .st-line{flex:1;height:1.5px;max-width:34px;background:linear-gradient(90deg,#6a2a1c,#3a120c);margin-bottom:14px}
+.reward-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:4px 0 14px}
+.reward{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px;border-radius:14px;background:linear-gradient(160deg,rgba(255,120,50,.14),rgba(255,255,255,.02));border:1px solid rgba(255,122,48,.25)}
+.reward b{font-size:20px;line-height:1.1}
+.reward span{font-size:12px;font-weight:800;color:#ffd0a8}
+.reward small{font-size:9.5px;color:#a87a6c}
+.auth-submit{position:relative;overflow:hidden;height:54px;border-radius:15px;font-size:16px}
+.auth-submit::after{content:'';position:absolute;top:0;bottom:0;width:60px;left:-80px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-20deg);animation:btnShine 3.2s ease-in-out infinite}
+@keyframes btnShine{0%,60%{left:-80px}100%{left:120%}}
+.auth-switch{margin-top:12px;text-align:center;font-size:12px;color:#a87a6c}
+.auth-switch a{color:#ff9b5c;font-weight:800;text-decoration:none}
+.auth-note{margin-top:14px;padding-top:12px;border-top:1px dashed rgba(255,122,48,.2)}
+@media (max-height:640px){.logo-wrap{width:70px;height:70px}.auth-tagline{display:none}.reward-row{display:none}}
+@media (prefers-reduced-motion:reduce){.auth-bg *,.auth-box,.logo-ring,.auth-submit::after{animation:none!important}}
+
 #app{display:none;position:relative;min-height:100vh;min-height:100svh;overflow:hidden;background-image:url("https://cdn.imgurl.ir/uploads/q712771_IMG_20260910_213129_944.jpg");background-size:cover;background-position:center top;background-repeat:no-repeat}
 .top-bar{position:absolute;z-index:30;top:10px;left:9px;right:9px;height:55px;display:flex;align-items:center;justify-content:space-between}
 .currency-area{display:flex;align-items:center;gap:8px;direction:ltr}
@@ -708,13 +767,6 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 <body>
 <div id="bootBg"></div>
 
-<div id="connBanner">
-  <span class="cnn-txt" id="connBannerText">در حال اتصال به سرور...</span>
-  <span id="connPing"></span>
-  <button class="cnn-btn" id="connRetryBtn" onclick="manualReconnectAbly()">تلاش مجدد</button>
-  <span class="cnn-spin" id="connSpinner"></span>
-</div>
-
 <div id="loadingScreen">
 <img class="loading-image" src="https://cdn.imgurl.ir/uploads/q712771_IMG_20260910_213129_944.jpg" alt="Loading" fetchpriority="high" decoding="async">
 <div class="loading-overlay"></div>
@@ -728,25 +780,41 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 </div>
 
 <div id="authScreen">
+<div class="auth-bg" aria-hidden="true">
+<i class="orb o1"></i><i class="orb o2"></i><i class="orb o3"></i>
+<span class="fs s1">♠</span><span class="fs s2">♥</span><span class="fs s3">♦</span><span class="fs s4">♣</span><span class="fs s5">♠</span><span class="fs s6">♥</span>
+</div>
 <div class="auth-box"><div class="auth-inner">
-<div class="logo-circle">♠</div>
+<div class="logo-wrap"><div class="logo-ring"></div><div class="logo-circle">♠</div></div>
 <div class="auth-title">مافیابست</div>
 <div class="auth-subtitle">ورود به دنیای مافیا • آنلاین</div>
-<div class="auth-tabs">
-<button class="auth-tab active" id="loginTab" onclick="switchAuth('login')">ورود</button>
-<button class="auth-tab" id="registerTab" onclick="switchAuth('register')">ثبت نام</button>
+<div class="auth-tagline" id="authTagline">با دوستانت وارد لابی شو</div>
+<div class="auth-tabs" id="authTabs" data-t="login">
+<button class="auth-tab active" id="loginTab" type="button" onclick="switchAuth('login')">ورود</button>
+<button class="auth-tab" id="registerTab" type="button" onclick="switchAuth('register')">ثبت نام</button>
 </div>
 <div id="authError" class="error"></div>
 <form id="loginForm">
-<div class="form-group"><label>ایمیل</label><div class="input-wrap"><span>📧</span><input id="loginEmail" type="email" placeholder="example@gmail.com" required></div></div>
-<div class="form-group"><label>رمز ورود</label><div class="input-wrap"><span>🔐</span><input id="loginPassword" type="password" placeholder="رمز ورود" required></div></div>
+<div class="auth-welcome"><b>خوش برگشتی 👋</b><span>برای ادامه وارد حسابت شو</span></div>
+<div class="form-group"><label>ایمیل</label><div class="input-wrap"><span>📧</span><input id="loginEmail" type="email" placeholder="example@gmail.com" autocomplete="email" required></div></div>
+<div class="form-group"><label>رمز ورود</label><div class="input-wrap"><span>🔐</span><input id="loginPassword" type="password" placeholder="رمز ورود" autocomplete="current-password" required><button type="button" class="pw-toggle" aria-label="نمایش رمز">👁️</button></div></div>
 <button class="auth-submit" type="submit">ورود به حساب</button>
+<div class="auth-switch">حساب نداری؟ <a href="#" onclick="switchAuth('register');return false">همین حالا بساز</a></div>
 </form>
 <form id="registerForm" style="display:none">
-<div class="form-group"><label>نام نمایشی</label><div class="input-wrap"><span>👤</span><input id="registerName" type="text" maxlength="20" placeholder="نام نمایشی" required></div></div>
-<div class="form-group"><label>ایمیل</label><div class="input-wrap"><span>📧</span><input id="registerEmail" type="email" placeholder="example@gmail.com" required></div></div>
-<div class="form-group"><label>رمز ورود</label><div class="input-wrap"><span>🔐</span><input id="registerPassword" type="password" minlength="6" placeholder="حداقل 6 کاراکتر" required></div></div>
+<div class="auth-welcome"><b>حساب جدید بساز ✨</b><span>فقط چند ثانیه وقت می‌گیرد</span></div>
+<div class="auth-steps"><div class="st on"><i>1</i><em>ثبت‌نام</em></div><div class="st-line"></div><div class="st"><i>2</i><em>ورود به لابی</em></div><div class="st-line"></div><div class="st"><i>3</i><em>شروع بازی</em></div></div>
+<div class="form-group"><label>نام نمایشی <small id="nameCount">0/20</small></label><div class="input-wrap"><span>👤</span><input id="registerName" type="text" maxlength="20" placeholder="نام نمایشی" autocomplete="nickname" required></div></div>
+<div class="form-group"><label>ایمیل</label><div class="input-wrap"><span>📧</span><input id="registerEmail" type="email" placeholder="example@gmail.com" autocomplete="email" required><em class="ok-tick" id="emailTick">✓</em></div></div>
+<div class="form-group"><label>رمز ورود</label><div class="input-wrap"><span>🔐</span><input id="registerPassword" type="password" minlength="6" placeholder="حداقل 6 کاراکتر" autocomplete="new-password" required><button type="button" class="pw-toggle" aria-label="نمایش رمز">👁️</button></div>
+<div class="pw-meter"><div class="pw-bars" id="pwBars"><i></i><i></i><i></i><i></i></div><small id="pwText">قدرت رمز</small></div></div>
+<div class="reward-row">
+<div class="reward"><b>🪙</b><span>300 سکه</span><small>هدیه ثبت‌نام</small></div>
+<div class="reward"><b>⭐</b><span>Level 1</span><small>شروع سطح</small></div>
+<div class="reward"><b>🌐</b><span>آنلاین</span><small>همه دستگاه‌ها</small></div>
+</div>
 <button class="auth-submit" type="submit">ساخت حساب</button>
+<div class="auth-switch">قبلاً ثبت‌نام کردی؟ <a href="#" onclick="switchAuth('login');return false">وارد شو</a></div>
 </form>
 <div class="auth-note">پاداش ثبت نام: <b>300 سکه</b><br>سطح اولیه: <b>Level 1</b><br>اتصال آنلاین بین همه دستگاه‌ها</div>
 </div></div>
@@ -1346,8 +1414,12 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 <script>
 'use strict';
 
+/* ============================================================
+   متغیرهای سراسری — همه اعلام شدن تا ReferenceError نداشته باشیم
+   ============================================================ */
 const GAME_INSTANCE_ID = "mafia_ali_2024_v1_";
 
+// NS wrapper
 const NS = {
   _key: function(k) { return GAME_INSTANCE_ID + k; },
   get: function(k) { try { return localStorage.getItem(NS._key(k)); } catch(e) { return null; } },
@@ -1394,6 +1466,7 @@ const EV = {
   activityLog: GAME_INSTANCE_ID + 'activity_log'
 };
 
+// ⚠️ همه متغیرها اینجا اعلام شدن
 let __pendingUserPublishes = {};
 let __pendingLobbyPublishes = {};
 let __pendingClanPublishes = {};
@@ -1437,7 +1510,8 @@ let audioContextRef = null;
 let intentionalLeaving = false;
 let isProcessingKick = false;
 
-let isMicAccessGranted = false;
+// Voice variables - همه اعلام شدن ✅
+let isMicAccessGranted = false;   // ⬅️ این متغیر باعث خطا شده بود
 let voiceMediaRecorder = null;
 let voiceStream = null;
 let voicePlayQueue = {};
@@ -1446,20 +1520,11 @@ let voiceActive = false;
 let voiceSequence = 0;
 let voiceAudioCtx = null;
 
+// Assets
 let __booted = false;
 let __bootTimeoutHandle = null;
 let __ablyReconnectTimer = null;
 let __ablyInitAttempts = 0;
-
-/* ===== Connection Quality Monitoring ===== */
-let connectionState = "idle"; // idle | connecting | connected | slow | failed | reconnecting
-let connBannerHideTimer = null;
-let lastPingAt = 0;
-let ablyLatencySamples = [];
-let ablyLatency = 0;
-let ablyQuality = "unknown"; // good | medium | poor | unknown
-let connMonitorInterval = null;
-let connFailStreak = 0;
 
 const DEFAULT_AVATAR = "https://cdn.imgurl.ir/uploads/v815577_file_00000000d37081f4bcc7c475a7a7d884.png";
 const CREATOR_LEAVE_TIMEOUT_MS = 30 * 60 * 1000;
@@ -1474,36 +1539,7 @@ const VERIFIED_BADGE = `<img class="verified-badge" src="https://cdn.imgurl.ir/u
 const ABLY_KEY = 'NNYzzQ.SZ3D7A:k9MnlENaJwWGoudGwBbtfN1_Ric4r_qCBU15gKsHs7k';
 
 /* ============================================================
-   CONNECTION BANNER UI
-   ============================================================ */
-function showConnBanner(state, text, showRetry, showSpinner, pingText) {
-  const banner = document.getElementById('connBanner');
-  const txt = document.getElementById('connBannerText');
-  const retry = document.getElementById('connRetryBtn');
-  const spin = document.getElementById('connSpinner');
-  const ping = document.getElementById('connPing');
-  if (!banner) return;
-  banner.classList.remove('state-connecting','state-slow','state-failed','state-reconnecting');
-  banner.classList.add('state-' + state);
-  banner.classList.add('show');
-  if (txt) txt.textContent = text;
-  if (retry) retry.style.display = showRetry ? 'inline-block' : 'none';
-  if (spin) spin.style.display = showSpinner ? 'inline-block' : 'none';
-  if (ping) ping.textContent = pingText || '';
-  if (connBannerHideTimer) { clearTimeout(connBannerHideTimer); connBannerHideTimer = null; }
-}
-function hideConnBanner() {
-  const banner = document.getElementById('connBanner');
-  if (!banner) return;
-  banner.classList.remove('show');
-}
-function hideConnBannerDelayed(ms) {
-  if (connBannerHideTimer) clearTimeout(connBannerHideTimer);
-  connBannerHideTimer = setTimeout(() => hideConnBanner(), ms || 2500);
-}
-
-/* ============================================================
-   ASSETS CACHE
+   ASSETS CACHE — Cache API + IndexedDB (پایدار و آفلاین)
    ============================================================ */
 const CACHE_NAME = "mafiabest-assets-v2";
 
@@ -1569,6 +1605,7 @@ const AssetCache = (function(){
     } catch(e) {}
     return null;
   }
+
   async function putInCacheAPI(url, blob, contentType) {
     if (!HAS_CACHE_API) return false;
     try {
@@ -1583,6 +1620,7 @@ const AssetCache = (function(){
       return true;
     } catch(e) { return false; }
   }
+
   async function getFromDisk(url) {
     try {
       const cached = await ImageDB.get(url);
@@ -1590,6 +1628,7 @@ const AssetCache = (function(){
     } catch(e) {}
     return null;
   }
+
   async function download(url) {
     if (!IS_HTTP) return null;
     try {
@@ -1602,6 +1641,7 @@ const AssetCache = (function(){
       return blob;
     } catch(e) { return null; }
   }
+
   async function getBlob(url) {
     if (loadedBlobs.has(url)) return loadedBlobs.get(url);
     let blob = await getFromCacheAPI(url);
@@ -1610,6 +1650,7 @@ const AssetCache = (function(){
     if (blob) loadedBlobs.set(url, blob);
     return blob;
   }
+
   function preloadAll(urls, concurrency, onProgress) {
     if (!urls || !urls.length) {
       if (onProgress) onProgress(1, 1, 0);
@@ -1644,9 +1685,11 @@ const AssetCache = (function(){
       next();
     });
   }
+
   return { getBlob, preloadAll, HAS_CACHE_API };
 })();
 
+/* لیست کامل تصاویر برنامه - همه اینجا کش می‌شن */
 const ALL_ASSETS = [
   "https://cdn.imgurl.ir/uploads/q712771_IMG_20260910_213129_944.jpg",
   "https://cdn.imgurl.ir/uploads/v815577_file_00000000d37081f4bcc7c475a7a7d884.png",
@@ -1758,15 +1801,21 @@ const LoadingScreen = (function(){
   return { setText, setProgress, setCount, hide };
 })();
 
+/* ============================================================
+   BOOT — حالا منتظر می‌مونه تا همه تصاویر دانلود بشن
+   ============================================================ */
 function fastBoot() {
   if (__booted) return;
   __booted = true;
+
+  // safety net طولانی‌تر - چون منتظر دانلود تصاویر هستیم
   __bootTimeoutHandle = setTimeout(() => {
     console.warn('[Boot] Safety timeout');
     LoadingScreen.hide();
     try { const u = getCurrentUser(); if (u) showApp(); else showAuth(); } catch(e) { try { showAuth(); } catch(e2) {} }
-  }, 120000);
+  }, 120000); // 2 دقیقه
 
+  // بارگذاری داده‌ها (سریع)
   try {
     loadDeletedData();
     ensureSpecialAccounts();
@@ -1774,6 +1823,7 @@ function fastBoot() {
     try { saveAccountsBackup(); } catch(e) {}
   } catch(e) { console.warn(e); }
 
+  // شروع دانلود تصاویر با نمایش پیشرفت واقعی
   LoadingScreen.setText('در حال دانلود تصاویر بازی...');
   LoadingScreen.setProgress(2);
 
@@ -1828,6 +1878,9 @@ function finishBoot() {
   }
 }
 
+/* ============================================================
+   UTILS
+   ============================================================ */
 function showToast(m) {
   const t = document.getElementById("toast");
   if (!t) return;
@@ -1871,6 +1924,9 @@ function isValidEmail(email) {
   return /^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$/i.test(e);
 }
 
+/* ============================================================
+   DELETED DATA
+   ============================================================ */
 function loadDeletedData() {
   try { deletedUsers = JSON.parse(NS.get("deleted_users") || "{}"); } catch(e){ deletedUsers = {}; }
   try { deletedClans = JSON.parse(NS.get("deleted_clans") || "{}"); } catch(e){ deletedClans = {}; }
@@ -2164,32 +2220,17 @@ function __flushAllPendingPublishes() {
 }
 
 /* ============================================================
-   ABLY + CONNECTION QUALITY
+   ABLY
    ============================================================ */
 function initAbly() {
   if (ably) return;
   const email = getCurrentEmail() || ('guest_' + Date.now());
   myClientId = email;
-
-  connectionState = "connecting";
-  showConnBanner('connecting', 'در حال اتصال به سرور...', false, true, '');
-
   try { ably = new Ably.Realtime({ key: ABLY_KEY, clientId: email }); }
-  catch(e) {
-    console.warn('[Ably] init error:', e);
-    connectionState = "failed";
-    showConnBanner('failed', '❌ اتصال به سرور ممکن نشد', true, false, '');
-    scheduleAblyRetry(__ablyInitAttempts);
-    return;
-  }
+  catch(e) { scheduleAblyRetry(__ablyInitAttempts); return; }
 
   ably.connection.on('connected', () => {
     isAblyReady = true;
-    connectionState = "connected";
-    connFailStreak = 0;
-    hideConnBannerDelayed(1500);
-
-    startConnectionMonitor();
 
     ablyUsersCh = ably.channels.get(CH.users());
     ablyUsersCh.subscribe(EV.userFull, msg => { if (msg.data?.phone) applyRemoteUser(msg.data); });
@@ -2356,80 +2397,10 @@ function initAbly() {
       __flushAllPendingPublishes();
     }, 4000);
   });
-
-  ably.connection.on('disconnected', () => {
-    isAblyReady = false;
-    connectionState = "reconnecting";
-    showConnBanner('reconnecting', '🔄 اتصال قطع شد - در حال تلاش برای بازگشت...', true, true, '');
-    scheduleAblyReconnect();
-  });
-  ably.connection.on('failed', () => {
-    isAblyReady = false;
-    connectionState = "failed";
-    showConnBanner('failed', '❌ اتصال به سرور ناموفق - اینترنت را بررسی کنید', true, false, '');
-    scheduleAblyReconnect();
-  });
-  ably.connection.on('suspended', () => {
-    isAblyReady = false;
-    connectionState = "reconnecting";
-    showConnBanner('reconnecting', '⚠️ اتصال ضعیف - تلاش مجدد...', true, true, '');
-    scheduleAblyReconnect();
-  });
-  ably.connection.on('closed', () => {
-    isAblyReady = false;
-  });
-}
-
-function startConnectionMonitor() {
-  if (connMonitorInterval) clearInterval(connMonitorInterval);
-  connMonitorInterval = setInterval(async () => {
-    if (!ably) return;
-    try {
-      const t0 = Date.now();
-      // Ping via Ably time API
-      if (ably.time) {
-        await ably.time();
-        const ping = Date.now() - t0;
-        ablyLatency = ping;
-        ablyLatencySamples.push(ping);
-        if (ablyLatencySamples.length > 8) ablyLatencySamples.shift();
-        const avg = ablyLatencySamples.reduce((a,b) => a+b, 0) / ablyLatencySamples.length;
-
-        if (avg < 250) ablyQuality = "good";
-        else if (avg < 700) ablyQuality = "medium";
-        else ablyQuality = "poor";
-
-        // اگر کیفیت ضعیف بود، هشدار بده
-        if (ablyQuality === "poor") {
-          showConnBanner('slow', '⚠️ اینترنت شما کند است - ممکن است صدا قطع شود', true, false, `Ping: ${Math.round(avg)}ms`);
-          hideConnBannerDelayed(4000);
-        } else if (ablyQuality === "medium") {
-          showConnBanner('slow', '🟡 کیفیت اتصال متوسط است', false, false, `Ping: ${Math.round(avg)}ms`);
-          hideConnBannerDelayed(2500);
-        }
-      }
-    } catch(e) {
-      console.warn('[ConnMonitor]', e);
-    }
-  }, 15000);
-}
-
-function manualReconnectAbly() {
-  if (connectionState === "connecting") return;
-  showToast('🔄 تلاش مجدد...');
-  connectionState = "connecting";
-  showConnBanner('connecting', 'در حال اتصال مجدد...', false, true, '');
-
-  try {
-    if (ably) { try { ably.close(); } catch(e) {} }
-    ably = null;
-    isAblyReady = false;
-    ablyUsersCh = null; ablyLobbyListCh = null; ablyClanListCh = null;
-    ablyAnnCh = null; ablyActivityCh = null; ablyRoomCh = null; ablyClanCh = null;
-    setTimeout(() => initAblyWhenReady(0), 200);
-  } catch(e) {
-    console.warn('[ManualReconnect]', e);
-  }
+  ably.connection.on('disconnected', () => { isAblyReady = false; scheduleAblyReconnect(); });
+  ably.connection.on('failed', () => { isAblyReady = false; scheduleAblyReconnect(); });
+  ably.connection.on('suspended', () => { isAblyReady = false; scheduleAblyReconnect(); });
+  ably.connection.on('closed', () => { isAblyReady = false; });
 }
 
 function scheduleAblyReconnect() {
@@ -2467,12 +2438,7 @@ function initAblyWhenReady(attempt) {
   scheduleAblyRetry(attempt);
 }
 function scheduleAblyRetry(attempt) {
-  if (attempt >= 30) {
-    console.warn('Ably retry limit');
-    connectionState = "failed";
-    showConnBanner('failed', '❌ اتصال ممکن نشد - لطفاً اینترنت خود را بررسی کرده و دکمه تلاش مجدد را بزنید', true, false, '');
-    return;
-  }
+  if (attempt >= 30) { console.warn('Ably retry limit'); return; }
   const delay = Math.min(4000, 300 * Math.pow(1.6, attempt));
   setTimeout(() => initAblyWhenReady(attempt + 1), delay);
 }
@@ -2565,7 +2531,7 @@ function subscribeLobbyRoom(lobbyId) {
         if (!isHost && (!currentSpeaker || currentSpeaker.phone !== msg.data.from)) return;
       }
     }
-    enqueueVoicePlayback(msg.data.from, msg.data.data, msg.data.seq);
+    enqueueVoicePlayback(msg.data.from, msg.data.data, msg.data.seq, msg.data.sid);
   });
   ablyRoomCh.subscribe(EV.voiceStop, msg => {
     if (!msg.data || msg.data.lobbyId !== currentLobbyId) return;
@@ -2615,20 +2581,26 @@ function subscribeLobbyRoom(lobbyId) {
 }
 
 /* ============================================================
-   VOICE SYSTEM v4 — با کیفیت بالا و بدون قطعی
-   چانک 300ms + بافر 600ms + بدون ریست timeline
+   VOICE SYSTEM — Ably-based (بدون WebRTC) — نسخه زنده PCM
+   ضبط مستقیم صدا (PCM 16kHz) → بسته‌های ۱۰۰ میلی‌ثانیه‌ای → پخش زنده با بافر خیلی کوچک
    ============================================================ */
-const VOICE_RATE = 16000;               // نرخ نمونه‌برداری
-const VOICE_SEND_SAMPLES = 4800;        // 300ms در هر بسته (3.3 msg/sec)
-const VOICE_JITTER = 0.60;              // بافر اولیه 600ms (تحمل jitter زیاد)
-const VOICE_MAX_BUFFER = 1.5;           // حداکثر بافر مجاز
-const VOICE_MIN_AHEAD = 0.005;          // حداقل فاصله پخش
-const VOICE_SILENCE_THRESHOLD = 0.01;   // آستانه سکوت (اختیاری)
+const VOICE_SR = 16000;                 // نرخ نمونه‌برداری ارسال
+const VOICE_FRAME_MS = 100;             // طول هر بسته صوتی
+const VOICE_FRAME_SAMPLES = VOICE_SR * VOICE_FRAME_MS / 1000;
+const VOICE_LEAD = 0.12;                // تاخیر اولیه پخش (ثانیه)
+const VOICE_MAX_LAG = 0.6;              // اگر عقب افتاد، پرش به جلو برای حذف تاخیر
+const VOICE_VAD_THRESHOLD = 350;        // آستانه تشخیص صدا (Int16)
+const VOICE_HANGOVER_FRAMES = 4;        // بعد از قطع صدا چند بسته دیگر ارسال شود
 
-let voiceProcessor = null;
-let voiceSourceNode = null;
-let voiceMuteGain = null;
-let voicePending = [];
+let voiceCapCtx = null;
+let voiceCapSource = null;
+let voiceCapNode = null;
+let voiceCapSink = null;
+let voiceSid = '';
+let voiceFrame = new Int16Array(VOICE_FRAME_SAMPLES);
+let voiceFrameN = 0;
+let voiceAcc = 0, voiceAccN = 0, voicePhase = 0;
+let voiceHangover = 0;
 
 function unlockAudioPlayback() {
   try {
@@ -2637,6 +2609,7 @@ function unlockAudioPlayback() {
       if (Ctx) audioContextRef = new Ctx();
     }
     if (audioContextRef && audioContextRef.state === 'suspended') audioContextRef.resume().catch(()=>{});
+    getVoiceAudioCtx();
     const silent = new Audio();
     silent.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
     silent.volume = 0.01; silent.play().catch(()=>{});
@@ -2649,22 +2622,15 @@ function unlockAudioPlayback() {
 function getVoiceAudioCtx() {
   if (!voiceAudioCtx) {
     try {
-      if (audioContextRef) voiceAudioCtx = audioContextRef;
-      else {
-        const Ctx = window.AudioContext || window.webkitAudioContext;
-        if (Ctx) voiceAudioCtx = new Ctx();
-      }
-    } catch(e) {}
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (Ctx) voiceAudioCtx = new Ctx({ latencyHint: 'interactive' });
+    } catch(e) {
+      try { const Ctx2 = window.AudioContext || window.webkitAudioContext; if (Ctx2) voiceAudioCtx = new Ctx2(); } catch(e2) {}
+    }
   }
   if (voiceAudioCtx && voiceAudioCtx.state === 'suspended') voiceAudioCtx.resume().catch(()=>{});
   return voiceAudioCtx;
 }
-
-['touchstart','click'].forEach(function(evName) {
-  document.addEventListener(evName, function() {
-    try { getVoiceAudioCtx(); } catch(e) {}
-  }, { passive: true });
-});
 
 function base64ToArrayBuffer(base64) {
   try {
@@ -2676,80 +2642,99 @@ function base64ToArrayBuffer(base64) {
   } catch(e) { return null; }
 }
 
-function voicePcmToBase64(int16) {
-  const bytes = new Uint8Array(int16.buffer, int16.byteOffset, int16.byteLength);
+function bytesToBase64(bytes) {
   let bin = '';
-  const step = 0x8000;
+  const step = 0x2000;
   for (let i = 0; i < bytes.length; i += step) {
     bin += String.fromCharCode.apply(null, bytes.subarray(i, i + step));
   }
   return btoa(bin);
 }
 
+/* ---------- ضبط ---------- */
+function voiceResetEncoder() {
+  voiceFrameN = 0; voiceAcc = 0; voiceAccN = 0; voicePhase = 0; voiceHangover = 0;
+}
+
+function voiceSendFrame() {
+  let peak = 0;
+  for (let i = 0; i < VOICE_FRAME_SAMPLES; i++) {
+    const a = voiceFrame[i] < 0 ? -voiceFrame[i] : voiceFrame[i];
+    if (a > peak) peak = a;
+  }
+  voiceFrameN = 0;
+  if (peak >= VOICE_VAD_THRESHOLD) voiceHangover = VOICE_HANGOVER_FRAMES;
+  else if (voiceHangover > 0) voiceHangover--;
+  else return; // سکوت: ارسال نمی‌کنیم
+  const seq = voiceSequence++;
+  const b64 = bytesToBase64(new Uint8Array(voiceFrame.buffer.slice(0)));
+  publishVoiceChunk(b64, seq);
+}
+
+function voiceFeed(f32) {
+  if (!voiceActive || !voiceCapCtx) return;
+  const ratio = voiceCapCtx.sampleRate / VOICE_SR;
+  for (let i = 0; i < f32.length; i++) {
+    voiceAcc += f32[i]; voiceAccN++; voicePhase += 1;
+    if (voicePhase >= ratio) {
+      voicePhase -= ratio;
+      let s = voiceAcc / voiceAccN;
+      voiceAcc = 0; voiceAccN = 0;
+      if (s > 1) s = 1; else if (s < -1) s = -1;
+      voiceFrame[voiceFrameN++] = s < 0 ? s * 32768 : s * 32767;
+      if (voiceFrameN >= VOICE_FRAME_SAMPLES) voiceSendFrame();
+    }
+  }
+}
+
 async function startVoiceCapture() {
   try {
-    if (voiceActive) return;
-    const ctx = getVoiceAudioCtx();
-    if (!ctx) { showToast('مرورگر از صدا پشتیبانی نمی‌کند'); return; }
-    if (ctx.state === 'suspended') { try { await ctx.resume(); } catch(e) {} }
-
-    // چک اتصال قبل از شروع
-    if (!isAblyReady) {
-      showToast('⛔ اتصال به سرور برقرار نیست');
-      showConnBanner('failed', '❌ برای ارسال صدا باید به سرور متصل باشید', true, false, '');
-      return;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw Object.assign(new Error('NO_MEDIA'), { name: 'NoMediaDevices' });
     }
+    // داخل کلیک کاربر، پخش صدا هم فعال می‌شود
+    getVoiceAudioCtx();
+    unlockAudioPlayback();
 
     voiceStream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-        channelCount: 1
-      },
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
       video: false
     });
 
-    voiceSourceNode = ctx.createMediaStreamSource(voiceStream);
-    voiceProcessor = ctx.createScriptProcessor(4096, 1, 1);
-    voiceMuteGain = ctx.createGain();
-    voiceMuteGain.gain.value = 0;
-    voicePending = [];
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    try { voiceCapCtx = new Ctx({ latencyHint: 'interactive' }); } catch(e) { voiceCapCtx = new Ctx(); }
+    if (voiceCapCtx.state === 'suspended') { try { await voiceCapCtx.resume(); } catch(e) {} }
+
+    voiceCapSource = voiceCapCtx.createMediaStreamSource(voiceStream);
+    voiceCapSink = voiceCapCtx.createGain();
+    voiceCapSink.gain.value = 0;
+    voiceCapSink.connect(voiceCapCtx.destination);
+
+    voiceResetEncoder();
+    voiceSid = Math.random().toString(36).slice(2, 8) + Date.now().toString(36);
     voiceSequence = 0;
     voiceActive = true;
 
-    voiceProcessor.onaudioprocess = function(e) {
-      if (!voiceActive) return;
-      if (!isAblyReady) return; // اگه قطع شد، ارسال نکن
-
-      const input = e.inputBuffer.getChannelData(0);
-      const ratio = ctx.sampleRate / VOICE_RATE;
-      const outLen = Math.floor(input.length / ratio);
-      for (let i = 0; i < outLen; i++) {
-        const start = Math.floor(i * ratio);
-        let end = Math.floor((i + 1) * ratio);
-        if (end <= start) end = start + 1;
-        if (end > input.length) end = input.length;
-        if (end <= start) { voicePending.push(0); continue; }
-        let sum = 0;
-        for (let j = start; j < end; j++) sum += input[j];
-        voicePending.push(sum / (end - start));
-      }
-      while (voicePending.length >= VOICE_SEND_SAMPLES) {
-        const part = voicePending.splice(0, VOICE_SEND_SAMPLES);
-        const pcm = new Int16Array(part.length);
-        for (let k = 0; k < part.length; k++) {
-          let s = part[k];
-          if (s > 1) s = 1; else if (s < -1) s = -1;
-          pcm[k] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-        }
-        publishVoiceChunk(voicePcmToBase64(pcm), voiceSequence++);
-      }
-    };
-
-    voiceSourceNode.connect(voiceProcessor);
-    voiceProcessor.connect(voiceMuteGain);
-    voiceMuteGain.connect(ctx.destination);
+    let usedWorklet = false;
+    if (voiceCapCtx.audioWorklet && typeof AudioWorkletNode !== 'undefined' && window.Blob && window.URL && URL.createObjectURL) {
+      try {
+        const code = "class P extends AudioWorkletProcessor{process(i){const c=i[0]&&i[0][0];if(c)this.port.postMessage(c.slice(0));return true}}registerProcessor('pcm-cap',P)";
+        const url = URL.createObjectURL(new Blob([code], { type: 'application/javascript' }));
+        await voiceCapCtx.audioWorklet.addModule(url);
+        try { URL.revokeObjectURL(url); } catch(e) {}
+        voiceCapNode = new AudioWorkletNode(voiceCapCtx, 'pcm-cap', { numberOfInputs: 1, numberOfOutputs: 1, channelCount: 1 });
+        voiceCapNode.port.onmessage = (ev) => voiceFeed(ev.data);
+        voiceCapSource.connect(voiceCapNode);
+        voiceCapNode.connect(voiceCapSink);
+        usedWorklet = true;
+      } catch(e) { usedWorklet = false; voiceCapNode = null; }
+    }
+    if (!usedWorklet) {
+      voiceCapNode = voiceCapCtx.createScriptProcessor(1024, 1, 1);
+      voiceCapNode.onaudioprocess = (ev) => voiceFeed(ev.inputBuffer.getChannelData(0));
+      voiceCapSource.connect(voiceCapNode);
+      voiceCapNode.connect(voiceCapSink);
+    }
 
     const btn = document.getElementById('lrMicBtn');
     if (btn) btn.classList.add('active');
@@ -2765,42 +2750,50 @@ async function startVoiceCapture() {
   } catch(err) {
     console.error('Voice capture error:', err);
     let msg = 'دسترسی به میکروفون داده نشد';
-    if (err && err.name === 'NotAllowedError') msg = '⛔ اجازه دسترسی به میکروفون داده نشد';
-    else if (err && err.name === 'NotFoundError') msg = '⛔ میکروفونی پیدا نشد';
+    if (err && err.name === 'NoMediaDevices') msg = (window.isSecureContext === false) ? 'برای میکروفون باید برنامه با HTTPS یا localhost باز شود' : 'مرورگر شما از میکروفون پشتیبانی نمی‌کند';
+    else if (err && err.name === 'NotFoundError') msg = 'میکروفونی پیدا نشد';
+    else if (err && err.name === 'NotReadableError') msg = 'میکروفون توسط برنامه دیگری استفاده می‌شود';
     showToast(msg);
     lrMicOn = false;
     isMicAccessGranted = false;
     voiceActive = false;
-    if (voiceStream) { voiceStream.getTracks().forEach(t => t.stop()); voiceStream = null; }
+    voiceTeardownCapture();
     const btn = document.getElementById('lrMicBtn');
     if (btn) btn.classList.remove('active');
     renderLobbyRoom();
   }
 }
 
+function voiceTeardownCapture() {
+  try { if (voiceCapNode) { voiceCapNode.onaudioprocess = null; if (voiceCapNode.port) voiceCapNode.port.onmessage = null; voiceCapNode.disconnect(); } } catch(e) {}
+  try { if (voiceCapSource) voiceCapSource.disconnect(); } catch(e) {}
+  try { if (voiceCapSink) voiceCapSink.disconnect(); } catch(e) {}
+  voiceCapNode = null; voiceCapSource = null; voiceCapSink = null;
+  if (voiceCapCtx) { try { voiceCapCtx.close(); } catch(e) {} voiceCapCtx = null; }
+  if (voiceStream) {
+    try { voiceStream.getTracks().forEach(t => t.stop()); } catch(e) {}
+    voiceStream = null;
+  }
+  voiceResetEncoder();
+}
+
 function stopVoiceCapture() {
-  const wasActive = voiceActive;
   voiceActive = false;
   lrMicOn = false;
   isMicAccessGranted = false;
 
-  try { if (voiceProcessor) { voiceProcessor.onaudioprocess = null; voiceProcessor.disconnect(); } } catch(e) {}
-  try { if (voiceSourceNode) voiceSourceNode.disconnect(); } catch(e) {}
-  try { if (voiceMuteGain) voiceMuteGain.disconnect(); } catch(e) {}
-  voiceProcessor = null; voiceSourceNode = null; voiceMuteGain = null;
-  voicePending = [];
+  if (voiceMediaRecorder && voiceMediaRecorder.state !== 'inactive') {
+    try { voiceMediaRecorder.stop(); } catch(e) {}
+  }
   voiceMediaRecorder = null;
 
-  if (voiceStream) {
-    voiceStream.getTracks().forEach(t => t.stop());
-    voiceStream = null;
-  }
+  voiceTeardownCapture();
 
   const btn = document.getElementById('lrMicBtn');
   if (btn) btn.classList.remove('active');
 
   const u = getCurrentUser();
-  if (u && wasActive) {
+  if (u) {
     publishMic(u.email, false);
     publishVoiceStop(u.email);
   }
@@ -2810,11 +2803,14 @@ function stopVoiceCapture() {
 
 function publishVoiceChunk(base64Data, seq) {
   if (!ablyRoomCh || !isAblyReady || !currentLobbyId) return;
+  // اگر اتصال قطع است بسته‌ها صف نشوند (باعث تاخیر می‌شود)
+  try { if (ably && ably.connection && ably.connection.state !== 'connected') return; } catch(e) {}
   const u = getCurrentUser();
   if (!u) return;
   try {
     ablyRoomCh.publish(EV.voiceChunk, {
-      lobbyId: currentLobbyId, from: u.email, data: base64Data, seq: seq, ts: Date.now()
+      lobbyId: currentLobbyId, from: u.email, data: base64Data, seq: seq,
+      sid: voiceSid, sr: VOICE_SR, fmt: 'pcm16', ts: Date.now()
     });
   } catch(e) {}
 }
@@ -2824,132 +2820,79 @@ function publishVoiceStop(phone) {
   try { ablyRoomCh.publish(EV.voiceStop, { lobbyId: currentLobbyId, from: phone }); } catch(e) {}
 }
 
-/* پخش صدا با کیفیت بالا - مدیریت کامل underrun و jitter */
-function enqueueVoicePlayback(fromPhone, base64Data, seq) {
+/* ---------- پخش ---------- */
+function enqueueVoicePlayback(fromPhone, base64Data, seq, sid) {
   const ctx = getVoiceAudioCtx();
   if (!ctx) return;
-
-  let st = voicePlayQueue[fromPhone];
-  if (!st) {
-    st = voicePlayQueue[fromPhone] = {
-      next: 0,
-      lastSeq: -1,
-      sources: [],
-      started: false,
-      underruns: 0,
-      packetsReceived: 0
-    };
+  if (ctx.state !== 'running') {
+    const b = document.getElementById('audioUnlockBtn');
+    if (b) b.classList.add('show');
+    ctx.resume().catch(()=>{});
   }
-
-  // شروع مجدد مایک (seq=0)
-  if (seq === 0) {
-    st.lastSeq = -1;
-    st.next = 0;
-    st.started = false;
-    st.underruns = 0;
-    st.packetsReceived = 0;
-    (st.sources || []).forEach(function(s) { try { s.stop(); } catch(e) {} });
-    st.sources = [];
+  let pq = voicePlayQueue[fromPhone];
+  if (!pq || pq.sid !== (sid || '')) {
+    pq = voicePlayQueue[fromPhone] = { sid: sid || '', nextTime: 0, lastSeq: -1, sources: [] };
   }
+  if (seq <= pq.lastSeq) return;
+  pq.lastSeq = seq;
 
-  // بسته تکراری یا قدیمی
-  if (seq <= st.lastSeq) return;
-
-  st.packetsReceived++;
-
-  // تشخیص گپ
-  const gap = st.lastSeq === -1 ? 0 : (seq - st.lastSeq - 1);
-
-  // اگر گپ کوچک (1-2 بسته): فقط علامت بزن
-  // اگر گپ بزرگ (>3): timeline رو jump کن
-  if (gap > 3 && st.started) {
-    const now = ctx.currentTime;
-    // به جای ریست کامل، فقط جلو بپر با فاصله جبرانی
-    st.next = Math.max(st.next, now + 0.15);
-    st.underruns++;
-  }
-
-  st.lastSeq = seq;
-
-  const buf = base64ToArrayBuffer(base64Data);
-  if (!buf || buf.byteLength < 2) return;
-  const view = new DataView(buf);
-  const n = Math.floor(buf.byteLength / 2);
-  const audioBuffer = ctx.createBuffer(1, n, VOICE_RATE);
-  const ch = audioBuffer.getChannelData(0);
-  for (let i = 0; i < n; i++) ch[i] = view.getInt16(i * 2, true) / 32768;
+  const ab = base64ToArrayBuffer(base64Data);
+  if (!ab || ab.byteLength < 2) return;
+  const i16 = new Int16Array(ab, 0, Math.floor(ab.byteLength / 2));
+  const n = i16.length;
+  if (!n) return;
+  let buf;
+  try { buf = ctx.createBuffer(1, n, VOICE_SR); } catch(e) { return; }
+  const ch = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) ch[i] = i16[i] / 32768;
 
   const now = ctx.currentTime;
-
-  // اگر هنوز شروع نشده یا timeline reset شده
-  if (!st.started || st.next === 0) {
-    st.next = now + VOICE_JITTER;
-    st.started = true;
-  }
-
-  // اگر عقب افتادیم (زمان پخش گذشته) - با نرمی جبران کن، نه ریست
-  if (st.next < now - 0.05) {
-    st.next = now + VOICE_MIN_AHEAD;
-    st.underruns++;
-  }
-
-  // اگر خیلی جلو افتادیم
-  const buffered = st.next - now;
-  if (buffered > VOICE_MAX_BUFFER) {
-    st.next = now + VOICE_JITTER;
-  }
+  if (pq.nextTime < now + 0.02) pq.nextTime = now + VOICE_LEAD;          // شروع صحبت یا قطع شدن بسته‌ها
+  else if (pq.nextTime - now > VOICE_MAX_LAG) pq.nextTime = now + VOICE_LEAD; // عقب افتادیم: برو جلو
 
   const src = ctx.createBufferSource();
-  src.buffer = audioBuffer;
+  src.buffer = buf;
   src.connect(ctx.destination);
-  src.onended = function() {
-    const i = st.sources.indexOf(src);
-    if (i !== -1) st.sources.splice(i, 1);
-  };
-  st.sources.push(src);
-
-  const startTime = Math.max(st.next, now + VOICE_MIN_AHEAD);
-  try { src.start(startTime); } catch(e) {}
-  st.next = startTime + audioBuffer.duration;
-
-  // پاک‌سازی منابع قدیمی
-  if (st.sources.length > 100) {
-    const toRemove = st.sources.splice(0, st.sources.length - 60);
-    toRemove.forEach(function(s) { try { s.stop(); } catch(e) {} });
-  }
+  src.onended = () => { const k = pq.sources.indexOf(src); if (k >= 0) pq.sources.splice(k, 1); };
+  try { src.start(pq.nextTime); } catch(e) { return; }
+  pq.sources.push(src);
+  pq.nextTime += buf.duration;
 }
 
 function clearVoiceQueue(fromPhone) {
-  const st = voicePlayQueue[fromPhone];
-  if (!st) return;
-  (st.sources || []).forEach(function(s) { try { s.stop(); } catch(e) {} });
-  st.sources = [];
-  st.next = 0;
-  st.lastSeq = -1;
-  st.started = false;
+  const pq = voicePlayQueue[fromPhone];
+  if (pq) {
+    // اجازه می‌دهیم بسته‌های در صف پخش شوند تا انتهای جمله بریده نشود
+    pq.nextTime = 0;
+    pq.lastSeq = -1;
+    pq.sid = '';
+  }
 }
 
 async function toggleLrMic() {
   const u = getCurrentUser();
   if (!u || !currentLobbyId) { showToast('لطفاً ابتدا وارد لابی شوید'); return; }
-  if (!isAblyReady) {
-    showToast('⛔ اتصال به سرور برقرار نیست');
-    showConnBanner('failed', '❌ برای ارسال صدا باید متصل باشید', true, false, '');
-    return;
-  }
   if (gameState.active && gameState.phase === 'night') {
     const me = gameState.players.find(p => p.phone === u.email);
     if (me && me.side !== 'mafia') { showToast('در شب فقط مافیا می‌تواند صحبت کند'); return; }
   }
+  getVoiceAudioCtx();
   if (lrMicOn) stopVoiceCapture();
   else await startVoiceCapture();
 }
 
 function disconnectAllPeers() {
   stopVoiceCapture();
+  Object.keys(voicePlayQueue || {}).forEach(k => {
+    const pq = voicePlayQueue[k];
+    if (pq && pq.sources) pq.sources.forEach(s => { try { s.stop(); } catch(e) {} });
+  });
   voicePlayQueue = {};
 }
 
+/* ============================================================
+   PUBLISHERS
+   ============================================================ */
 function publishRoomState(lobby) {
   if (!lobby || !lobby.id) return;
   if (ablyRoomCh && isAblyReady) { try { ablyRoomCh.publish(EV.roomState, lobby); } catch(e) {} }
@@ -2991,6 +2934,9 @@ function publishClanUpdate(clan) {
   if (ablyClanCh && isAblyReady) { try { ablyClanCh.publish(EV.clanUpdate, clan); } catch(e) {} }
 }
 
+/* ============================================================
+   SHOW / HIDE
+   ============================================================ */
 function showAuth() {
   document.getElementById("authScreen").style.display = "flex";
   document.getElementById("app").style.display = "none";
@@ -3048,6 +2994,7 @@ function updateUI() {
   else { badgeEl.innerHTML = ""; badgeEl.style.display = "none"; }
 }
 
+/* FRAMES */
 const FRAMES = [
   {id:"frame1", src:"https://cdn.imgurl.ir/uploads/r861788_IMG_20260909_221506_133.jpg", price:5000},
   {id:"frame2", src:"https://cdn.imgurl.ir/uploads/s38626_IMG_20260909_221405_287.jpg", price:6000},
@@ -3064,6 +3011,7 @@ function getFrameSrc(frameId) {
   return f ? f.src : "";
 }
 
+/* SCENARIOS */
 const SCENARIOS = {
   takavar: {
     name: "تکاور",
@@ -3105,6 +3053,9 @@ let gameState = {
   gameStartTime: null, clanScoreGiven: false, log: []
 };
 
+/* ============================================================
+   ACTIVITY LOG
+   ============================================================ */
 function logActivity(category, action, details) {
   try {
     const entry = {
@@ -3152,6 +3103,9 @@ function renderActivityLog() {
   `).join("");
 }
 
+/* ============================================================
+   GAME LOGIC
+   ============================================================ */
 function startGame(lobby) {
   const seats = lobby.seats.filter(s => s && !s.isGhost);
   if (seats.length < 10) { showToast("برای شروع بازی باید ۱۰ بازیکن حضور داشته باشند!"); return; }
@@ -3498,6 +3452,9 @@ function observerToggleAlive(phone) {
 }
 function observerToggleMic() { toggleLrMic(); }
 
+/* ============================================================
+   LIVE STREAM + MATCH HISTORY
+   ============================================================ */
 function openLiveStream() { closeMenu(); closeInternalPages(); renderLiveStream(); document.getElementById("liveStreamPage").classList.add("show"); }
 function renderLiveStream() {
   const list = document.getElementById("liveStreamList");
@@ -3538,6 +3495,9 @@ function renderMatchHistory() {
   list.innerHTML = history.map(h => `<div class="announcement-item"><h4>${h.result === 'برد' ? '🏆' : '❌'} ${h.result} - ${h.scenario}</h4><p>نقش شما: ${h.myRole} (${h.mySide}) | برنده: ${h.winner}</p><div class="ann-time">${h.date} | مدت: ${h.duration}</div></div>`).join("");
 }
 
+/* ============================================================
+   LOBBY SYSTEM
+   ============================================================ */
 async function showLobbyLoading() {
   return new Promise((resolve) => {
     const overlay = document.getElementById('lobbyLoadingOverlay');
@@ -3546,6 +3506,7 @@ async function showLobbyLoading() {
     if (!overlay || !bar || !pct) { resolve(); return; }
     overlay.classList.add('show');
     bar.style.width = '0%'; pct.textContent = '0%';
+    // چون همه چیز کش شده، سرعت بالاست
     let i = 0;
     const iv = setInterval(() => {
       i += 25;
@@ -4438,6 +4399,9 @@ function joinLobby(id) {
   enterLobbyRoom(id);
 }
 
+/* ============================================================
+   OTHER UI PAGES
+   ============================================================ */
 function getUserClanName(phone) {
   const clans = getClans();
   let n = "-";
@@ -4544,6 +4508,7 @@ function buildLeaderboard() {
   });
 }
 
+/* AVATARS */
 const AVATARS = [
   {id:"free1",name:"",src:"https://cdn.imgurl.ir/uploads/u02312_file_00000000d56c8211a467677795d2a0fb.png",price:0},
   {id:"free2",name:"",src:"https://cdn.imgurl.ir/uploads/r417544_file_00000000d37081f4bcc7c475a7a7d884.png",price:0},
@@ -4709,6 +4674,7 @@ function equipAvatar(av) {
   updateUI(); renderAvatarShop(); renderMyAvatars(); showToast("اواتار تجهیز شد! ✅");
 }
 
+/* CLAN */
 function openClan() {
   closeMenu(); closeInternalPages();
   const u = getCurrentUser(); if (!u) return;
@@ -5085,6 +5051,7 @@ function replyToClanMessage(idx) {
   showToast("در حال ریپلای به پیام...");
 }
 
+/* STORE / RULES / SETTINGS */
 function openStore() { closeMenu(); closeInternalPages(); document.getElementById("storePage").classList.add("show"); }
 function closeStore() { document.getElementById("storePage").classList.remove("show"); }
 function claimDailyReward() {
@@ -5165,7 +5132,6 @@ function logout() {
   closeMenu(); closeInternalPages();
   stopVoiceCapture();
   voicePlayQueue = {};
-  if (connMonitorInterval) { clearInterval(connMonitorInterval); connMonitorInterval = null; }
   if (ably) { try { ably.close(); } catch(e) {} }
   ably = null; isAblyReady = false;
   NS.remove("current_user");
@@ -5173,7 +5139,6 @@ function logout() {
   const cf = document.getElementById("creatorFloatBtn");
   if (cf) { cf.classList.remove('show'); cf.style.display = 'none'; }
   closeFloatingAdmin();
-  hideConnBanner();
   showAuth(); switchAuth("login");
 }
 function comingSoon() { showToast("بزودی"); }
@@ -5190,6 +5155,7 @@ function showBlockedPage(blocked) {
   document.getElementById("authScreen").style.display = "none";
 }
 
+/* SEND COINS */
 function openSendCoins() {
   closeMenu();
   const u = getCurrentUser(); if (!u) return;
@@ -5219,6 +5185,9 @@ function submitSendCoins() {
   showToast(`${amount} سکه با موفقیت ارسال شد ✅`);
 }
 
+/* ============================================================
+   CREATOR FLOATING BTN + ADMIN PANEL
+   ============================================================ */
 let creatorDragState = null;
 function startCreatorDrag(e) {
   e.preventDefault();
@@ -5987,6 +5956,9 @@ function renderAdminList() {
   }
 }
 
+/* ============================================================
+   EVENT LISTENERS — Login / Register
+   ============================================================ */
 document.getElementById("loginForm").addEventListener("submit", function(e) {
   e.preventDefault(); clearError(); loadDeletedData(); ensureSpecialAccounts();
   const email = normalizeEmail(document.getElementById("loginEmail").value);
@@ -6042,6 +6014,73 @@ document.getElementById("registerForm").addEventListener("submit", function(e) {
   setTimeout(() => { const u = getCurrentUser(); if (u) publishFullUser(u); }, 5000);
   setTimeout(saveAccountsBackup, 1000);
 });
+
+
+/* ============================================================
+   AUTH UI ENHANCEMENTS (فقط ظاهر صفحه ورود/ثبت‌نام — منطق ورود تغییر نکرده)
+   ============================================================ */
+(function authUiEnhance() {
+  try {
+    const $ = id => document.getElementById(id);
+
+    // نمایش/مخفی کردن رمز
+    document.querySelectorAll('#authScreen .pw-toggle').forEach(b => {
+      b.addEventListener('click', () => {
+        const i = b.parentNode.querySelector('input'); if (!i) return;
+        const show = i.type === 'password';
+        i.type = show ? 'text' : 'password';
+        b.textContent = show ? '🙈' : '👁️';
+      });
+    });
+
+    // شمارنده نام
+    const nameIn = $('registerName'), nameCount = $('nameCount');
+    if (nameIn && nameCount) nameIn.addEventListener('input', () => { nameCount.textContent = nameIn.value.length + '/20'; });
+
+    // تیک ایمیل معتبر
+    const emIn = $('registerEmail'), tick = $('emailTick');
+    if (emIn && tick) emIn.addEventListener('input', () => {
+      tick.classList.toggle('show', /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emIn.value.trim()));
+    });
+
+    // قدرت رمز
+    const pw = $('registerPassword'), bars = $('pwBars'), txt = $('pwText');
+    const labels = ['قدرت رمز', 'خیلی ضعیف', 'ضعیف', 'خوب', 'عالی'];
+    if (pw && bars && txt) pw.addEventListener('input', () => {
+      const v = pw.value; let s = 0;
+      if (v.length >= 6) s++;
+      if (v.length >= 9) s++;
+      if (/[A-Za-z]/.test(v) && /\d/.test(v)) s++;
+      if (/[A-Z]/.test(v) || /[^A-Za-z0-9]/.test(v)) s++;
+      if (!v.length) s = 0; else if (v.length < 6) s = 1;
+      bars.setAttribute('data-s', s);
+      txt.textContent = labels[s];
+    });
+
+    // تگ‌لاین چرخان
+    const tag = $('authTagline');
+    if (tag) {
+      const lines = ['با دوستانت وارد لابی شو 🎭', 'شب مافیا، روز شهروند 🌙', 'گفت‌وگوی صوتی زنده در بازی 🎤', 'سکه جمع کن، سطح بگیر ⭐'];
+      let k = 0;
+      setInterval(() => {
+        tag.classList.add('out');
+        setTimeout(() => { k = (k + 1) % lines.length; tag.textContent = lines[k]; tag.classList.remove('out'); }, 350);
+      }, 3200);
+    }
+
+    // اسلایدر تب‌ها (بدون تغییر در تابع اصلی switchAuth)
+    const tabs = $('authTabs');
+    const origSwitch = window.switchAuth;
+    if (tabs && typeof origSwitch === 'function') {
+      window.switchAuth = function (t) {
+        origSwitch(t);
+        tabs.setAttribute('data-t', t === 'register' ? 'register' : 'login');
+        const f = $(t === 'register' ? 'registerForm' : 'loginForm');
+        if (f) { f.style.animation = 'none'; void f.offsetWidth; f.style.animation = ''; }
+      };
+    }
+  } catch (e) { console.warn('[AuthUI]', e); }
+})();
 
 document.addEventListener("click", function(e) {
   const menu = document.getElementById("menuPanel");
@@ -6103,8 +6142,11 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-console.log('%cمافیابست • v10.0.0 (High-Quality Voice + Connection Monitor)', 'color:#f0c15b;font-weight:bold');
+console.log('%cمافیابست • v7.0.0 (Offline Assets + Ably Voice)', 'color:#f0c15b;font-weight:bold');
 
+/* ============================================================
+   BOOT START
+   ============================================================ */
 try {
   fastBoot();
 } catch(e) {

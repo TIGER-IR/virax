@@ -276,77 +276,6 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 .c-blue{--c1:#6fd6ff;--c2:#1a6aa8}.c-green{--c1:#6fe3a0;--c2:#1a8a4a}.c-orange{--c1:#ffae5a;--c2:#b8541a}
 @media (prefers-reduced-motion:reduce){.sh-bgfx i,.sh-coin,.sh-chest-ico,.sh-daily-glow,.sh-claim::after,.sh-wallet-glow{animation:none!important}}
 
-/* AUTH SCREEN v2 — modern look (override layer; original rules above are kept) */
-#authScreen{background:radial-gradient(circle at 50% 18%,rgba(200,40,25,.40),transparent 46%),radial-gradient(circle at 15% 90%,rgba(255,120,30,.22),transparent 50%),radial-gradient(circle at 90% 70%,rgba(120,10,40,.30),transparent 50%),#050202}
-.auth-bg{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0}
-.auth-bg .orb{position:absolute;border-radius:50%;filter:blur(60px);opacity:.5;animation:orbFloat 14s ease-in-out infinite}
-.auth-bg .o1{width:260px;height:260px;background:#ff5a2a;top:-70px;right:-60px}
-.auth-bg .o2{width:300px;height:300px;background:#a0121c;bottom:-110px;left:-90px;animation-delay:-5s}
-.auth-bg .o3{width:180px;height:180px;background:#ff9b3d;top:45%;left:55%;opacity:.25;animation-delay:-9s}
-@keyframes orbFloat{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(26px,-34px) scale(1.12)}}
-.auth-bg .fs{position:absolute;font-size:34px;color:rgba(255,140,80,.13);animation:suitRise 16s linear infinite;bottom:-60px}
-.auth-bg .s1{right:8%;animation-delay:0s}.auth-bg .s2{right:28%;font-size:26px;animation-delay:-4s}
-.auth-bg .s3{right:50%;font-size:40px;animation-delay:-8s}.auth-bg .s4{right:68%;font-size:28px;animation-delay:-2s}
-.auth-bg .s5{right:86%;font-size:32px;animation-delay:-11s}.auth-bg .s6{right:40%;font-size:22px;animation-delay:-13s}
-@keyframes suitRise{0%{transform:translateY(0) rotate(0);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-115vh) rotate(200deg);opacity:0}}
-.auth-box{position:relative;z-index:1;margin:auto;width:min(440px,100%);padding:1.5px;border-radius:26px;background:linear-gradient(160deg,rgba(255,130,60,.9),rgba(120,20,15,.5) 30%,rgba(40,8,5,.6) 60%,rgba(255,90,40,.7));box-shadow:0 20px 60px rgba(0,0,0,.6),0 0 60px rgba(255,90,40,.22);animation:boxIn .55s cubic-bezier(.2,.9,.3,1) both}
-@keyframes boxIn{from{opacity:0;transform:translateY(24px) scale(.97)}to{opacity:1;transform:none}}
-.auth-inner{border-radius:25px;padding:26px 20px 18px;background:linear-gradient(165deg,rgba(26,9,8,.96),rgba(7,3,3,.97) 70%);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
-.logo-wrap{position:relative;width:92px;height:92px;margin:0 auto 12px}
-.logo-wrap .logo-circle{position:absolute;inset:5px;width:auto;height:auto;margin:0}
-.logo-ring{position:absolute;inset:0;border-radius:50%;border:2px solid transparent;border-top-color:#ff7a30;border-left-color:rgba(255,122,48,.35);animation:spin 3.2s linear infinite}
-.auth-title{font-size:30px;background:linear-gradient(90deg,#ffd0a0,#ff8a3d 50%,#ff5a5a);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none}
-.auth-tagline{min-height:18px;text-align:center;font-size:12px;color:#ffab85;margin:-12px 0 16px;transition:opacity .35s,transform .35s}
-.auth-tagline.out{opacity:0;transform:translateY(5px)}
-.auth-tabs{position:relative;gap:0;padding:4px;border-radius:14px;background:#0f0505;border:1px solid #4a1510}
-.auth-tabs::before{content:'';position:absolute;top:4px;bottom:4px;right:4px;width:calc(50% - 4px);border-radius:10px;background:linear-gradient(180deg,#ff8a3d,#d63a2a 55%,#8a0a0a);box-shadow:0 0 18px rgba(255,100,40,.45);transition:transform .32s cubic-bezier(.3,.9,.3,1)}
-.auth-tabs[data-t="register"]::before{transform:translateX(-100%)}
-.auth-tab,.auth-tab.active{position:relative;background:transparent;border:none;box-shadow:none;height:42px;color:#c98878;transition:color .25s}
-.auth-tab.active{color:#fff}
-.auth-welcome{display:flex;flex-direction:column;gap:3px;margin-bottom:14px;text-align:right}
-.auth-welcome b{font-size:17px;color:#fff;font-weight:800}
-.auth-welcome span{font-size:12px;color:#b98a7c}
-#loginForm,#registerForm{animation:formIn .4s ease both}
-@keyframes formIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-.form-group label{display:flex;justify-content:space-between;align-items:center}
-.form-group label small{color:#7d4a3e;font-weight:500}
-.input-wrap input{height:52px;border-radius:14px;font-size:16px;background:rgba(255,255,255,.04);border:1.5px solid #4f1a12}
-.input-wrap input:focus{background:rgba(255,255,255,.07);border-color:#ff7a30;box-shadow:0 0 0 4px rgba(255,122,48,.14)}
-.input-wrap input:not(:placeholder-shown):valid{border-color:#7a3a22}
-.pw-toggle{position:absolute;left:6px;top:50%;transform:translateY(-50%);width:40px;height:40px;border:none;background:transparent;font-size:17px;cursor:pointer;opacity:.75;border-radius:10px}
-.pw-toggle:active{background:rgba(255,255,255,.08)}
-.input-wrap:has(.pw-toggle) input{padding-left:48px}
-.ok-tick{position:absolute;left:14px;top:50%;transform:translateY(-50%) scale(0);font-style:normal;color:#2ecc71;font-weight:900;font-size:17px;transition:transform .25s}
-.ok-tick.show{transform:translateY(-50%) scale(1)}
-.pw-meter{display:flex;align-items:center;gap:10px;margin:8px 4px 0}
-.pw-bars{flex:1;display:flex;gap:5px}
-.pw-bars i{flex:1;height:5px;border-radius:5px;background:#2a1210;transition:background .25s}
-.pw-bars[data-s="1"] i:nth-child(-n+1){background:#e63946}
-.pw-bars[data-s="2"] i:nth-child(-n+2){background:#ff8a3d}
-.pw-bars[data-s="3"] i:nth-child(-n+3){background:#f4c542}
-.pw-bars[data-s="4"] i{background:#2ecc71}
-.pw-meter small{font-size:11px;color:#a77a6c;min-width:62px;text-align:left}
-.auth-steps{display:flex;align-items:center;justify-content:center;gap:6px;margin:0 0 16px}
-.auth-steps .st{display:flex;flex-direction:column;align-items:center;gap:4px;opacity:.5}
-.auth-steps .st i{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:12px;font-weight:800;border:1.5px solid #6a2a1c;color:#d49080;background:#120505}
-.auth-steps .st em{font-style:normal;font-size:10px;color:#c9917f}
-.auth-steps .st.on{opacity:1}
-.auth-steps .st.on i{background:linear-gradient(#ff8a3d,#c73b1a);color:#fff;border-color:#ff9b5c;box-shadow:0 0 12px rgba(255,120,50,.5)}
-.auth-steps .st-line{flex:1;height:1.5px;max-width:34px;background:linear-gradient(90deg,#6a2a1c,#3a120c);margin-bottom:14px}
-.reward-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:4px 0 14px}
-.reward{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px;border-radius:14px;background:linear-gradient(160deg,rgba(255,120,50,.14),rgba(255,255,255,.02));border:1px solid rgba(255,122,48,.25)}
-.reward b{font-size:20px;line-height:1.1}
-.reward span{font-size:12px;font-weight:800;color:#ffd0a8}
-.reward small{font-size:9.5px;color:#a87a6c}
-.auth-submit{position:relative;overflow:hidden;height:54px;border-radius:15px;font-size:16px}
-.auth-submit::after{content:'';position:absolute;top:0;bottom:0;width:60px;left:-80px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-20deg);animation:btnShine 3.2s ease-in-out infinite}
-@keyframes btnShine{0%,60%{left:-80px}100%{left:120%}}
-.auth-switch{margin-top:12px;text-align:center;font-size:12px;color:#a87a6c}
-.auth-switch a{color:#ff9b5c;font-weight:800;text-decoration:none}
-.auth-note{margin-top:14px;padding-top:12px;border-top:1px dashed rgba(255,122,48,.2)}
-@media (max-height:640px){.logo-wrap{width:70px;height:70px}.auth-tagline{display:none}.reward-row{display:none}}
-@media (prefers-reduced-motion:reduce){.auth-bg *,.auth-box,.logo-ring,.auth-submit::after{animation:none!important}}
-
 #app{display:none;position:relative;min-height:100vh;min-height:100svh;overflow:hidden;background-image:url("https://cdn.imgurl.ir/uploads/q712771_IMG_20260910_213129_944.jpg");background-size:cover;background-position:center top;background-repeat:no-repeat}
 .top-bar{position:absolute;z-index:30;top:10px;left:9px;right:9px;height:55px;display:flex;align-items:center;justify-content:space-between}
 .currency-area{display:flex;align-items:center;gap:8px;direction:ltr}
@@ -985,6 +914,405 @@ html,body{width:100%;min-height:100%;background:#000;color:#fff;font-family:"Vaz
 .room-name{font-size:10px}
 .player-count{font-size:10px;padding:1px 8px}
 }
+
+/* ============================================================
+   🎨 LOBBY / فرودگاه — بازطراحی کامل نئونی بنفش-آبی-مگنتا
+   (override layer — منطق دست‌نخورده)
+   ============================================================ */
+#lobbyPage{
+  background:
+    radial-gradient(circle at 18% 8%, rgba(140,60,255,.55), transparent 48%),
+    radial-gradient(circle at 82% 12%, rgba(0,200,255,.45), transparent 50%),
+    radial-gradient(circle at 50% 100%, rgba(255,40,180,.35), transparent 55%),
+    radial-gradient(circle at 50% 50%, rgba(20,10,50,.9), rgba(4,0,16,.98) 70%),
+    #06001a !important;
+}
+#lobbyPage .bg-layer{
+  filter: blur(28px) saturate(1.7) hue-rotate(200deg) brightness(.7);
+  opacity:.4;
+  transform: scale(1.15);
+  mix-blend-mode: screen;
+}
+#lobbyPage .dark-overlay{
+  background: linear-gradient(180deg, rgba(8,2,24,.45) 0%, rgba(4,0,16,.72) 60%, rgba(0,0,8,.92) 100%) !important;
+}
+#lobbyPage .glass-blur{
+  backdrop-filter: blur(18px) saturate(1.5) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.5) !important;
+  background: radial-gradient(circle at 30% 20%, rgba(120,60,255,.06), transparent 55%);
+}
+#lobbyPage .ui::before{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    radial-gradient(circle at 15% 85%, rgba(180,80,255,.22), transparent 30%),
+    radial-gradient(circle at 85% 80%, rgba(0,200,255,.18), transparent 30%);
+  animation:lobbyAuraFloat 14s ease-in-out infinite;
+}
+@keyframes lobbyAuraFloat{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-12px,-18px) scale(1.1)}}
+
+/* دکمه‌های بالا */
+#lobbyPage .btn-plus,
+#lobbyPage .btn-settings,
+#lobbyPage .btn-search,
+#lobbyPage .btn-close,
+#lobbyPage .refresh-btn{
+  filter: drop-shadow(0 0 12px rgba(160,90,255,.65)) drop-shadow(0 6px 14px rgba(0,0,0,.8)) hue-rotate(0deg) saturate(1.3);
+  transition: transform .15s, filter .25s;
+}
+#lobbyPage .btn-plus:active,
+#lobbyPage .btn-settings:active,
+#lobbyPage .btn-search:active,
+#lobbyPage .btn-close:active,
+#lobbyPage .refresh-btn:active{transform:scale(.88)}
+
+#lobbyPage .header-png{
+  filter: drop-shadow(0 0 22px rgba(180,90,255,.85)) drop-shadow(0 0 45px rgba(0,200,255,.45)) saturate(1.4) brightness(1.15);
+  animation:lobbyHeaderPulse 3.4s ease-in-out infinite;
+}
+@keyframes lobbyHeaderPulse{0%,100%{filter:drop-shadow(0 0 18px rgba(180,90,255,.7)) drop-shadow(0 0 40px rgba(0,200,255,.3)) saturate(1.4)}50%{filter:drop-shadow(0 0 30px rgba(200,120,255,1)) drop-shadow(0 0 55px rgba(0,220,255,.6)) saturate(1.6)}}
+
+/* کانتینر لیست */
+#lobbyPage .lobby-list-container{padding-top:96px;gap:14px}
+
+/* کارت لابی — کامل بازطراحی شده */
+#lobbyPage .lobby-card{
+  width: min(376px, calc(100vw - 24px));
+  position:relative;
+  overflow:hidden;
+  border-radius:22px;
+  border:1.5px solid rgba(150,110,255,.55);
+  background:
+    linear-gradient(155deg, rgba(60,25,120,.85), rgba(15,5,45,.95) 45%, rgba(6,2,22,.98)),
+    radial-gradient(circle at 100% 0%, rgba(255,80,220,.25), transparent 45%);
+  box-shadow:
+    0 12px 34px rgba(0,0,0,.7),
+    0 0 0 1px rgba(255,255,255,.05) inset,
+    0 0 40px rgba(150,80,255,.25),
+    inset 0 1px 0 rgba(255,255,255,.18);
+  backdrop-filter: blur(18px) saturate(1.35);
+  -webkit-backdrop-filter: blur(18px) saturate(1.35);
+  padding:14px 14px 12px;
+  gap:10px;
+  transition: transform .18s cubic-bezier(.2,.9,.3,1), box-shadow .25s;
+  animation:lobbyCardIn .5s cubic-bezier(.2,.9,.3,1) both;
+}
+@keyframes lobbyCardIn{from{opacity:0;transform:translateY(18px) scale(.97)}to{opacity:1;transform:none}}
+#lobbyPage .lobby-card::before{
+  content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(130deg, rgba(255,255,255,.16), transparent 30%, transparent 70%, rgba(255,80,220,.14));
+  opacity:.9;
+}
+#lobbyPage .lobby-card::after{
+  content:'';position:absolute;top:-70px;right:-70px;width:200px;height:200px;border-radius:50%;
+  background: radial-gradient(circle, rgba(200,120,255,.4), rgba(120,60,255,.18) 40%, transparent 70%);
+  filter: blur(6px);
+  pointer-events:none;
+  animation:lobbyCardGlow 4s ease-in-out infinite;
+}
+@keyframes lobbyCardGlow{0%,100%{opacity:.7;transform:scale(1)}50%{opacity:1;transform:scale(1.15)}}
+#lobbyPage .lobby-card:active{transform:scale(.975);box-shadow:0 8px 24px rgba(0,0,0,.7),0 0 55px rgba(170,100,255,.5)}
+
+#lobbyPage .lobby-card .card-top{
+  position:relative;z-index:2;
+  padding-bottom:8px;
+  border-bottom:1px dashed rgba(180,140,255,.25);
+}
+#lobbyPage .lobby-card .scenario-label,
+#lobbyPage .lobby-card .creator-label{
+  color:#b6a6ff !important;
+  font-size:10.5px;
+  text-transform:uppercase;
+  letter-spacing:.4px;
+  opacity:.85;
+}
+#lobbyPage .lobby-card .scenario-name{
+  color:#7df4ff !important;
+  font-weight:900;
+  font-size:11px;
+  text-shadow:0 0 10px rgba(120,240,255,.6);
+}
+#lobbyPage .lobby-card .creator-name{
+  color:#ffb3f0 !important;
+  font-weight:900;
+  font-size:11px;
+  text-shadow:0 0 10px rgba(255,150,230,.55);
+}
+
+#lobbyPage .lobby-card .card-bottom{
+  position:relative;z-index:2;
+  padding-top:4px;
+  gap:10px;
+}
+#lobbyPage .lobby-card .room-name{
+  flex:1;
+  min-width:0;
+  color:#fff !important;
+  font-size:14.5px !important;
+  font-weight:900;
+  text-shadow:0 0 16px rgba(200,140,255,.65), 0 2px 6px rgba(0,0,0,.9);
+  max-width:none !important;
+  text-align:right;
+  padding-right:4px;
+}
+#lobbyPage .lobby-card .player-count{
+  background: linear-gradient(180deg, rgba(160,90,255,.35), rgba(90,40,180,.55)) !important;
+  border:1.5px solid rgba(200,160,255,.6) !important;
+  color:#e9dcff !important;
+  padding:4px 12px !important;
+  font-size:12px !important;
+  font-weight:900 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.35),
+    0 0 16px rgba(160,90,255,.55);
+  text-shadow:0 0 8px rgba(200,160,255,.9);
+  border-radius:20px !important;
+}
+#lobbyPage .lobby-card .join-btn{
+  filter: drop-shadow(0 0 14px rgba(120,220,255,.75)) drop-shadow(0 4px 10px rgba(0,0,0,.7)) saturate(1.4);
+  width:56px !important;
+  transition: transform .15s;
+}
+#lobbyPage .lobby-card .join-btn:active{transform:scale(.9)}
+
+/* حالت خالی */
+#lobbyPage .lobby-list-container > div[style*="text-align:center"]{
+  color:#cbbaff !important;
+  font-size:13px;
+  padding:30px 16px;
+  background: linear-gradient(160deg, rgba(60,25,120,.4), rgba(6,2,22,.85));
+  border:1px dashed rgba(150,110,255,.4);
+  border-radius:18px;
+  box-shadow:inset 0 0 24px rgba(140,80,255,.15);
+}
+
+/* ===== مودال ساخت لابی — بازطراحی کامل ===== */
+#createLobbyModal{
+  background: radial-gradient(circle at 50% 30%, rgba(120,50,220,.55), rgba(6,2,22,.92) 65%) !important;
+  backdrop-filter: blur(12px) saturate(1.3) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(1.3) !important;
+}
+.create-lobby-box{
+  width:min(400px,100%) !important;
+  border-radius:26px !important;
+  border:1.5px solid rgba(150,110,255,.55) !important;
+  background:
+    linear-gradient(165deg, rgba(45,20,90,.96), rgba(12,4,32,.98) 60%, rgba(6,2,22,.99)) !important;
+  box-shadow:
+    0 22px 60px rgba(0,0,0,.85),
+    0 0 60px rgba(150,80,255,.35),
+    inset 0 1px 0 rgba(255,255,255,.18) !important;
+  animation:createBoxIn .5s cubic-bezier(.2,.9,.3,1) both;
+  position:relative;
+  overflow:hidden;
+}
+@keyframes createBoxIn{from{opacity:0;transform:translateY(24px) scale(.96)}to{opacity:1;transform:none}}
+.create-lobby-box::before{
+  content:'';position:absolute;top:-120px;right:-100px;width:280px;height:280px;border-radius:50%;
+  background: radial-gradient(circle, rgba(255,80,220,.35), rgba(150,80,255,.15) 45%, transparent 70%);
+  filter: blur(4px);
+  pointer-events:none;
+  animation:lobbyCardGlow 5s ease-in-out infinite;
+}
+.create-lobby-box::after{
+  content:'';position:absolute;bottom:-120px;left:-100px;width:280px;height:280px;border-radius:50%;
+  background: radial-gradient(circle, rgba(0,200,255,.3), rgba(60,140,255,.12) 45%, transparent 70%);
+  filter: blur(4px);
+  pointer-events:none;
+  animation:lobbyCardGlow 5s ease-in-out infinite reverse;
+}
+.create-lobby-header{
+  background: linear-gradient(180deg, rgba(120,60,220,.4), transparent) !important;
+  border-bottom:1px solid rgba(180,140,255,.35) !important;
+  height:64px !important;
+  position:relative;
+  z-index:2;
+}
+.create-lobby-header h2{
+  color:#fff !important;
+  font-size:19px !important;
+  font-weight:900;
+  background: linear-gradient(90deg,#ffd0ff,#c9a4ff 45%,#7de4ff);
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent !important;
+  text-shadow:none !important;
+  filter: drop-shadow(0 0 12px rgba(200,140,255,.7));
+  letter-spacing:.5px;
+}
+.create-lobby-close{
+  background: linear-gradient(180deg,#ff5060,#b0102a) !important;
+  border:1.5px solid rgba(255,180,200,.65) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.5),
+    0 4px 14px rgba(255,40,80,.55) !important;
+  transition: transform .15s !important;
+}
+.create-lobby-close:active{transform:scale(.9) !important}
+
+.create-lobby-body{padding:20px 18px 10px;position:relative;z-index:2}
+
+.create-input-row{margin-bottom:14px;position:relative}
+.create-input-row input{
+  height:54px !important;
+  border-radius:16px !important;
+  border:1.5px solid rgba(150,110,255,.45) !important;
+  background: linear-gradient(180deg, rgba(20,8,45,.9), rgba(10,3,28,.95)) !important;
+  color:#fff !important;
+  font-size:15px !important;
+  padding:0 48px 0 46px !important;
+  transition: border-color .2s, box-shadow .25s, background .2s !important;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,.55);
+}
+.create-input-row input:focus{
+  border-color:#c9a4ff !important;
+  box-shadow:
+    inset 0 2px 8px rgba(0,0,0,.55),
+    0 0 0 4px rgba(180,120,255,.22),
+    0 0 22px rgba(180,120,255,.45) !important;
+  background: linear-gradient(180deg, rgba(30,12,60,.95), rgba(14,5,34,.97)) !important;
+}
+.create-input-row input::placeholder{color:rgba(200,180,255,.5) !important}
+.create-input-row .input-icon{
+  color:#c9a4ff !important;
+  font-size:19px !important;
+  opacity:.9 !important;
+  filter: drop-shadow(0 0 8px rgba(180,120,255,.7));
+}
+.create-input-row .eye-icon{
+  color:#7de4ff !important;
+  opacity:.85 !important;
+  filter: drop-shadow(0 0 6px rgba(120,220,255,.7));
+}
+
+.create-pass-toggle{padding:0 6px 4px !important}
+.create-pass-toggle label{
+  color:#e3d6ff !important;
+  font-size:14px !important;
+  font-weight:700;
+  text-shadow:0 0 10px rgba(180,140,255,.5);
+}
+.create-pass-toggle .lock-icon{
+  color:#ffb3f0 !important;
+  filter: drop-shadow(0 0 8px rgba(255,150,230,.7));
+}
+
+.toggle-switch{
+  width:54px !important;
+  height:30px !important;
+  border-radius:16px !important;
+  background: linear-gradient(180deg, rgba(40,20,80,.9), rgba(20,8,45,.9)) !important;
+  border:1.5px solid rgba(150,110,255,.45) !important;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.6);
+}
+.toggle-switch.active{
+  background: linear-gradient(90deg, #7b3aff, #ff40b8) !important;
+  border-color: rgba(255,140,220,.7) !important;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.4), 0 0 18px rgba(255,80,200,.55) !important;
+}
+.toggle-switch .knob{
+  width:24px !important;
+  height:24px !important;
+  top:2px !important;
+  right:2px !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,.55), 0 0 10px rgba(255,255,255,.5) !important;
+}
+.toggle-switch.active .knob{right:26px !important}
+
+/* حالت‌های بازپرس / تکاور */
+.create-mode-row{gap:16px !important;margin:20px 0 24px !important}
+.create-mode-btn{
+  width:108px !important;
+  height:108px !important;
+  border-radius:20px !important;
+  border:1.5px solid rgba(150,110,255,.4) !important;
+  background: linear-gradient(165deg, rgba(30,12,60,.7), rgba(10,4,30,.9)) !important;
+  gap:8px !important;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,.55), 0 6px 18px rgba(0,0,0,.45);
+  transition: transform .2s, border-color .2s, box-shadow .3s !important;
+  position:relative;
+  overflow:hidden;
+}
+.create-mode-btn::before{
+  content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(160deg, rgba(255,255,255,.1), transparent 45%);
+}
+.create-mode-btn .mode-icon{filter: drop-shadow(0 0 10px rgba(180,120,255,.6))}
+.create-mode-btn .mode-icon img{border-radius:14px}
+.create-mode-btn span{
+  font-size:13px !important;
+  font-weight:900 !important;
+  color:#e8dfff;
+  text-shadow:0 0 10px rgba(180,140,255,.5);
+}
+.create-mode-btn.active{
+  border-color:rgba(200,140,255,.9) !important;
+  box-shadow:
+    0 0 0 3px rgba(180,120,255,.25),
+    0 0 32px rgba(180,120,255,.65),
+    inset 0 2px 8px rgba(0,0,0,.5) !important;
+  transform: translateY(-2px);
+}
+.create-mode-btn.mode-bazis.active{
+  background: linear-gradient(165deg, #6a3acf, #341578 55%, #1a0740) !important;
+  border-color: rgba(180,140,255,.9) !important;
+  box-shadow:
+    0 0 0 3px rgba(180,120,255,.3),
+    0 0 36px rgba(160,90,255,.75),
+    0 8px 22px rgba(0,0,0,.55) !important;
+}
+.create-mode-btn.mode-takavar.active{
+  background: linear-gradient(165deg, #00b8d4, #007b95 55%, #003b4b) !important;
+  border-color: rgba(140,240,255,.9) !important;
+  box-shadow:
+    0 0 0 3px rgba(120,220,255,.3),
+    0 0 36px rgba(0,200,255,.75),
+    0 8px 22px rgba(0,0,0,.55) !important;
+}
+.create-mode-btn.mode-takavar.active span{color:#d8faff;text-shadow:0 0 12px rgba(120,220,255,.85)}
+
+.create-lobby-submit{
+  width: calc(100% - 36px) !important;
+  margin: 4px 18px 20px !important;
+  height:56px !important;
+  border-radius:18px !important;
+  font-size:17px !important;
+  font-weight:900;
+  background: linear-gradient(135deg, #ff5cd6, #a54bff 50%, #3a8dff) !important;
+  color:#fff !important;
+  border:none !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.5),
+    0 12px 30px rgba(160,80,255,.55),
+    0 0 26px rgba(255,90,220,.5) !important;
+  position:relative;
+  overflow:hidden;
+  letter-spacing:.5px;
+  text-shadow: 0 0 12px rgba(255,255,255,.55);
+  transition: transform .15s !important;
+}
+.create-lobby-submit:active{transform:scale(.97)}
+.create-lobby-submit::after{
+  content:'';position:absolute;top:0;bottom:0;width:70px;left:-90px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent);
+  transform: skewX(-20deg);
+  animation: btnShine 3s ease-in-out infinite;
+}
+
+/* زیرصفحه انتخاب رنگ و راهنما */
+.color-help{
+  background: linear-gradient(160deg, rgba(30,12,60,.7), rgba(10,4,30,.9)) !important;
+  border:1px solid rgba(150,110,255,.3) !important;
+  color:#cbbaff !important;
+  font-size:10.5px !important;
+  padding:10px 12px !important;
+  border-radius:12px !important;
+}
+.color-help b{color:#ffb3f0 !important;text-shadow:0 0 8px rgba(255,150,230,.5)}
+
+/* اسکرول‌بار */
+#lobbyPage .ui::-webkit-scrollbar{width:6px}
+#lobbyPage .ui::-webkit-scrollbar-thumb{background: linear-gradient(180deg, #7b3aff, #ff40b8);border-radius:6px}
+#lobbyPage .ui::-webkit-scrollbar-track{background: rgba(20,8,45,.5)}
 </style>
 </head>
 <body>
@@ -2817,16 +3145,15 @@ function subscribeLobbyRoom(lobbyId) {
 }
 
 /* ============================================================
-   VOICE SYSTEM — Ably-based (بدون WebRTC) — نسخه زنده PCM
-   ضبط مستقیم صدا (PCM 16kHz) → بسته‌های ۱۰۰ میلی‌ثانیه‌ای → پخش زنده با بافر خیلی کوچک
+   VOICE SYSTEM — نسخه کم‌تأخیر (پکت‌های ۶۰ms + بافر کوچک + مدیریت هوشمند صف)
    ============================================================ */
 const VOICE_SR = 16000;                 // نرخ نمونه‌برداری ارسال
-const VOICE_FRAME_MS = 100;             // طول هر بسته صوتی
+const VOICE_FRAME_MS = 60;              // ⬅️ ۱۰۰ → ۶۰ (بسته‌های کوچک‌تر = تأخیر کمتر)
 const VOICE_FRAME_SAMPLES = VOICE_SR * VOICE_FRAME_MS / 1000;
-const VOICE_LEAD = 0.12;                // تاخیر اولیه پخش (ثانیه)
-const VOICE_MAX_LAG = 0.6;              // اگر عقب افتاد، پرش به جلو برای حذف تاخیر
-const VOICE_VAD_THRESHOLD = 350;        // آستانه تشخیص صدا (Int16)
-const VOICE_HANGOVER_FRAMES = 4;        // بعد از قطع صدا چند بسته دیگر ارسال شود
+const VOICE_LEAD = 0.05;                // ⬅️ ۰.۱۲ → ۰.۰۵ (بافر شروع بسیار کوتاه)
+const VOICE_MAX_LAG = 0.22;             // ⬅️ ۰.۶ → ۰.۲۲ (اگر عقب افتاد سریع بپر جلو)
+const VOICE_VAD_THRESHOLD = 320;        // آستانه تشخیص صدا (Int16)
+const VOICE_HANGOVER_FRAMES = 2;        // ⬅️ ۴ → ۲ (دنباله سکوت کمتر)
 
 let voiceCapCtx = null;
 let voiceCapSource = null;
@@ -3042,7 +3369,7 @@ function publishVoiceStop(phone) {
   try { ablyRoomCh.publish(EV.voiceStop, { lobbyId: currentLobbyId, from: phone }); } catch(e) {}
 }
 
-/* ---------- پخش ---------- */
+/* ---------- پخش — مدیریت هوشمند تأخیر ---------- */
 function enqueueVoicePlayback(fromPhone, base64Data, seq, sid) {
   const ctx = getVoiceAudioCtx();
   if (!ctx) return;
@@ -3069,8 +3396,14 @@ function enqueueVoicePlayback(fromPhone, base64Data, seq, sid) {
   for (let i = 0; i < n; i++) ch[i] = i16[i] / 32768;
 
   const now = ctx.currentTime;
-  if (pq.nextTime < now + 0.02) pq.nextTime = now + VOICE_LEAD;          // شروع صحبت یا قطع شدن بسته‌ها
-  else if (pq.nextTime - now > VOICE_MAX_LAG) pq.nextTime = now + VOICE_LEAD; // عقب افتادیم: برو جلو
+  // ⬇️ منطق کم‌تأخیر: اگر صف عقب افتاد یا خیلی جلو زد، ریست کن
+  if (pq.nextTime < now + 0.008) {
+    // بسته اول یک نفس یا صف عقب افتاده → شروع فوری با بافر کوچک
+    pq.nextTime = now + VOICE_LEAD;
+  } else if (pq.nextTime - now > VOICE_MAX_LAG) {
+    // بافر خیلی جلو زده → می‌پرانیم جلو تا صدا بلادرنگ بمونه
+    pq.nextTime = now + VOICE_LEAD;
+  }
 
   const src = ctx.createBufferSource();
   src.buffer = buf;
@@ -6313,72 +6646,6 @@ document.getElementById("registerForm").addEventListener("submit", function(e) {
 
 
 /* ============================================================
-   AUTH UI ENHANCEMENTS (فقط ظاهر صفحه ورود/ثبت‌نام — منطق ورود تغییر نکرده)
-   ============================================================ */
-(function authUiEnhance() {
-  try {
-    const $ = id => document.getElementById(id);
-
-    // نمایش/مخفی کردن رمز
-    document.querySelectorAll('#authScreen .pw-toggle').forEach(b => {
-      b.addEventListener('click', () => {
-        const i = b.parentNode.querySelector('input'); if (!i) return;
-        const show = i.type === 'password';
-        i.type = show ? 'text' : 'password';
-        b.textContent = show ? '🙈' : '👁️';
-      });
-    });
-
-    // شمارنده نام
-    const nameIn = $('registerName'), nameCount = $('nameCount');
-    if (nameIn && nameCount) nameIn.addEventListener('input', () => { nameCount.textContent = nameIn.value.length + '/20'; });
-
-    // تیک ایمیل معتبر
-    const emIn = $('registerEmail'), tick = $('emailTick');
-    if (emIn && tick) emIn.addEventListener('input', () => {
-      tick.classList.toggle('show', /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emIn.value.trim()));
-    });
-
-    // قدرت رمز
-    const pw = $('registerPassword'), bars = $('pwBars'), txt = $('pwText');
-    const labels = ['قدرت رمز', 'خیلی ضعیف', 'ضعیف', 'خوب', 'عالی'];
-    if (pw && bars && txt) pw.addEventListener('input', () => {
-      const v = pw.value; let s = 0;
-      if (v.length >= 6) s++;
-      if (v.length >= 9) s++;
-      if (/[A-Za-z]/.test(v) && /\d/.test(v)) s++;
-      if (/[A-Z]/.test(v) || /[^A-Za-z0-9]/.test(v)) s++;
-      if (!v.length) s = 0; else if (v.length < 6) s = 1;
-      bars.setAttribute('data-s', s);
-      txt.textContent = labels[s];
-    });
-
-    // تگ‌لاین چرخان
-    const tag = $('authTagline');
-    if (tag) {
-      const lines = ['با دوستانت وارد لابی شو 🎭', 'شب مافیا، روز شهروند 🌙', 'گفت‌وگوی صوتی زنده در بازی 🎤', 'سکه جمع کن، سطح بگیر ⭐'];
-      let k = 0;
-      setInterval(() => {
-        tag.classList.add('out');
-        setTimeout(() => { k = (k + 1) % lines.length; tag.textContent = lines[k]; tag.classList.remove('out'); }, 350);
-      }, 3200);
-    }
-
-    // اسلایدر تب‌ها (بدون تغییر در تابع اصلی switchAuth)
-    const tabs = $('authTabs');
-    const origSwitch = window.switchAuth;
-    if (tabs && typeof origSwitch === 'function') {
-      window.switchAuth = function (t) {
-        origSwitch(t);
-        tabs.setAttribute('data-t', t === 'register' ? 'register' : 'login');
-        const f = $(t === 'register' ? 'registerForm' : 'loginForm');
-        if (f) { f.style.animation = 'none'; void f.offsetWidth; f.style.animation = ''; }
-      };
-    }
-  } catch (e) { console.warn('[AuthUI]', e); }
-})();
-
-/* ============================================================
    CLAN + STORE v2 helpers (فقط ظاهر؛ منطق قبلی دست‌نخورده)
    ============================================================ */
 function clanEmblemHTML(c, size) {
@@ -6491,7 +6758,7 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-console.log('%cمافیابست • v7.0.0 (Offline Assets + Ably Voice)', 'color:#f0c15b;font-weight:bold');
+console.log('%cمافیابست • v7.1.0 (Low-Latency Voice + Neon Lobby)', 'color:#f0c15b;font-weight:bold');
 
 /* ============================================================
    BOOT START
